@@ -1,0 +1,27 @@
+.layer1,
+.layer2,
+.layer3 {
+  position: absolute;
+  inset: 0;
+}
+
+.layer1 {
+  background-image: linear-gradient(20deg, #ee342f, #8d2676);
+  background-size: 100vw 150vh;
+  background-position: bottom center;
+}
+
+.layer2 {
+  background-image: linear-gradient(-10deg, #efe1c2, #8d2676);
+  background-size: cover;
+  background-position: bottom center;
+  mix-blend-mode: multiply;
+}
+
+.layer3 {
+  background-image: url('/noise.avif');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.5;
+  mix-blend-mode: color-dodge;
+}
