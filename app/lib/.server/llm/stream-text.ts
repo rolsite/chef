@@ -19,7 +19,7 @@ export interface StreamingOptions extends Omit<Parameters<typeof _streamText>[0]
 
 const logger = createScopedLogger('stream-text');
 
-export async function streamText(props: {
+export async function boltStreamText(props: {
   messages: Omit<Message, 'id'>[];
   env?: Env;
   options?: StreamingOptions;
