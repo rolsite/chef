@@ -1,4 +1,4 @@
-import type { Message } from 'ai';
+import type { Message, ToolInvocation } from 'ai';
 import { useCallback, useState } from 'react';
 import { StreamingMessageParser } from '~/lib/runtime/message-parser';
 import { workbenchStore } from '~/lib/stores/workbench';
@@ -38,48 +38,45 @@ const messageParser = new StreamingMessageParser({
   },
 });
 
-type OpenArtifact = {
-  artifactId: string,
-}
 
-function toBoltMarkdown(message: Message) {
+function processMessage(message: Message): string {
   if (!message.parts) {
     return message.content;
   }
   const result = [];
-
-  let nextArtifactId = 0;
-  let openArtifact: null | OpenArtifact = null;
-
-  const startArtifact = () => {
-    openArtifact = {
-      artifactId: `toolArtifact-${message.id}-${nextArtifactId++}`,
-    };
-    result.push(`<boltArtifact id="${openArtifact.artifactId}" title="Agentic Coding">`);
-  }
-  const endArtifact = () => {
-    result.push(`</boltArtifact>`);
-    openArtifact = null;
-  }
-
+  const artifactId = `toolArtifact-${message.id}`;
+  let createdArtifact = false;
   for (const part of message.parts) {
     switch (part.type) {
       case 'text': {
-        if (openArtifact) {
-          endArtifact();
-        }
         result.push(part.text);
         break;
       }
       case 'tool-invocation': {
         const { toolInvocation } = part;
-        if (toolInvocation.state === "partial-call") {
-          continue;
+        if (!createdArtifact) {
+          workbenchStore.addArtifact({
+            id: artifactId,
+            messageId: message.id,
+            title: 'Agentic Coding',
+          })
+          console.log('createdArtifact', artifactId, message);
+          createdArtifact = true;
         }
-        if (!openArtifact) {
-          startArtifact();
+        const data = {
+          "artifactId": artifactId,
+          "messageId": message.id,
+          "actionId": toolInvocation.toolCallId,
+          "action": {
+            "type": "toolUse" as const,
+            "toolName": toolInvocation.toolName,
+            "content": JSON.stringify(toolInvocation),
+          }
+        };
+        workbenchStore.addAction(data);
+        if (toolInvocation.state === "call" || toolInvocation.state === "result") {
+          workbenchStore.runAction(data);
         }
-        result.push(`<boltAction type="toolUse" toolName="${toolInvocation.toolName}">${JSON.stringify(toolInvocation)}</boltAction>`);
         break;
       }
       case 'step-start': {
@@ -91,16 +88,11 @@ function toBoltMarkdown(message: Message) {
       }
     }
   }
-
-  if (openArtifact) {
-    endArtifact();
-  }
-
   return result.join('\n');
 }
 
 export function useMessageParser() {
-  const [parsedMessages, setParsedMessages] = useState<string[]>([]);
+  const [parsedMessages, setParsedMessages] = useState<{ [key: number]: { content: string, parts: Message["parts"] } }>({});
 
   const parseMessages = useCallback((messages: Message[], isLoading: boolean) => {
     let reset = false;
@@ -112,15 +104,11 @@ export function useMessageParser() {
 
     for (const [index, message] of messages.entries()) {
       if (message.role === 'assistant' || message.role === 'user') {
-        const newParsedContent = messageParser.parse(message.id, toBoltMarkdown(message));
+        const content = processMessage(message);
+        const newParsedContent = messageParser.parse(message.id, content);
         setParsedMessages((prevParsed) => {
-          const newParsed = [...prevParsed];
-          if (reset) {
-            newParsed[index] = newParsedContent;
-          } else {
-            newParsed[index] = (prevParsed[index] || '') + newParsedContent;
-          }
-          return newParsed;
+          const newContent = reset ? newParsedContent : (prevParsed[index]?.content || '') + newParsedContent;
+          return { ...prevParsed, [index]: { content: newContent, parts: message.parts } };
         })
       }
     }

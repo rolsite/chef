@@ -197,7 +197,9 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
     initialMessages,
     initialInput: Cookies.get(PROMPT_COOKIE_KEY) || '',
     async onToolCall({ toolCall }) {
+      console.log("Starting tool call", toolCall);
       const result = await workbenchStore.waitOnToolCall(toolCall.toolCallId);
+      console.log("Tool call finished", result);
       return result;
     }
   });
@@ -455,10 +457,10 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
         if (message.role === 'user') {
           return message;
         }
-
         return {
           ...message,
-          content: parsedMessages[i] || '',
+          content: parsedMessages[i]?.content || '',
+          parts: parsedMessages[i]?.parts || [],
         };
       })}
       enhancePrompt={() => {
