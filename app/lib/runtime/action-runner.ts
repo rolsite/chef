@@ -9,8 +9,9 @@ import type { BoltShell } from '~/utils/shell';
 import { convexStore, waitForConvexProjectConnection } from '~/lib/stores/convex';
 import { initializeConvexAuth } from '~/lib/convexAuth';
 import type { ToolInvocation } from 'ai';
-import { z } from 'zod';
 import { withResolvers } from '~/utils/promises';
+import { editor, editorToolParameters } from './editorTool';
+import { bashToolParameters } from './bashTool';
 
 const logger = createScopedLogger('ActionRunner');
 
@@ -454,10 +455,29 @@ export class ActionRunner {
     let result: string;
     try {
       switch (parsed.toolName) {
-        case "sayHi": {
-          const args = z.object({ message: z.string() }).parse(parsed.args);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          result = `Thanks for the lovely greeting of ${args.message.length} characters! Please continue the conversation.`;
+        case "str_replace_editor": {
+          const args = editorToolParameters.parse(parsed.args);
+          const container = await this.#webcontainer;
+          result = await editor(container, args, {});
+          break;
+        }
+        case "bash": {
+          const args = bashToolParameters.parse(parsed.args);
+          if (!args.command.length) {
+            throw new Error("A nonempty command is required");
+          }
+          const shell = this.#shellTerminal();
+          await shell.ready();
+          const resp = await shell.executeCommand(this.runnerId.get(), args.command, () => {
+            logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
+            action.abort();
+          });
+          logger.debug(`${action.type} Shell Response: [exit code:${resp?.exitCode}]`);
+          if (resp?.exitCode !== 0) {
+            throw new Error(`Process exited with code ${resp?.exitCode}: ${resp?.output}`);
+          } else {
+            result = resp?.output || '';
+          }
           break;
         }
         default: {
@@ -526,3 +546,5 @@ export class ActionRunner {
     }
   }
 }
+
+

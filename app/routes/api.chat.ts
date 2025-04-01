@@ -7,9 +7,10 @@ import { WORK_DIR } from '~/utils/constants';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { getSystemPrompt } from '~/lib/common/prompts/prompts';
 import { createOpenAI } from '@ai-sdk/openai';
-import { z } from 'zod';
+import { flexSystemPrompt, makeFlexGuidelinesPrompt } from '~/lib/common/prompts/flexPrompts';
+import { convexGuidelines } from '~/lib/common/prompts/convex';
 
-const logger = createScopedLogger('api.chat2');
+const logger = createScopedLogger('api.chat');
 
 export async function action(args: ActionFunctionArgs) {
   return chatAction(args, args.context.cloudflare.env);
@@ -56,6 +57,7 @@ async function chatAction({ request }: ActionFunctionArgs, env: Env) {
           system: systemPrompt,
           maxTokens: provider.maxTokens,
           messages: userMessages,
+          tools: provider.tools,
           onFinish: async (result) => {
             const { usage } = result;
             console.log("Finished streaming", {
@@ -87,14 +89,6 @@ async function chatAction({ request }: ActionFunctionArgs, env: Env) {
             } satisfies ProgressAnnotation);
             await new Promise((resolve) => setTimeout(resolve, 0));
           },
-          tools: {
-            sayHi: {
-              description: "Say hello to the user",
-              parameters: z.object({
-                message: z.string().describe("A pleasant greeting to say to the user. BE NICE!"),
-              }),
-            }
-          }
         });
         const logErrors = async () => {
           for await (const part of result.fullStream) {
@@ -194,7 +188,11 @@ function anthropicInjectCacheControl(options?: RequestInit) {
   body.system = [
     {
       type: "text",
-      text: getSystemPrompt(WORK_DIR),
+      text: flexSystemPrompt,
+    },
+    {
+      type: "text",
+      text: makeFlexGuidelinesPrompt(convexGuidelines),
       cache_control: { type: "ephemeral" },
     },
     // NB: The client dynamically manages files injected as context
@@ -225,11 +223,16 @@ function makeProvider(env: Env) {
       maxTokens: 8192,
       model: anthropic("claude-3-5-sonnet-20241022"),
       includeSystemPrompt: false,
+      tools: {
+        str_replace_editor: anthropic.tools.textEditor_20241022(),
+        bash: anthropic.tools.bash_20241022(),
+      }
     },
     openai: {
       maxTokens: 16384,
       model: openai("gpt-4o-2024-11-20"),
       includeSystemPrompt: true,
+      tools: {},
     }
   }
   return providers.anthropic;

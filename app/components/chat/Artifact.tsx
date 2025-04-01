@@ -15,13 +15,14 @@ import { api } from '@convex/_generated/api';
 import { useQuery } from 'convex/react';
 import { useChatId } from '~/lib/stores/chat';
 import type { ToolInvocation } from 'ai';
+import { Markdown } from './Markdown';
 
 const highlighterOptions = {
   langs: ['shell'],
   themes: ['light-plus', 'dark-plus'],
 };
 
-const shellHighlighter: HighlighterGeneric<BundledLanguage, BundledTheme> =
+export const shellHighlighter: HighlighterGeneric<BundledLanguage, BundledTheme> =
   import.meta.hot?.data.shellHighlighter ?? (await createHighlighter(highlighterOptions));
 
 if (import.meta.hot) {
@@ -132,14 +133,14 @@ export const Artifact = memo(({ messageId }: ArtifactProps) => {
 });
 
 interface ShellCodeBlockProps {
-  classsName?: string;
+  className?: string;
   code: string;
 }
 
-function ShellCodeBlock({ classsName, code }: ShellCodeBlockProps) {
+export function ShellCodeBlock({ className, code }: ShellCodeBlockProps) {
   return (
     <div
-      className={classNames('text-xs', classsName)}
+      className={classNames('text-xs', className)}
       dangerouslySetInnerHTML={{
         __html: shellHighlighter.codeToHtml(code, {
           lang: 'shell',
@@ -154,7 +155,7 @@ interface ActionListProps {
   actions: ActionState[];
 }
 
-const actionVariants = {
+export const actionVariants = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 },
 };
@@ -239,13 +240,11 @@ const ActionList = memo(({ actions }: ActionListProps) => {
                   >
                     <span className="flex-1">Start Application</span>
                   </a>
-                ) : type === "toolUse" ? (
-                  <ToolUseAction content={content} />
                 ) : null}
               </div>
               {(type === 'shell' || type === 'start') && (
                 <ShellCodeBlock
-                  classsName={classNames('mt-1', {
+                  className={classNames('mt-1', {
                     'mb-3.5': !isLast,
                   })}
                   code={content}
@@ -265,19 +264,7 @@ const ActionList = memo(({ actions }: ActionListProps) => {
   );
 });
 
-function ToolUseAction({ content }: { content: string }) {
-  const parsed: ToolInvocation = useMemo(() => {
-    return JSON.parse(content);
-  }, [content]);
-  console.log('parsed', parsed);
-  return (
-    <div className="flex items-center w-full min-h-[28px]">
-      <span className="flex-1">Tool: {parsed.toolName}({JSON.stringify(parsed.args)})</span>
-    </div>
-  );
-}
-
-function getIconColor(status: ActionState['status']) {
+export function getIconColor(status: ActionState['status']) {
   switch (status) {
     case 'pending': {
       return 'text-bolt-elements-textTertiary';
