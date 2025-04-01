@@ -9,7 +9,9 @@
   "scripts": {
     "deploy": "npm run build && wrangler pages deploy",
     "build": "remix vite:build",
-    "dev": "node pre-start.cjs  && remix vite:dev",
+    "dev": "npm run download-snapshot; node pre-start.cjs  && remix vite:dev",
+    "dev-using-local-snapshot": "node pre-start.cjs  && remix vite:dev",
+    "download-snapshot": "curl -s -o public/snapshot.bin -z public/snapshot.bin -e public/snapshot.bin https://pub-2a55ba970a5b4cd6a9b18adbf8df6fe8.r2.dev/snapshot.bin",
     "rebuild-template": "node make-bootstrap-snapshot.js && open http://localhost:5173/admin/build-snapshot",
     "test": "vitest --run",
     "test:watch": "vitest",

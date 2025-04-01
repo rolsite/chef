@@ -35,6 +35,9 @@ pnpx convex dev
 
 There are a few steps to iterating on the template.
 
+In prod / preview deploys a file on Cloudflare R2 storage is always used. Locally you can use your own snapshot.bin if
+but YOU MUST USE a different dev command, `npm run dev-using-local-snapshot`.
+
 1. Work on `template/`, `bun install` and `bun dev` there, etc.
 2. Run `bun snapshotTemplate` to pack all of the Git unignored files in `template` to
    `templates/flex-template.bin` as a bootstrap template. This will not include
@@ -44,3 +47,4 @@ There are a few steps to iterating on the template.
    NPM dependencies within the WebContainer.
 4. After installation completes, open the "Snapshot Admin" UI in the top right and
    download the snapshot to `templates/flex-template.bin'.
+5. When you're ready, replace the existing `snapshot.bin` object in the Cloudflare UI. All local, preview, and prod deployments will immediately use this new snapshot. Link: https://dash.cloudflare.com/a4aa0fffebef8bc497f64875c40ee6fb/r2/default/buckets/cvx-static

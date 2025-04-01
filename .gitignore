@@ -44,3 +44,7 @@ changelogUI.md
 docs/instructions/Roadmap.md
 .cursorrules
 *.md
+
+# file is too large, in prod we use
+# https://pub-2a55ba970a5b4cd6a9b18adbf8df6fe8.r2.dev/snapshot.bin
+public/snapshot.bin
