@@ -8,6 +8,9 @@ import type { ActionCallbackData } from './message-parser';
 import type { BoltShell } from '~/utils/shell';
 import { convexStore, waitForConvexProjectConnection } from '~/lib/stores/convex';
 import { initializeConvexAuth } from '~/lib/convexAuth';
+import type { ToolInvocation } from 'ai';
+import { z } from 'zod';
+import { withResolvers } from '~/utils/promises';
 
 const logger = createScopedLogger('ActionRunner');
 
@@ -76,6 +79,7 @@ export class ActionRunner {
   buildOutput?: { path: string; exitCode: number; output: string };
 
   constructor(
+    private toolCalls: Map<string, PromiseWithResolvers<string>>,
     webcontainerPromise: Promise<WebContainer>,
     getShellTerminal: () => BoltShell,
     onAlert?: (alert: ActionAlert) => void,
@@ -104,13 +108,13 @@ export class ActionRunner {
       executed: false,
       abort: () => {
         abortController.abort();
-        this.#updateAction(actionId, { status: 'aborted' });
+        this.updateAction(actionId, { status: 'aborted' });
       },
       abortSignal: abortController.signal,
     });
 
     this.#currentExecutionPromise.then(() => {
-      this.#updateAction(actionId, { status: 'running' });
+      this.updateAction(actionId, { status: 'running' });
     });
   }
 
@@ -130,7 +134,7 @@ export class ActionRunner {
       return; // No return value here
     }
 
-    this.#updateAction(actionId, { ...action, ...data.action, executed: !isStreaming });
+    this.updateAction(actionId, { ...action, ...data.action, executed: !isStreaming });
 
     this.#currentExecutionPromise = this.#currentExecutionPromise
       .then(() => {
@@ -148,7 +152,7 @@ export class ActionRunner {
   async #executeAction(actionId: string, isStreaming: boolean = false) {
     const action = this.actions.get()[actionId];
 
-    this.#updateAction(actionId, { status: 'running' });
+    this.updateAction(actionId, { status: 'running' });
 
     try {
       switch (action.type) {
@@ -171,13 +175,13 @@ export class ActionRunner {
           // making the start app non blocking
 
           this.#runStartAction(action)
-            .then(() => this.#updateAction(actionId, { status: 'complete' }))
+            .then(() => this.updateAction(actionId, { status: 'complete' }))
             .catch((err: Error) => {
               if (action.abortSignal.aborted) {
                 return;
               }
 
-              this.#updateAction(actionId, { status: 'failed', error: 'Action failed' });
+              this.updateAction(actionId, { status: 'failed', error: 'Action failed' });
               logger.error(`[${action.type}]:Action failed\n\n`, err);
 
               if (!(err instanceof ActionCommandError)) {
@@ -204,9 +208,13 @@ export class ActionRunner {
           await this.#runConvexAction(actionId, action);
           break;
         }
+        case "toolUse": {
+          await this.#runToolUseAction(actionId, action);
+          break;
+        }
       }
 
-      this.#updateAction(actionId, {
+      this.updateAction(actionId, {
         status: isStreaming ? 'running' : action.abortSignal.aborted ? 'aborted' : 'complete',
       });
     } catch (error) {
@@ -214,7 +222,7 @@ export class ActionRunner {
         return;
       }
 
-      this.#updateAction(actionId, { status: 'failed', error: 'Action failed' });
+      this.updateAction(actionId, { status: 'failed', error: 'Action failed' });
       logger.error(`[${action.type}]:Action failed\n\n`, error);
 
       if (!(error instanceof ActionCommandError)) {
@@ -315,7 +323,7 @@ export class ActionRunner {
     }
   }
 
-  #updateAction(id: string, newState: ActionStateUpdate) {
+  updateAction(id: string, newState: ActionStateUpdate) {
     const actions = this.actions.get();
 
     this.actions.setKey(id, { ...actions[id], ...newState });
@@ -397,7 +405,7 @@ export class ActionRunner {
 
     await this.#setupConvexEnvVars();
 
-    const updateAction = this.#updateAction.bind(this);
+    const updateAction = this.updateAction.bind(this);
 
     // Run convex dev --once
 
@@ -427,6 +435,45 @@ export class ActionRunner {
     }
 
     convexLogger.info(`Convex process terminated with code ${exitCode}`);
+  }
+
+  async #runToolUseAction(actionId: string, action: ActionState) {
+    const parsed: ToolInvocation = JSON.parse(action.content);
+    if (parsed.state === "result") {
+      return;
+    }
+    if (parsed.state === "partial-call") {
+      throw new Error("Tool call is still in progress");
+    }
+
+    let resolvers = this.toolCalls.get(parsed.toolCallId);
+    if (!resolvers) {
+      resolvers = withResolvers<string>();
+      this.toolCalls.set(parsed.toolCallId, resolvers);
+    }
+    let result: string;
+    try {
+      switch (parsed.toolName) {
+        case "sayHi": {
+          const args = z.object({ message: z.string() }).parse(parsed.args);
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          result = `Thanks for the lovely greeting of ${args.message.length} characters! Please continue the conversation.`;
+          break;
+        }
+        default: {
+          throw new Error(`Unknown tool: ${parsed.toolName}`);
+        }
+      }
+      resolvers.resolve(result);
+    } catch (e: any) {
+      console.error('Error on tool call', e);
+      let message = e.toString();
+      if (!message.startsWith("Error:")) {
+        message = "Error: " + message;
+      }
+      resolvers.resolve(message);
+      throw e;
+    }
   }
 
   async #setupConvexEnvVars() {

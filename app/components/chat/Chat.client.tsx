@@ -196,6 +196,10 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
     },
     initialMessages,
     initialInput: Cookies.get(PROMPT_COOKIE_KEY) || '',
+    async onToolCall({ toolCall }) {
+      const result = await workbenchStore.waitOnToolCall(toolCall.toolCallId);
+      return result;
+    }
   });
   const isLoading = status === 'streaming' || status === 'submitted';
   useEffect(() => {
@@ -216,6 +220,7 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
 
   const { enhancingPrompt, promptEnhanced, enhancePrompt, resetEnhancer } = usePromptEnhancer();
   const { parsedMessages, parseMessages } = useMessageParser();
+  console.log('messages', messages, parsedMessages);
 
   const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
 

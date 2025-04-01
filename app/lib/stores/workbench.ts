@@ -24,6 +24,7 @@ import { api } from '@convex/_generated/api';
 import type { Id } from '@convex/_generated/dataModel';
 import { buildSnapshot, compressSnapshot } from '~/lib/snapshot';
 import { sessionIdStore } from './convex';
+import { withResolvers } from '~/utils/promises';
 
 const BACKUP_DEBOUNCE_MS = 1000 * 5;
 
@@ -49,6 +50,7 @@ export class WorkbenchStore {
   #editorStore = new EditorStore(this.#filesStore);
   #terminalStore = new TerminalStore(webcontainer);
   #convexClient: ConvexHttpClient;
+  #toolCalls: Map<string, PromiseWithResolvers<string>> = new Map();
 
   #reloadedMessages = new Set<string>();
 
@@ -197,6 +199,15 @@ export class WorkbenchStore {
 
   prewarmWorkdir(container: WebContainer) {
     this.#filesStore.prewarmWorkdir(container);
+  }
+
+  async waitOnToolCall(toolCallId: string): Promise<string> {
+    let resolvers = this.#toolCalls.get(toolCallId);
+    if (!resolvers) {
+      resolvers = withResolvers<string>();
+      this.#toolCalls.set(toolCallId, resolvers);
+    }
+    return await resolvers.promise;
   }
 
   get currentDocument(): ReadableAtom<EditorDocument | undefined> {
@@ -395,6 +406,7 @@ export class WorkbenchStore {
       closed: false,
       type,
       runner: new ActionRunner(
+        this.#toolCalls,
         webcontainer,
         () => this.boltTerminal,
         (alert) => {

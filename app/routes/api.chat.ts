@@ -7,6 +7,7 @@ import { WORK_DIR } from '~/utils/constants';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { getSystemPrompt } from '~/lib/common/prompts/prompts';
 import { createOpenAI } from '@ai-sdk/openai';
+import { z } from 'zod';
 
 const logger = createScopedLogger('api.chat2');
 
@@ -55,7 +56,6 @@ async function chatAction({ request }: ActionFunctionArgs, env: Env) {
           system: systemPrompt,
           maxTokens: provider.maxTokens,
           messages: userMessages,
-          toolChoice: 'none',
           onFinish: async (result) => {
             const { usage } = result;
             console.log("Finished streaming", {
@@ -87,6 +87,14 @@ async function chatAction({ request }: ActionFunctionArgs, env: Env) {
             } satisfies ProgressAnnotation);
             await new Promise((resolve) => setTimeout(resolve, 0));
           },
+          tools: {
+            sayHi: {
+              description: "Say hello to the user",
+              parameters: z.object({
+                message: z.string().describe("A pleasant greeting to say to the user. BE NICE!"),
+              }),
+            }
+          }
         });
         const logErrors = async () => {
           for await (const part of result.fullStream) {
