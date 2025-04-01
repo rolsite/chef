@@ -245,8 +245,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 <h1 className="text-3xl lg:text-6xl font-black text-white mb-4 animate-fade-in font-display tracking-tight">
                   You can just ship things
                 </h1>
-                <p className="text-md lg:text-2xl mb-8 text-white opacity-80 animate-fade-in animation-delay-200 font-display font-medium">
-                  Create projects with Convex + AI in minutes.
+                <p className="text-md lg:text-2xl mb-8 text-white animate-fade-in animation-delay-200 font-display font-medium">
+                  <span className="opacity-80">Create projects with Convex + AI in minutes.</span>
                 </p>
               </div>
             )}
