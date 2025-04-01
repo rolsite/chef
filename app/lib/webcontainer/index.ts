@@ -1,5 +1,6 @@
 import { WebContainer } from '@webcontainer/api';
 import { WORK_DIR_NAME } from '~/utils/constants';
+import { loadSnapshot } from '../snapshot';
 import { cleanStackTrace } from '~/utils/stacktrace';
 
 interface WebContainerContext {
@@ -60,9 +61,9 @@ if (!import.meta.env.SSR) {
         });
       })
       .then(async (webcontainer) => {
-        webcontainerContext.loaded = true;
-
         const { workbenchStore } = await import('~/lib/stores/workbench');
+        await loadSnapshot(webcontainer, workbenchStore);
+        webcontainerContext.loaded = true;
 
         // Listen for preview errors
         webcontainer.on('preview-message', (message) => {
@@ -81,7 +82,13 @@ if (!import.meta.env.SSR) {
           }
         });
 
+        console.log("Done booting WebContainer!");
+        (globalThis as any).webcontainer = webcontainer;
         return webcontainer;
+      })
+      .catch((error) => {
+        console.error('Error booting WebContainer:', error);
+        throw error;
       });
 
   if (import.meta.hot) {

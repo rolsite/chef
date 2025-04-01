@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { analyzeSnapshotSize, buildSnapshot, compressSnapshot, decompressSnapshot } from '~/lib/admin/snapshot';
+import { analyzeSnapshotSize, buildSnapshot, compressSnapshot, decompressSnapshot } from '~/lib/snapshot';
 import { webcontainer } from '~/lib/webcontainer';
 import { formatSize } from '~/utils/formatSize';
 

@@ -3,9 +3,44 @@ import type {
     DirectoryNode,
     FileNode,
     SymlinkNode,
+    WebContainer,
 } from "@webcontainer/api";
-import { webcontainer } from "../webcontainer";
+import { webcontainer } from "./webcontainer";
 import { formatSize } from "~/utils/formatSize";
+import { EXECUTABLES, WORK_DIR } from "~/utils/constants";
+import type { WorkbenchStore } from "./stores/workbench";
+import { path } from "~/utils/path";
+
+export async function loadSnapshot(webcontainer: WebContainer, workbenchStore: WorkbenchStore) {
+    console.time("loadSnapshot");
+    const resp = await fetch('/snapshot.bin');
+    if (!resp.ok) {
+        const body = await resp.text();
+        throw new Error(`Failed to download snapshot (${resp.statusText}): ${body}`);
+    }
+    const compressed = await resp.arrayBuffer();
+    console.timeLog("loadSnapshot", `Downloaded snapshot (${formatSize(compressed.byteLength)})`);
+
+    const decompressed = await decompressSnapshot(new Uint8Array(compressed));
+    await webcontainer.mount(decompressed);
+    console.timeLog("loadSnapshot", "Mounted snapshot");
+
+    const chmodProc = await webcontainer.spawn("chmod", ["+x", ...EXECUTABLES]);
+    if ((await chmodProc.exit) !== 0) {
+      const output = await chmodProc.output.getReader().read();
+      throw new Error(`Failed to chmod node binaries: ${output.value}`);
+    }
+    console.timeLog("loadSnapshot", "Marked binaries as executable");
+
+    // After loading the snapshot, we need to load the files into the FilesStore since
+    // we won't receive file events for snapshot files.
+    await workbenchStore.prewarmWorkdir(webcontainer);
+    console.timeLog("loadSnapshot", "Pre-warmed workdir");
+
+    console.timeEnd("loadSnapshot");
+
+
+}
 
 export async function buildSnapshot(format: "json"): Promise<FileSystemTree>;
 export async function buildSnapshot(format: "binary"): Promise<Uint8Array>;

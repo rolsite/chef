@@ -156,8 +156,8 @@ importers:
         specifier: ^0.61.9
         version: 0.61.9
       '@webcontainer/api':
-        specifier: ^1.5.3
-        version: 1.5.3
+        specifier: 1.5.1-internal.10
+        version: 1.5.1-internal.10
       '@webcontainer/snapshot':
         specifier: ^0.1.0
         version: 0.1.0
@@ -3010,8 +3010,8 @@ packages:
   '@web3-storage/multipart-parser@1.0.0':
     resolution: {integrity: sha512-BEO6al7BYqcnfX15W2cnGR+Q566ACXAT9UQykORCWW80lmkpWsnEob6zJS1ZVBKsSJC8+7vJkHwlp+lXG1UCdw==}
 
-  '@webcontainer/api@1.5.3':
-    resolution: {integrity: sha512-f6Oq3ohtSC5RYABhpN8aVOVHpcKvJ1fB1jjuvODTBU5u6BcroYEhphnrywdw8RO+2Vy5ekCdKe5D4dCMdMSrzA==}
+  '@webcontainer/api@1.5.1-internal.10':
+    resolution: {integrity: sha512-7VLUirVEr+/3DoyPCHxbVnw+T30OYskQx+hWVHXXLkSk3swq0ifkhVh0E1l+ZFdD8brSdX1xX8Svkw7GOWi7lw==}
 
   '@webcontainer/snapshot@0.1.0':
     resolution: {integrity: sha512-PTIGQ3osUpTbK/dqB8RYbcZGv8IK+DJACx709z5sFbeIlngB3hUFpTEYFYs1SbUvr/AEQqvd0/bhc4ectrPRRw==}
@@ -9498,7 +9498,7 @@ snapshots:
 
   '@web3-storage/multipart-parser@1.0.0': {}
 
-  '@webcontainer/api@1.5.3': {}
+  '@webcontainer/api@1.5.1-internal.10': {}
 
   '@webcontainer/snapshot@0.1.0':
     dependencies:
