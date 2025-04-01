@@ -1,12 +1,15 @@
 import { type ActionFunctionArgs } from '@remix-run/cloudflare';
-import { boltStreamText, type Messages, type StreamingOptions } from '~/lib/.server/llm/stream-text';
+import { type Messages } from '~/lib/.server/llm/stream-text';
 import { createScopedLogger } from '~/utils/logger';
-import { createDataStream, type DataStreamWriter } from 'ai';
+import { convertToCoreMessages, createDataStream, streamText, type DataStreamWriter } from 'ai';
 import type { ContextAnnotation, ProgressAnnotation } from '~/types/context';
 import { getFilePaths, selectContext } from '~/lib/.server/llm/select-context';
 import { createSummary } from '~/lib/.server/llm/create-summary';
 import type { FileMap } from '~/lib/.server/llm/constants';
 import { WORK_DIR } from '~/utils/constants';
+import { anthropic } from '@ai-sdk/anthropic';
+import { getSystemPrompt } from '~/lib/common/prompts/prompts';
+import { createFilesContext } from '~/lib/.server/llm/utils';
 
 const logger = createScopedLogger('api.chat2');
 
@@ -43,8 +46,9 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
 
     const dataStream = createDataStream({
       async execute(dataStream) {
-        let messageSliceId = 0;
+        const filePaths = getFilePaths(files || {});
 
+        let messageSliceId = 0;
         let summary: string | undefined = undefined;
         let filteredFiles: FileMap | undefined = undefined;
         if (messages.length > 3) {
@@ -57,7 +61,6 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
             progress
           );
 
-          const filePaths = getFilePaths(files || {});
           if (filePaths.length > 0) {
             filteredFiles = await determineFilesToRead(
               dataStream,
@@ -79,13 +82,23 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
           message: 'Generating Response',
         } satisfies ProgressAnnotation);
 
-        const options: StreamingOptions = {
-          convexProjectConnected: !!convex?.isConnected,
-          convexProjectToken: convex?.projectToken || null,
+        const systemPrompt = buildSystemPrompt(
+          getFilePaths(files || {}),
+          filteredFiles,
+          summary,
+        );
+        const userMessages = buildUserMessages(
+          messages,
+          files && filteredFiles && summary && messageSliceId,
+        );
+        const result = streamText({
+          model: anthropic("claude-3-5-sonnet-20241022"),
+          system: systemPrompt,
+          maxTokens: 8192,
+          messages: userMessages,
           toolChoice: 'none',
           onFinish: async ({ usage }) => {
             logger.debug('usage', JSON.stringify(usage));
-
             if (usage) {
               progress.cumulativeUsage.completionTokens += usage.completionTokens || 0;
               progress.cumulativeUsage.promptTokens += usage.promptTokens || 0;
@@ -109,30 +122,17 @@ async function chatAction({ context, request }: ActionFunctionArgs) {
             } satisfies ProgressAnnotation);
             await new Promise((resolve) => setTimeout(resolve, 0));
           }
-        };
-
-        const result = await boltStreamText({
-          messages,
-          env: context.cloudflare?.env,
-          options,
-          apiKeys: undefined,
-          files,
-          providerSettings: undefined,
-          promptId,
-          contextFiles: filteredFiles,
-          summary,
-          messageSliceId,
         });
-        (async () => {
+        const logErrors = async () => {
           for await (const part of result.fullStream) {
             if (part.type === 'error') {
               const error: any = part.error;
               logger.error(`${error}`);
-
               return;
             }
           }
-        })();
+        };
+        void logErrors();
         result.mergeIntoDataStream(dataStream);
       },
       onError: (error: any) => `Custom error: ${error.message}`,
@@ -278,4 +278,62 @@ async function determineFilesToRead(
   } satisfies ProgressAnnotation);
 
   return filteredFiles;
+}
+
+function buildSystemPrompt(filePaths: string[], contextFiles: FileMap | undefined, summary: string | undefined) {
+  let systemPrompt = getSystemPrompt(WORK_DIR);
+  if (filePaths && contextFiles) {
+    const codeContext = createFilesContext(contextFiles, true);
+    systemPrompt = `${systemPrompt}
+      Below are all the files present in the project:
+      ---
+      ${filePaths.join('\n')}
+      ---
+
+      Below is the artifact containing the context loaded into context buffer for you to have knowledge of and might need changes to fullfill current user request.
+      CONTEXT BUFFER:
+      ---
+      ${codeContext}
+      ---
+      `;
+  }
+
+  if (summary) {
+    systemPrompt = `${systemPrompt}
+      below is the chat history till now
+CHAT SUMMARY:
+---
+${summary}
+---
+      `;
+  }
+
+  return systemPrompt;
+}
+
+function buildUserMessages(
+  messages: Messages,
+  messageSliceId: number | undefined,
+) {
+  let processedMessages = messages.map((message) => {
+    if (message.role === 'user') {
+      return message;
+    } else if (message.role == 'assistant') {
+      let content = message.content;
+      content = content.replace(/<div class=\\"__boltThought__\\">.*?<\/div>/s, '');
+      content = content.replace(/<think>.*?<\/think>/s, '');
+      return { ...message, content };
+    }
+    return message;
+  });
+  if (messageSliceId) {
+    processedMessages = processedMessages.slice(messageSliceId);
+  } else {
+    const lastMessage = processedMessages.pop();
+    if (lastMessage) {
+      processedMessages = [lastMessage];
+    }
+  }
+  return convertToCoreMessages(processedMessages);
+
 }
