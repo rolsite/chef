@@ -32,7 +32,7 @@ export type FailedActionState = BoltAction &
 
 export type ActionState = BaseActionState | FailedActionState;
 
-type BaseActionUpdate = Partial<Pick<BaseActionState, 'status' | 'abort' | 'executed'>>;
+type BaseActionUpdate = Partial<Pick<BaseActionState, 'status' | 'abort' | 'executed' | 'content'>>;
 
 export type ActionStateUpdate =
   | BaseActionUpdate
@@ -97,7 +97,9 @@ export class ActionRunner {
     const action = actions[actionId];
 
     if (action) {
-      // action already added
+      if (action.content !== data.action.content) {
+        this.updateAction(actionId, { ...action, content: data.action.content });
+      }
       return;
     }
 

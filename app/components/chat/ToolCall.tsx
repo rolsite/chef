@@ -8,7 +8,6 @@ import { workbenchStore } from '~/lib/stores/workbench';
 import { cubicEasingFn } from '~/utils/easings';
 import { editorToolParameters } from '~/lib/runtime/editorTool';
 import { bashToolParameters } from '~/lib/runtime/bashTool';
-import { actionVariants } from './Artifact';
 import { classNames } from '~/utils/classNames';
 import { path } from '~/utils/path';
 import { WORK_DIR } from '~/utils/constants';
@@ -96,7 +95,7 @@ export const ToolCall = memo((props: { messageId: string; toolCallId: string }) 
                 transition={{ duration: 0.15 }}
               >
                 <ul className="list-none space-y-2.5">
-                  <ToolUseContents action={action} invocation={parsed} />
+                  <ToolUseContents invocation={parsed} />
                 </ul>
               </motion.div>
             </div>
@@ -107,9 +106,10 @@ export const ToolCall = memo((props: { messageId: string; toolCallId: string }) 
   );
 });
 
-export const ToolUseContents = memo(({ action, invocation }: { action: ActionState, invocation: ToolInvocation }) => {
+export const ToolUseContents = memo(({ invocation }: { invocation: ToolInvocation }) => {
+  console.log(invocation);
   // TODO: Make this pretty!
-  return action.content;
+  return JSON.stringify(invocation);
 });
 
 function statusIcon(status: ActionState['status']) {

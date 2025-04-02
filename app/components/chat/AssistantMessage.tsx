@@ -10,7 +10,6 @@ interface AssistantMessageProps {
 }
 
 export const AssistantMessage = memo(({ messageId, content, parts }: AssistantMessageProps) => {
-  console.log('parts', parts);
   if (!parts || !parts.some((part) => part.type === 'tool-invocation')) {
     return (
       <div className="overflow-hidden w-full">

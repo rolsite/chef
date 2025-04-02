@@ -60,7 +60,6 @@ function processMessage(message: Message): string {
             messageId: message.id,
             title: 'Agentic Coding',
           })
-          console.log('createdArtifact', artifactId, message);
           createdArtifact = true;
         }
         const data = {
