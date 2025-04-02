@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Markdown } from './Markdown';
 import type { Message, ToolInvocation } from 'ai';
-import { ToolCallBatch } from './ToolCall';
+import { ToolCall } from './ToolCall';
 
 interface AssistantMessageProps {
   messageId: string;
@@ -19,25 +19,13 @@ export const AssistantMessage = memo(({ messageId, content, parts }: AssistantMe
     );
   }
   const children: React.ReactNode[] = [];
-  let toolBatch: ToolInvocation[] = [];
   for (const part of parts) {
     if (part.type === 'tool-invocation') {
-      toolBatch.push(part.toolInvocation);
-      continue;
+      children.push(<ToolCall key={children.length} messageId={messageId} toolCallId={part.toolInvocation.toolCallId} />);
     }
-    if (part.type !== 'text') {
-      continue;
+    if (part.type === "text") {
+      children.push(<Markdown key={children.length} html>{part.text}</Markdown>);
     }
-    if (toolBatch.length > 0) {
-      const toolCallIds = toolBatch.map((tool) => tool.toolCallId).join(',');
-      children.push(<ToolCallBatch key={children.length} messageId={messageId} toolCallIds={toolCallIds} />);
-      toolBatch = [];
-    }
-    children.push(<Markdown key={children.length} html>{part.text}</Markdown>);
-  }
-  if (toolBatch.length > 0) {
-    const toolCallIds = toolBatch.map((tool) => tool.toolCallId).join(',');
-    children.push(<ToolCallBatch key={children.length} messageId={messageId} toolCallIds={toolCallIds} />);
   }
   return (
     <div className="overflow-hidden w-full">
