@@ -32,12 +32,6 @@ export const ToolCall = memo((props: { messageId: string; toolCallId: string }) 
     setShowAction(!showAction);
   };
 
-  useEffect(() => {
-    if (!showAction && !userToggledAction.current) {
-      setShowAction(true);
-    }
-  }, []);
-
   const parsed: ToolInvocation = useMemo(() => JSON.parse(action.content), [action.content]);
   const title = toolTitle(parsed, action.status);
   const icon = statusIcon(action.status, parsed);

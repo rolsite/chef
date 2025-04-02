@@ -199,6 +199,10 @@ export class WorkbenchStore {
     return this.#filesStore.files;
   }
 
+  get userWrites() {
+    return this.#filesStore.userWrites;
+  }
+
   prewarmWorkdir(container: WebContainer) {
     this.#filesStore.prewarmWorkdir(container);
   }
