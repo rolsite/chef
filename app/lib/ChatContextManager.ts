@@ -20,7 +20,6 @@ type UIMessagePart = UIMessage['parts'][number];
 
 type ParsedAssistantMessage = {
   filesTouched: Map<string, number>;
-  content: string;
 };
 
 export class ChatContextManager {
@@ -170,6 +169,7 @@ export class ChatContextManager {
         }
         const remainingMessage = {
           ...message,
+          content: StreamingMessageParser.stripArtifacts(message.content),
           parts: filteredParts,
         };
         fullMessages.push(remainingMessage);
@@ -234,11 +234,8 @@ export class ChatContextManager {
         filesTouched.set(args.path, j);
       }
     }
-
-    const content = StreamingMessageParser.stripArtifacts(message.content);
     const result = {
       filesTouched,
-      content,
     };
     this.assistantMessageCache.set(message, result);
     return result;

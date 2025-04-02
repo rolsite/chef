@@ -9,30 +9,25 @@ const logger = createScopedLogger('useMessageParser');
 const messageParser = new StreamingMessageParser({
   callbacks: {
     onArtifactOpen: (data) => {
-      logger.debug('onArtifactOpen', data);
       workbenchStore.showWorkbench.set(true);
       workbenchStore.addArtifact(data);
     },
     onArtifactClose: (data) => {
-      logger.debug('onArtifactClose', data);
       workbenchStore.updateArtifact(data, { closed: true });
     },
     onActionOpen: (data) => {
-      logger.debug('onActionOpen', data.action);
       // we only add shell actions when when the close tag got parsed because only then we have the content
       if (data.action.type === 'file') {
         workbenchStore.addAction(data);
       }
     },
     onActionClose: (data) => {
-      logger.debug('onActionClose', data.action);
       if (data.action.type !== 'file') {
         workbenchStore.addAction(data);
       }
       workbenchStore.runAction(data);
     },
     onActionStream: (data) => {
-      logger.debug('onActionStream', data.action);
       workbenchStore.runAction(data, true);
     },
   },

@@ -22,20 +22,20 @@ export const ToolCall = memo((props: { messageId: string; toolCallId: string }) 
 
   const actions = useStore(artifact.runner.actions);
   const pair = Object.entries(actions).find(([actionId]) => actionId === toolCallId);
-  if (!pair) {
-    throw new Error(`ToolCall: action ${toolCallId} not found`);
-  }
-  const action = pair[1];
+  const action = pair && pair[1];
 
   const toggleAction = () => {
     userToggledAction.current = true;
     setShowAction(!showAction);
   };
 
-  const parsed: ToolInvocation = useMemo(() => JSON.parse(action.content), [action.content]);
-  const title = toolTitle(parsed, action.status);
-  const icon = statusIcon(action.status, parsed);
+  const parsed: ToolInvocation = useMemo(() => JSON.parse(action?.content ?? '{}'), [action?.content]);
+  const title = action && toolTitle(parsed, action.status);
+  const icon = action && statusIcon(action.status, parsed);
 
+  if (!action) {
+    return null;
+  }
   return (
     <div className="artifact border border-bolt-elements-borderColor flex flex-col overflow-hidden rounded-lg w-full transition-border duration-150">
       <div className="flex">

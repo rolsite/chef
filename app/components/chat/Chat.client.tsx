@@ -161,9 +161,10 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
     initialInput: Cookies.get(PROMPT_COOKIE_KEY) || '',
     api: '/api/chat',
     sendExtraMessageFields: true,
-    experimental_prepareRequestBody: ({ messages }) => {
+    experimental_prepareRequestBody: ({ messages, requestBody, requestData }) => {
       return {
         messages: chatContextManager.current.prepareContext(messages),
+        firstUserMessage: messages.filter((message) => message.role == 'user').length == 1,
       };
     },
     maxSteps: 64,
