@@ -25,7 +25,7 @@ export const editorToolParameters = z.object({
 export async function editor(
   container: WebContainer,
   args: z.infer<typeof editorToolParameters>,
-  editBackup: Record<string, string>
+  backupStack: BackupStack,
 ) {
   const relPath = workDirRelative(args.path);
   switch (args.command) {
@@ -58,7 +58,7 @@ export async function editor(
       } else {
         newContent = args.new_str ?? "";
       }
-      editBackup[relPath] = oldContent;
+      backupStack.pushBackup(args.path, oldContent);
       await container.fs.writeFile(relPath, newContent);
       return `Successfully replaced text at exactly one location.`;
     }
@@ -88,12 +88,12 @@ export async function editor(
       const newContent = lines.join("\n");
       await container.fs.writeFile(relPath, newContent);
 
-      editBackup[relPath] = oldContent;
+      backupStack.pushBackup(args.path, oldContent);
       return `Successfully inserted text at line ${args.insert_line}.`;
     }
     case "undo_edit": {
       const relPath = workDirRelative(args.path);
-      const oldContent = editBackup[relPath];
+      const oldContent = backupStack.popBackup(args.path);
       if (!oldContent) {
         throw new Error(`No backup found for ${args.path}`);
       }
@@ -103,5 +103,26 @@ export async function editor(
     default: {
       throw new Error(`Unknown command: ${JSON.stringify(args)}`);
     }
+  }
+}
+
+export class BackupStack {
+  backups: Record<string, string[]> = {};
+
+  pushBackup(absPath: string, content: string) {
+    let existing = this.backups[absPath];
+    if (!existing) {
+      existing = [];
+      this.backups[absPath] = existing;
+    }
+    existing.push(content);
+  }
+
+  popBackup(absPath: string) {
+    const existing = this.backups[absPath];
+    if (!existing) {
+      return null;
+    }
+    return existing.pop();
   }
 }

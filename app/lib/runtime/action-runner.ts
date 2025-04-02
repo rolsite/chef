@@ -10,7 +10,7 @@ import { convexStore, waitForConvexProjectConnection } from '~/lib/stores/convex
 import { initializeConvexAuth } from '~/lib/convexAuth';
 import type { ToolInvocation } from 'ai';
 import { withResolvers } from '~/utils/promises';
-import { editor, editorToolParameters } from './editorTool';
+import { BackupStack, editor, editorToolParameters } from './editorTool';
 import { bashToolParameters } from './bashTool';
 
 const logger = createScopedLogger('ActionRunner');
@@ -81,6 +81,7 @@ export class ActionRunner {
 
   constructor(
     private toolCalls: Map<string, PromiseWithResolvers<string>>,
+    private backupStack: BackupStack,
     webcontainerPromise: Promise<WebContainer>,
     getShellTerminal: () => BoltShell,
     onAlert?: (alert: ActionAlert) => void,
@@ -122,6 +123,7 @@ export class ActionRunner {
   }
 
   async runAction(data: ActionCallbackData, isStreaming: boolean = false) {
+    console.log('runAction', data);
     const { actionId } = data;
     const action = this.actions.get()[actionId];
 
@@ -460,7 +462,7 @@ export class ActionRunner {
         case "str_replace_editor": {
           const args = editorToolParameters.parse(parsed.args);
           const container = await this.#webcontainer;
-          result = await editor(container, args, {});
+          result = await editor(container, args, this.backupStack);
           break;
         }
         case "bash": {
