@@ -33,6 +33,7 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
       totalTokens: 0,
     },
   };
+  const enableAgent = (env.FLEX_ENABLE_TOOL_AGENT || process.env.FLEX_ENABLE_TOOL_AGENT) === 'true';
   const dataStream = createDataStream({
     async execute(dataStream) {
       let systemPrompt: string;
@@ -44,7 +45,7 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
         order: progress.counter++,
         message: 'Analyzing Messages',
       } satisfies ProgressAnnotation);
-      if (firstUserMessage) {
+      if (firstUserMessage || !enableAgent) {
         console.log("Using XML-based coding agent");
         systemPrompt = getSystemPrompt();
         tools = {};
@@ -57,7 +58,7 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
         }
       }
       const anthropic = createAnthropic({
-        apiKey: env.ANTHROPIC_API_KEY,
+        apiKey: env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY,
         fetch: async (url, options) => {
           return fetch(url, anthropicInjectCacheControl(systemPrompt, options));
         },
