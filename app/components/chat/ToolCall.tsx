@@ -23,7 +23,6 @@ export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => 
   const [showAction, setShowAction] = useState(false);
 
   const artifacts = useStore(workbenchStore.artifacts);
-  console.log('artifacts', artifacts, partId);
   const artifact = artifacts[partId];
 
   const actions = useStore(artifact.runner.actions);
@@ -328,7 +327,6 @@ const DeployTerminal = memo(
 function statusIcon(status: ActionState['status'], invocation: ConvexToolInvocation) {
   let inner: React.ReactNode;
   let color: string;
-  console.log('invocation', invocation);
   if (
     invocation.state === 'result' &&
     typeof invocation.result === 'string' &&
