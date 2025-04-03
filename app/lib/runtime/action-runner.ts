@@ -491,14 +491,28 @@ export class ActionRunner {
           }
           break;
         }
-        case 'convexDeploy': {
-          result = await this.#runConvexDeployAction(action);
+        case 'deploy': {
+          result = await this._runShellCommand(`npx convex dev --once`, () => {
+            logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
+            action.abort();
+          });
+          // Check if the dev server (vite) is already running on port 5173
+          // const devServerRunning = await this._runShellCommand(`netstat -an | grep 5173`, () => {
+          //   logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
+          //   action.abort();
+          // });
+          // if (!devServerRunning.includes('LISTEN')) {
+          //   // Start the dev server
+          //   result += await this._runShellCommand(`npx vite`, () => {
+          //     logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
+          //     action.abort();
+          //   });
+          // } else {
+          //   logger.info('Vite dev server is already running');
+          // }
           break;
         }
-        case 'startDevServerWithConvex': {
-          result = await this.#runStartDevServerWithConvexAction(action);
-          break;
-        }
+
         default: {
           throw new Error(`Unknown tool: ${parsed.toolName}`);
         }
@@ -525,34 +539,6 @@ export class ActionRunner {
       throw new Error(`Process exited with code ${resp?.exitCode}: ${cleanConvexOutput(command, resp?.output || '')}`);
     }
     return resp?.output || '';
-  }
-  async #runConvexDeployAction(action: ActionState) {
-    return this._runShellCommand(`npx convex dev --once`, () => {
-      logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
-      action.abort();
-    });
-  }
-
-  async #runStartDevServerWithConvexAction(action: ActionState) {
-    // Deploy convex functions first
-    await this._runShellCommand(`npx convex dev --once`, () => {
-      logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
-      action.abort();
-    });
-    // Check if the dev server (vite) is already running on port 5173
-    const devServerRunning = await this._runShellCommand(`netstat -an | grep 5173`, () => {
-      logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
-      action.abort();
-    });
-    if (devServerRunning.includes('LISTEN')) {
-      return 'Dev server already running';
-    }
-    // Start the dev server
-    await this._runShellCommand(`npx vite`, () => {
-      logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
-      action.abort();
-    });
-    return 'Dev server started';
   }
 }
 

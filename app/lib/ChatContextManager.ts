@@ -351,14 +351,11 @@ function abbreviateToolInvocation(toolInvocation: ToolInvocation): string {
       toolCall = `ran the command ${args.command}`;
       break;
     }
-    case 'convexDeploy': {
-      toolCall = `deployed the Convex backend`;
+    case 'deploy': {
+      toolCall = `deployed the app`;
       break;
     }
-    case 'startDevServer': {
-      toolCall = `started the development server`;
-      break;
-    }
+
     default:
       throw new Error(`Unknown tool name: ${toolInvocation.toolName}`);
   }
