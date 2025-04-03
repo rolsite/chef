@@ -1,6 +1,6 @@
 import type { WebContainer } from '@webcontainer/api';
 import { path as nodePath } from '~/utils/path';
-import { atom, map, type MapStore } from 'nanostores';
+import { atom, map, type MapStore, type WritableAtom } from 'nanostores';
 import type { ActionAlert, BoltAction, FileHistory } from '~/types/actions';
 import { createScopedLogger } from '~/utils/logger';
 import { unreachable } from '~/utils/unreachable';
@@ -77,6 +77,7 @@ export class ActionRunner {
   actions: ActionsMap = map({});
   onAlert?: (alert: ActionAlert) => void;
   buildOutput?: { path: string; exitCode: number; output: string };
+  terminalOutput: WritableAtom<string> = atom('');
 
   constructor(
     private toolCalls: Map<string, PromiseWithResolvers<string>>,
@@ -362,12 +363,20 @@ export class ActionRunner {
           action.abortSignal.addEventListener('abort', () => {
             convexProc.kill();
           });
-          const pieces: string[] = [];
+
+          let lastSaved = 0;
+          let output = '';
           const { resolve, promise } = withResolvers<number>();
+          const terminalOutput = this.terminalOutput;
           convexProc.output.pipeTo(
             new WritableStream({
               write(data) {
-                pieces.push(data.toString());
+                output += data.toString();
+                const now = Date.now();
+                if (now - lastSaved > 50) {
+                  terminalOutput.set(output);
+                  lastSaved = now;
+                }
                 if (data.startsWith("Error: ")) {
                   resolve(-1);
                   return;
@@ -375,12 +384,13 @@ export class ActionRunner {
               },
             })
           );
+          this.terminalOutput.set(output);
           const convexExitCode = await Promise.race([promise, convexProc.exit]);
-          const output = cleanConvexOutput(pieces.join(''));
+          const cleanedOutput = cleanConvexOutput(output);
           if (convexExitCode !== 0) {
-            throw new Error(`Convex failed with exit code ${convexExitCode}: ${output}`);
+            throw new Error(`Convex failed with exit code ${convexExitCode}: ${cleanedOutput}`);
           }
-          result = output;
+          result = cleanedOutput;
 
           await shell.startCommand(this.runnerId.get(), 'npx vite --open', () => {
             logger.debug(`[${action.type}]:Aborting Action\n\n`, action);

@@ -1,16 +1,20 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { useStore } from '@nanostores/react';
+import { Terminal as XTerm } from '@xterm/xterm';
 import { AnimatePresence } from 'framer-motion';
 import { motion } from 'framer-motion';
-import { memo, useMemo, useRef, useState } from 'react';
+import { forwardRef, memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { ActionState } from '~/lib/runtime/action-runner';
-import { workbenchStore } from '~/lib/stores/workbench';
+import { workbenchStore, type ArtifactState } from '~/lib/stores/workbench';
 import { cubicEasingFn } from '~/utils/easings';
 import { editorToolParameters } from '~/lib/runtime/editorTool';
 import { classNames } from '~/utils/classNames';
 import { path } from '~/utils/path';
 import { WORK_DIR } from '~/utils/constants';
 import type { ConvexToolInvocation } from '~/lib/common/types';
+import { ShellCodeBlock } from './Artifact';
+import { getTerminalTheme } from '../workbench/terminal/theme';
+import { FitAddon } from '@xterm/addon-fit';
 
 export const ToolCall = memo((props: { messageId: string; toolCallId: string }) => {
   const { messageId, toolCallId } = props;
@@ -62,7 +66,7 @@ export const ToolCall = memo((props: { messageId: string; toolCallId: string }) 
               exit={{ width: 0 }}
               transition={{ duration: 0.15, ease: cubicEasingFn }}
               className="bg-bolt-elements-artifacts-background hover:bg-bolt-elements-artifacts-backgroundHover"
-              disabled={parsed.state === 'partial-call' || parsed.state === 'call'}
+              disabled={parsed.state === 'partial-call'}
               onClick={toggleAction}
             >
               <div className="p-4">
@@ -90,7 +94,7 @@ export const ToolCall = memo((props: { messageId: string; toolCallId: string }) 
                 transition={{ duration: 0.15 }}
               >
                 <ul className="list-none space-y-2.5">
-                  <ToolUseContents invocation={parsed} />
+                  <ToolUseContents artifact={artifact} invocation={parsed} />
                 </ul>
               </motion.div>
             </div>
@@ -101,13 +105,13 @@ export const ToolCall = memo((props: { messageId: string; toolCallId: string }) 
   );
 });
 
-export const ToolUseContents = memo(({ invocation }: { invocation: ConvexToolInvocation }) => {
-  if (invocation.state !== 'result') {
-    return null;
-  }
-
+export const ToolUseContents = memo(({ artifact, invocation }: { artifact: ArtifactState; invocation: ConvexToolInvocation }) => {
   switch (invocation.toolName) {
     case 'str_replace_editor': {
+      if (invocation.state !== 'result') {
+        return null;
+      }
+
       const args = editorToolParameters.parse(invocation.args) as
         | { command: 'create'; path: string; file_text: string }
         | { command: 'view'; path: string }
@@ -236,11 +240,7 @@ export const ToolUseContents = memo(({ invocation }: { invocation: ConvexToolInv
       }
     }
     case 'deploy': {
-      return (
-        <div className="font-mono text-sm bg-bolt-elements-terminals-background text-bolt-elements-textPrimary p-4 rounded-lg border border-bolt-elements-borderColor overflow-x-auto whitespace-pre">
-          {invocation.result}
-        </div>
-      );
+      return <DeployTool artifact={artifact} invocation={invocation} />
     }
     default: {
       // Fallback for other tool types
@@ -248,6 +248,80 @@ export const ToolUseContents = memo(({ invocation }: { invocation: ConvexToolInv
     }
   }
 });
+
+function DeployTool({ artifact, invocation }: { artifact: ArtifactState; invocation: ConvexToolInvocation }) {
+  if (invocation.toolName !== "deploy") {
+    throw new Error("Terminal can only be used for the deploy tool");
+  }
+
+  if (invocation.state === "call") {
+    return (
+      <div className="space-y-2">
+        <div className="font-mono text-sm bg-bolt-elements-background-depth-1 rounded-lg border border-bolt-elements-borderColor overflow-hidden text-bolt-elements-textPrimary">
+          <DeployTerminal artifact={artifact} invocation={invocation} />
+        </div>
+      </div>
+    )
+  }
+  if (invocation.state === "result") {
+    return (
+      <div className="space-y-2">
+        <div className="font-mono text-sm bg-bolt-elements-background-depth-1 rounded-lg border border-bolt-elements-borderColor overflow-hidden text-bolt-elements-textPrimary">
+          <DeployTerminal artifact={artifact} invocation={invocation} />
+        </div>
+      </div>
+    )
+  }
+}
+
+const DeployTerminal = memo(
+  forwardRef(
+    ({ artifact, invocation }: { artifact: ArtifactState; invocation: ConvexToolInvocation }, ref) => {
+      let terminalOutput = useStore(artifact.runner.terminalOutput);
+      if (!terminalOutput && invocation.state === "result" && invocation.result) {
+        terminalOutput = invocation.result;
+      }
+      const terminalElementRef = useRef<HTMLDivElement>(null);
+      const terminalRef = useRef<XTerm>();
+      useEffect(() => {
+        const element = terminalElementRef.current!;
+        const fitAddon = new FitAddon();
+        const terminal = new XTerm({
+          cursorBlink: true,
+          convertEol: true,
+          disableStdin: true,
+          theme: getTerminalTheme({ cursor: '#00000000' }),
+          fontSize: 12,
+          fontFamily: 'Menlo, courier-new, courier, monospace',
+        });
+        terminal.loadAddon(fitAddon);
+
+        terminalRef.current = terminal;
+        terminal.open(element);
+
+        const resizeObserver = new ResizeObserver(() => {
+          fitAddon.fit();
+        });
+        resizeObserver.observe(element);
+
+        return () => {
+          resizeObserver.disconnect();
+          terminal.dispose();
+        };
+      }, []);
+
+      const written = useRef(0);
+      useEffect(() => {
+        if (terminalRef.current && terminalOutput.length > written.current) {
+          terminalRef.current.write(terminalOutput.slice(written.current));
+          written.current = terminalOutput.length;
+        }
+      }, [terminalOutput]);
+
+      return <div className="h-40" ref={terminalElementRef} />;
+    }
+  )
+)
 
 function statusIcon(status: ActionState['status'], invocation: ConvexToolInvocation) {
   let inner: React.ReactNode;
@@ -355,8 +429,24 @@ function toolTitle(invocation: ConvexToolInvocation): React.ReactNode {
         }
       }
     }
+    case "deploy": {
+      let msg: string;
+      if (invocation.state === "partial-call" || invocation.state === "call") {
+        msg = "Deploying to Convex...";
+      } else if (invocation.result?.startsWith("Error:")) {
+        msg = "Failed to deploy to Convex";
+      } else {
+        msg = "Deployed to Convex";
+      }
+      return (
+        <div className="flex items-center gap-2">
+          <img className="w-4 h-4 mr-1" height="16" width="16" src="/icons/Convex.svg" alt="Convex" />
+          <span>{msg}</span>
+        </div>
+      )
+    }
     default: {
-      return invocation.toolName;
+      return (invocation as any).toolName;
     }
   }
 }
