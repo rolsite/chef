@@ -145,6 +145,9 @@ export class BoltShell {
   async newBoltShellProcess(webcontainer: WebContainer, terminal: ITerminal) {
     const args: string[] = [];
 
+    // Wait for setup to fully complete before allowing shells to spawn.
+    await waitForContainerBootState(ContainerBootState.READY);
+
     // we spawn a JSH process with a fallback cols and rows in case the process is not attached yet to a visible terminal
     const process = await webcontainer.spawn('/bin/jsh', ['--osc', ...args], {
       terminal: {
