@@ -287,6 +287,7 @@ export class WorkbenchStore {
   get boltTerminal() {
     return this.#terminalStore.boltTerminal;
   }
+
   get alert() {
     return this.actionAlert;
   }
