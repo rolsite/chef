@@ -13,6 +13,7 @@ import type { ProgressAnnotation } from '~/types/context';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { constantPrompt, roleSystemPrompt } from '~/lib/common/prompts/system';
 import { deployTool } from '~/lib/runtime/deployTool';
+import { npmInstallTool } from '~/lib/runtime/npmInstallTool';
 
 export type AITextDataStream = ReturnType<typeof createDataStream>;
 
@@ -27,8 +28,6 @@ export type RequestProgress = {
   counter: number;
   cumulativeUsage: { completionTokens: number; promptTokens: number; totalTokens: number };
 };
-
-const genericAnthropic = createAnthropic({});
 
 export async function convexAgent(env: Env, firstUserMessage: boolean, messages: Messages): Promise<AITextDataStream> {
   const progress: RequestProgress = {
@@ -51,7 +50,8 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
       const systemPrompt = constantPrompt;
       const tools = {
         deploy: deployTool,
-      }
+        npmInstall: npmInstallTool,
+      };
       const anthropic = createAnthropic({
         apiKey: getEnv(env, 'ANTHROPIC_API_KEY'),
         fetch: async (url, options) => {

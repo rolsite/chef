@@ -8,6 +8,7 @@ import { StreamingMessageParser } from './runtime/message-parser';
 import { path } from '~/utils/path';
 import { editorToolParameters } from './runtime/editorTool';
 import { bashToolParameters } from './runtime/bashTool';
+import { npmInstallToolParameters } from './runtime/npmInstallTool';
 // import { bashToolParameters, editorToolParameters } from "./tools";
 
 // It's wasteful to actually tokenize the content, so we'll just use character
@@ -354,6 +355,11 @@ function abbreviateToolInvocation(toolInvocation: ToolInvocation): string {
     }
     case 'deploy': {
       toolCall = `deployed the app`;
+      break;
+    }
+    case 'npmInstall': {
+      const args = npmInstallToolParameters.parse(toolInvocation.args);
+      toolCall = `installed the dependencies ${args.packages.join(', ')}`;
       break;
     }
 
