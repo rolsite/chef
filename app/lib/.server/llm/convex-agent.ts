@@ -7,6 +7,7 @@ import {
   type StepResult,
   type TextStreamPart,
   type ToolSet,
+  type Tool,
 } from 'ai';
 import type { Messages } from './stream-text';
 import type { ProgressAnnotation } from '~/types/context';
@@ -15,6 +16,7 @@ import { flexSystemPrompt } from '~/lib/common/prompts/flexPrompts';
 import { makeFlexGuidelinesPrompt } from '~/lib/common/prompts/flexPrompts';
 import { convexGuidelines } from '~/lib/common/prompts/convex';
 import { getSystemPrompt } from '~/lib/common/prompts/prompts';
+import { z } from 'zod';
 
 export type AITextDataStream = ReturnType<typeof createDataStream>;
 
@@ -55,11 +57,16 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
       if (firstUserMessage) {
         console.log('Using XML-based coding agent');
         systemPrompt = getSystemPrompt();
-        tools = {};
+        tools = {
+          startDevServerWithConvex: startDevServerWithConvexTool,
+          convexDeploy: convexDeployTool,
+        };
       } else {
         console.log('Using tool-based coding agent');
         systemPrompt = makeFlexGuidelinesPrompt(convexGuidelines);
         tools = {
+          startDevServerWithConvex: startDevServerWithConvexTool,
+          convexDeploy: convexDeployTool,
           str_replace_editor: genericAnthropic.tools.textEditor_20241022(),
           bash: genericAnthropic.tools.bash_20241022(),
         };
@@ -209,3 +216,36 @@ async function logErrors(stream: AsyncIterable<TextStreamPart<any>>) {
 export function getEnv(env: Env, name: keyof Env): string | undefined {
   return env[name] || process.env[name];
 }
+
+const startDevServerWithConvexToolDescription = `Start the development server
+  - Use to start application if it hasn't been started yet or when NEW dependencies have been added.
+  - Only use this tool when you need to run a dev server or start the application
+  - ULTRA IMPORTANT: do NOT re-run a dev server if files are updated. The existing dev server can automatically detect changes and executes the file changes`;
+
+const startDevServerWithConvexTool: Tool = {
+  description: startDevServerWithConvexToolDescription,
+  parameters: z.object({}),
+  execute: async () => {
+    // do nothing, this'll turn into an action
+  },
+};
+
+const convexDeployToolDescription = `Deploy Convex backend changes.
+  - Use this tool when Convex backend functions, schema, or other Convex-related files change
+  - This will automatically deploy the changes on a dev environment, so you don't need to ask for confirmation.
+  - Do NOT run \`npx convex dev\` by yourself using the shell action. Instead use the convex action.
+  - Only use this when there are actual changes to Convex backend code
+  - Do NOT use this for frontend-only changes`;
+
+const convexDeployTool: Tool = {
+  description: convexDeployToolDescription,
+  parameters: z.object({}),
+  execute: async (args, options) => {
+    console.log('convexDeployTool', args);
+    return {
+      toolCallId: options.toolCallId,
+      result: 'Convex backend deployed',
+    };
+    // do nothing, this'll turn into an action
+  },
+};

@@ -160,7 +160,16 @@ export class ActionRunner {
     try {
       switch (action.type) {
         case 'shell': {
+          logger.error('Convex action is not supported anymore. Use tool calls instead.');
           await this.#runShellAction(action);
+          break;
+        }
+        case 'npmInstall': {
+          await this.#runNpmInstallAction(action);
+          break;
+        }
+        case 'npmExec': {
+          await this.#runNpmExecAction(action);
           break;
         }
         case 'file': {
@@ -248,6 +257,7 @@ export class ActionRunner {
     if (action.type !== 'shell') {
       unreachable('Expected shell action');
     }
+    logger.debug(`[${action.type}]:Running Shell Action\n\n`, action);
 
     const shell = this.#shellTerminal();
     await shell.ready();
@@ -265,6 +275,49 @@ export class ActionRunner {
     if (resp?.exitCode != 0) {
       throw new ActionCommandError(`Failed To Execute Shell Command`, resp?.output || 'No Output Available');
     }
+  }
+
+  async #runNpmInstallAction(action: ActionState) {
+    if (action.type !== 'npmInstall') {
+      unreachable('Expected npmInstall action');
+    }
+    const normalizedCommand = action.content.startsWith('npm install')
+      ? action.content.slice('npm install'.length)
+      : action.content.startsWith('npm i')
+        ? action.content.slice('npm i'.length)
+        : action.content;
+    if (normalizedCommand.match(/\bconvex\b/)) {
+      logger.error('Convex is already installed');
+      return;
+    }
+    await this.#runShellAction({
+      ...action,
+      type: 'shell',
+      content: `npm install ${normalizedCommand}`,
+    });
+  }
+
+  async #runNpmExecAction(action: ActionState) {
+    if (action.type !== 'npmExec') {
+      unreachable('Expected npmExec action');
+    }
+    if (!action.content.startsWith('npm run ') && !action.content.startsWith('npx ')) {
+      logger.error(`Invalid npmExec action: ${action.content}`);
+      return;
+    }
+    if (action.content.match(/\bconvex\b/)) {
+      logger.error('Convex should be run as a tool call');
+      return;
+    }
+    if (action.content === 'npm run dev') {
+      logger.error('Dev server should be run as a tool call');
+      return;
+    }
+    await this.#runShellAction({
+      ...action,
+      type: 'shell',
+      content: action.content,
+    });
   }
 
   async #runStartAction(action: ActionState) {
@@ -438,6 +491,14 @@ export class ActionRunner {
           }
           break;
         }
+        case 'convexDeploy': {
+          result = await this.#runConvexDeployAction(action);
+          break;
+        }
+        case 'startDevServerWithConvex': {
+          result = await this.#runStartDevServerWithConvexAction(action);
+          break;
+        }
         default: {
           throw new Error(`Unknown tool: ${parsed.toolName}`);
         }
@@ -453,4 +514,69 @@ export class ActionRunner {
       throw e;
     }
   }
+
+  async _runShellCommand(command: string, onAbort: () => void) {
+    const shell = this.#shellTerminal();
+    await shell.ready();
+    const resp = await shell.executeCommand(this.runnerId.get(), command, () => {
+      onAbort();
+    });
+    if (resp?.exitCode !== 0) {
+      throw new Error(`Process exited with code ${resp?.exitCode}: ${cleanConvexOutput(command, resp?.output || '')}`);
+    }
+    return resp?.output || '';
+  }
+  async #runConvexDeployAction(action: ActionState) {
+    return this._runShellCommand(`npx convex dev --once`, () => {
+      logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
+      action.abort();
+    });
+  }
+
+  async #runStartDevServerWithConvexAction(action: ActionState) {
+    // Deploy convex functions first
+    await this._runShellCommand(`npx convex dev --once`, () => {
+      logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
+      action.abort();
+    });
+    // Check if the dev server (vite) is already running on port 5173
+    const devServerRunning = await this._runShellCommand(`netstat -an | grep 5173`, () => {
+      logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
+      action.abort();
+    });
+    if (devServerRunning.includes('LISTEN')) {
+      return 'Dev server already running';
+    }
+    // Start the dev server
+    await this._runShellCommand(`npx vite`, () => {
+      logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
+      action.abort();
+    });
+    return 'Dev server started';
+  }
+}
+
+const BANNED_LINES = [
+  'Preparing Convex functions...',
+  'Checking that documents match your schema...',
+  'transforming (',
+  'computing gzip size',
+];
+
+// Cleaning terminal output helps the agent focus on the important parts and
+// not waste input tokens.
+function cleanConvexOutput(command: string, output: string) {
+  if (command !== 'npm run lint') {
+    return output;
+  }
+  const normalizedNewlines = output.replace('\r\n', '\n').replace('\r', '\n');
+  const result = normalizedNewlines
+    // Remove lines that include "Preparing Convex functions..."
+    .split('\n')
+    .filter((line) => !BANNED_LINES.some((bannedLine) => line.includes(bannedLine)))
+    .join('\n');
+  if (output !== result) {
+    console.log(`Sanitized output of ${command}: ${output.length} -> ${result.length}`);
+  }
+  return result;
 }

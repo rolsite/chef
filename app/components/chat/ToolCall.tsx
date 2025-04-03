@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import { useStore } from '@nanostores/react';
-import type { ToolInvocation } from 'ai';
 import { AnimatePresence } from 'framer-motion';
 import { motion } from 'framer-motion';
 import { memo, useMemo, useRef, useState } from 'react';
@@ -11,6 +11,24 @@ import { bashToolParameters } from '~/lib/runtime/bashTool';
 import { classNames } from '~/utils/classNames';
 import { path } from '~/utils/path';
 import { WORK_DIR } from '~/utils/constants';
+
+type BaseConvexToolInvocation = {
+  toolName: string;
+  args?: any;
+};
+type ConvexToolInvocation = BaseConvexToolInvocation &
+  (
+    | {
+        state: 'result';
+        result?: any;
+      }
+    | {
+        state: 'partial-call';
+      }
+    | {
+        state: 'call';
+      }
+  );
 
 export const ToolCall = memo((props: { messageId: string; toolCallId: string }) => {
   const { messageId, toolCallId } = props;
@@ -29,7 +47,7 @@ export const ToolCall = memo((props: { messageId: string; toolCallId: string }) 
     setShowAction(!showAction);
   };
 
-  const parsed: ToolInvocation = useMemo(() => JSON.parse(action?.content ?? '{}'), [action?.content]);
+  const parsed: ConvexToolInvocation = useMemo(() => JSON.parse(action?.content ?? '{}'), [action?.content]);
   const title = action && toolTitle(parsed);
   const icon = action && statusIcon(action.status, parsed);
 
@@ -101,7 +119,7 @@ export const ToolCall = memo((props: { messageId: string; toolCallId: string }) 
   );
 });
 
-export const ToolUseContents = memo(({ invocation }: { invocation: ToolInvocation }) => {
+export const ToolUseContents = memo(({ invocation }: { invocation: ConvexToolInvocation }) => {
   if (invocation.state !== 'result') {
     return null;
   }
@@ -247,10 +265,15 @@ export const ToolUseContents = memo(({ invocation }: { invocation: ToolInvocatio
   return <pre className="whitespace-pre-wrap overflow-x-auto">{JSON.stringify(invocation, null, 2)}</pre>;
 });
 
-function statusIcon(status: ActionState['status'], invocation: ToolInvocation) {
+function statusIcon(status: ActionState['status'], invocation: ConvexToolInvocation) {
   let inner: React.ReactNode;
   let color: string;
-  if (invocation.state === 'result' && invocation.result.startsWith('Error:')) {
+  console.log('invocation', invocation);
+  if (
+    invocation.state === 'result' &&
+    typeof invocation.result === 'string' &&
+    invocation.result.startsWith('Error:')
+  ) {
     inner = <div className="i-ph:x" />;
     color = 'text-bolt-elements-icon-error';
   } else {
@@ -282,13 +305,13 @@ function statusIcon(status: ActionState['status'], invocation: ToolInvocation) {
   return <div className={classNames('text-lg', color)}>{inner}</div>;
 }
 
-function toolTitle(invocation: ToolInvocation): React.ReactNode {
+function toolTitle(invocation: ConvexToolInvocation): React.ReactNode {
   switch (invocation.toolName) {
     case 'str_replace_editor': {
       if (invocation.state === 'partial-call') {
         return `Editing file...`;
       } else {
-        const args = editorToolParameters.parse(invocation.args);
+        const args = editorToolParameters.parse(invocation.args ?? {});
         const p = path.relative(WORK_DIR, args.path);
         switch (args.command) {
           case 'str_replace': {
@@ -349,7 +372,7 @@ function toolTitle(invocation: ToolInvocation): React.ReactNode {
       }
     }
     case 'bash': {
-      const args = bashToolParameters.parse(invocation.args);
+      const args = bashToolParameters.parse(invocation.args ?? {});
       return (
         <div className="flex items-center gap-2 text-sm">
           <div className="i-ph:terminal-window text-bolt-elements-textSecondary" />
