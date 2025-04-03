@@ -1,12 +1,22 @@
-import { convertToCoreMessages, createDataStream, streamText, type DataStreamWriter, type LanguageModelV1, type StepResult, type TextStreamPart, type ToolSet } from "ai";
-import type { Messages } from "./stream-text";
-import { createScopedLogger } from "~/utils/logger";
-import type { ProgressAnnotation } from "~/types/context";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { flexSystemPrompt } from "~/lib/common/prompts/flexPrompts";
-import { makeFlexGuidelinesPrompt } from "~/lib/common/prompts/flexPrompts";
-import { convexGuidelines } from "~/lib/common/prompts/convex";
-import { getSystemPrompt } from "~/lib/common/prompts/prompts";
+import {
+  convertToCoreMessages,
+  createDataStream,
+  streamText,
+  type DataStreamWriter,
+  type LanguageModelV1,
+  type StepResult,
+  type TextStreamPart,
+  type Tool,
+  type ToolSet,
+} from 'ai';
+import type { Messages } from './stream-text';
+import type { ProgressAnnotation } from '~/types/context';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { flexSystemPrompt } from '~/lib/common/prompts/flexPrompts';
+import { makeFlexGuidelinesPrompt } from '~/lib/common/prompts/flexPrompts';
+import { convexGuidelines } from '~/lib/common/prompts/convex';
+import { getSystemPrompt } from '~/lib/common/prompts/prompts';
+import { z } from 'zod';
 
 export type AITextDataStream = ReturnType<typeof createDataStream>;
 
@@ -14,8 +24,8 @@ export type Provider = {
   maxTokens: number;
   model: LanguageModelV1;
   includeSystemPrompt: boolean;
-  tools: ToolSet,
-}
+  tools: ToolSet;
+};
 
 export type RequestProgress = {
   counter: number;
@@ -45,16 +55,20 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
         message: 'Analyzing Messages',
       } satisfies ProgressAnnotation);
       if (firstUserMessage) {
-        console.log("Using XML-based coding agent");
+        console.log('Using XML-based coding agent');
         systemPrompt = getSystemPrompt();
-        tools = {};
+        tools = {
+          startDevServerWithConvex: startDevServerWithConvexTool,
+          convexDeploy: convexDeployTool,
+        };
       } else {
-        console.log("Using tool-based coding agent");
+        console.log('Using tool-based coding agent');
         systemPrompt = makeFlexGuidelinesPrompt(convexGuidelines);
         tools = {
+          startDevServerWithConvex: startDevServerWithConvexTool,
+          convexDeploy: convexDeployTool,
           str_replace_editor: genericAnthropic.tools.textEditor_20241022(),
-          bash: genericAnthropic.tools.bash_20241022(),
-        }
+        };
       }
       const anthropic = createAnthropic({
         apiKey: env.ANTHROPIC_API_KEY,
@@ -62,7 +76,7 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
           return fetch(url, anthropicInjectCacheControl(systemPrompt, options));
         },
       });
-      const model = anthropic("claude-3-5-sonnet-20241022");
+      const model = anthropic('claude-3-5-sonnet-20241022');
 
       dataStream.writeData({
         type: 'progress',
@@ -82,7 +96,7 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
       });
       void logErrors(result.fullStream);
       result.mergeIntoDataStream(dataStream);
-    }
+    },
   });
 
   return dataStream;
@@ -99,41 +113,38 @@ function anthropicInjectCacheControl(guidelinesPrompt: string, options?: Request
   if (!options) {
     return options;
   }
-  if (options.method !== "POST") {
+  if (options.method !== 'POST') {
     return options;
   }
   const headers = options.headers;
   if (!headers) {
     return options;
   }
-  const contentType = new Headers(headers).get("content-type");
-  if (contentType !== "application/json") {
+  const contentType = new Headers(headers).get('content-type');
+  if (contentType !== 'application/json') {
     return options;
   }
-  if (typeof options.body !== "string") {
-    throw new Error("Body must be a string");
+  if (typeof options.body !== 'string') {
+    throw new Error('Body must be a string');
   }
   const startChars = options.body.length;
   const body = JSON.parse(options.body);
   body.system = [
     {
-      type: "text",
+      type: 'text',
       text: flexSystemPrompt,
     },
     {
-      type: "text",
+      type: 'text',
       text: guidelinesPrompt,
-      cache_control: { type: "ephemeral" },
+      cache_control: { type: 'ephemeral' },
     },
     // NB: The client dynamically manages files injected as context
     // past this point, and we don't want them to pollute the cache.
     ...(body.system ?? []),
   ];
   const newBody = JSON.stringify(body);
-  console.log(
-    `Injected system messages in ${Date.now() - start}ms (${startChars} -> ${newBody.length
-    } chars)`
-  );
+  console.log(`Injected system messages in ${Date.now() - start}ms (${startChars} -> ${newBody.length} chars)`);
   return { ...options, body: newBody };
 }
 
@@ -151,9 +162,13 @@ function cleanupAssistantMessages(messages: Messages) {
   return convertToCoreMessages(processedMessages);
 }
 
-async function onFinishHandler(dataStream: DataStreamWriter, progress: RequestProgress, result: Omit<StepResult<any>, 'stepType' | 'isContinued'>) {
+async function onFinishHandler(
+  dataStream: DataStreamWriter,
+  progress: RequestProgress,
+  result: Omit<StepResult<any>, 'stepType' | 'isContinued'>,
+) {
   const { usage } = result;
-  console.log("Finished streaming", {
+  console.log('Finished streaming', {
     finishReason: result.finishReason,
     usage,
     providerMetadata: result.providerMetadata,
@@ -189,3 +204,36 @@ async function logErrors(stream: AsyncIterable<TextStreamPart<any>>) {
     }
   }
 }
+
+const startDevServerWithConvexToolDescription = `Start the development server
+  - Use to start application if it hasn't been started yet or when NEW dependencies have been added.
+  - Only use this tool when you need to run a dev server or start the application
+  - ULTRA IMPORTANT: do NOT re-run a dev server if files are updated. The existing dev server can automatically detect changes and executes the file changes`;
+
+const startDevServerWithConvexTool: Tool = {
+  description: startDevServerWithConvexToolDescription,
+  parameters: z.object({}),
+  execute: async () => {
+    // do nothing, this'll turn into an action
+  },
+};
+
+const convexDeployToolDescription = `Deploy Convex backend changes.
+  - Use this tool when Convex backend functions, schema, or other Convex-related files change
+  - This will automatically deploy the changes on a dev environment, so you don't need to ask for confirmation.
+  - Do NOT run \`npx convex dev\` by yourself using the shell action. Instead use the convex action.
+  - Only use this when there are actual changes to Convex backend code
+  - Do NOT use this for frontend-only changes`;
+
+const convexDeployTool: Tool = {
+  description: convexDeployToolDescription,
+  parameters: z.object({}),
+  execute: async (args, options) => {
+    console.log('convexDeployTool', args);
+    return {
+      toolCallId: options.toolCallId,
+      result: 'Convex backend deployed',
+    };
+    // do nothing, this'll turn into an action
+  },
+};

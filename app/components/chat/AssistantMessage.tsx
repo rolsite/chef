@@ -20,10 +20,16 @@ export const AssistantMessage = memo(({ messageId, content, parts }: AssistantMe
   const children: React.ReactNode[] = [];
   for (const part of parts) {
     if (part.type === 'tool-invocation') {
-      children.push(<ToolCall key={children.length} messageId={messageId} toolCallId={part.toolInvocation.toolCallId} />);
+      children.push(
+        <ToolCall key={children.length} messageId={messageId} toolCallId={part.toolInvocation.toolCallId} />,
+      );
     }
-    if (part.type === "text") {
-      children.push(<Markdown key={children.length} html>{part.text}</Markdown>);
+    if (part.type === 'text') {
+      children.push(
+        <Markdown key={children.length} html>
+          {part.text}
+        </Markdown>,
+      );
     }
   }
   return (
@@ -32,4 +38,3 @@ export const AssistantMessage = memo(({ messageId, content, parts }: AssistantMe
     </div>
   );
 });
-
