@@ -5,7 +5,7 @@ import { AnimatePresence } from 'framer-motion';
 import { motion } from 'framer-motion';
 import { forwardRef, memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { ActionState } from '~/lib/runtime/action-runner';
-import { workbenchStore, type ArtifactState } from '~/lib/stores/workbench';
+import { workbenchStore, type ArtifactState, type PartId } from '~/lib/stores/workbench';
 import { cubicEasingFn } from '~/utils/easings';
 import { editorToolParameters } from '~/lib/runtime/editorTool';
 import { classNames } from '~/utils/classNames';
@@ -16,13 +16,13 @@ import { ShellCodeBlock } from './Artifact';
 import { getTerminalTheme } from '../workbench/terminal/theme';
 import { FitAddon } from '@xterm/addon-fit';
 
-export const ToolCall = memo((props: { messageId: string; toolCallId: string }) => {
-  const { messageId, toolCallId } = props;
+export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => {
+  const { partId, toolCallId } = props;
   const userToggledAction = useRef(false);
   const [showAction, setShowAction] = useState(false);
 
   const artifacts = useStore(workbenchStore.artifacts);
-  const artifact = artifacts[messageId];
+  const artifact = artifacts[partId];
 
   const actions = useStore(artifact.runner.actions);
   const pair = Object.entries(actions).find(([actionId]) => actionId === toolCallId);
@@ -265,7 +265,7 @@ function DeployTool({ artifact, invocation }: { artifact: ArtifactState; invocat
   }
   if (invocation.state === "result") {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2 ">
         <div className="font-mono text-sm bg-bolt-elements-background-depth-1 rounded-lg border border-bolt-elements-borderColor overflow-hidden text-bolt-elements-textPrimary">
           <DeployTerminal artifact={artifact} invocation={invocation} />
         </div>

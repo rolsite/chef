@@ -4,7 +4,7 @@ import { computed } from 'nanostores';
 import { memo, useEffect, useRef, useState } from 'react';
 import { createHighlighter, type BundledLanguage, type BundledTheme, type HighlighterGeneric } from 'shiki';
 import type { ActionState } from '~/lib/runtime/action-runner';
-import { workbenchStore } from '~/lib/stores/workbench';
+import { workbenchStore, type PartId } from '~/lib/stores/workbench';
 import { classNames } from '~/utils/classNames';
 import { cubicEasingFn } from '~/utils/easings';
 import { WORK_DIR } from '~/utils/constants';
@@ -28,16 +28,16 @@ if (import.meta.hot) {
 }
 
 interface ArtifactProps {
-  messageId: string;
+  partId: PartId;
 }
 
-export const Artifact = memo(({ messageId }: ArtifactProps) => {
+export const Artifact = memo(({ partId }: ArtifactProps) => {
   const userToggledActions = useRef(false);
   const [showActions, setShowActions] = useState(false);
   const [allActionFinished, setAllActionFinished] = useState(false);
 
   const artifacts = useStore(workbenchStore.artifacts);
-  const artifact = artifacts[messageId];
+  const artifact = artifacts[partId];
 
   const actions = useStore(
     computed(artifact.runner.actions, (actions) => {

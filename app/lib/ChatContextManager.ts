@@ -2,7 +2,7 @@ import { generateId, type ToolInvocation, type UIMessage } from 'ai';
 import { renderFile } from '~/utils/fileUtils';
 import type { Dirent } from './stores/files';
 import { PREWARM_PATHS, WORK_DIR } from '~/utils/constants';
-import { workbenchStore } from './stores/workbench';
+import { makePartId, workbenchStore, type PartId } from './stores/workbench';
 import { StreamingMessageParser } from './runtime/message-parser';
 import { path } from '~/utils/path';
 import { editorToolParameters } from './runtime/editorTool';
@@ -222,13 +222,13 @@ export class ChatContextManager {
     }
 
     const filesTouched = new Map<string, number>();
-    for (const file of extractFileArtifacts(message.id, message.content)) {
+    for (const file of extractFileArtifacts(makePartId(message.id, 0), message.content)) {
       filesTouched.set(file, 0);
     }
     for (let j = 0; j < message.parts.length; j++) {
       const part = message.parts[j];
       if (part.type === 'text') {
-        const files = extractFileArtifacts(message.id, part.text);
+        const files = extractFileArtifacts(makePartId(message.id, j), part.text);
         for (const file of files) {
           filesTouched.set(file, j);
         }
@@ -362,7 +362,7 @@ function abbreviateToolInvocation(toolInvocation: ToolInvocation): string {
   return `The assistant ${toolCall} ${wasError ? 'and got an error' : 'successfully'}.`;
 }
 
-function extractFileArtifacts(id: string, content: string) {
+function extractFileArtifacts(partId: PartId, content: string) {
   const filesTouched: Set<string> = new Set();
   const parser = new StreamingMessageParser({
     callbacks: {
@@ -375,6 +375,6 @@ function extractFileArtifacts(id: string, content: string) {
       },
     },
   });
-  parser.parse(id, content);
+  parser.parse(partId, content);
   return Array.from(filesTouched);
 }

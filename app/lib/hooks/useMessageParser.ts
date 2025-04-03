@@ -1,7 +1,7 @@
 import type { Message } from 'ai';
 import { useCallback, useState } from 'react';
 import { StreamingMessageParser } from '~/lib/runtime/message-parser';
-import { workbenchStore } from '~/lib/stores/workbench';
+import { makePartId, workbenchStore } from '~/lib/stores/workbench';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('useMessageParser');
@@ -53,14 +53,14 @@ function processMessage(message: Message): Record<number, string> {
         if (!createdArtifact) {
           workbenchStore.addArtifact({
             id: artifactId,
-            messageId: message.id,
+            partId: makePartId(message.id, i),
             title: 'Agentic Coding',
           });
           createdArtifact = true;
         }
         const data = {
           artifactId,
-          messageId: message.id,
+          partId: makePartId(message.id, i),
           actionId: toolInvocation.toolCallId,
           action: {
             type: 'toolUse' as const,
@@ -103,7 +103,7 @@ export function useMessageParser() {
       if (message.role === 'assistant' || message.role === 'user') {
         const parts = message.parts;
         if (!parts) {
-          const parsedContent = messageParser.parse(message.id, message.content);
+          const parsedContent = messageParser.parse(makePartId(message.id, 0), message.content);
           setParsedMessages((prevParsed) => {
             const newContent = reset ? parsedContent : (prevParsed[index]?.content || '') + parsedContent;
             return { ...prevParsed, [index]: { content: newContent, parts: message.parts } };
@@ -113,7 +113,7 @@ export function useMessageParser() {
         const content = processMessage(message);
         const parsedParts = Object.entries(content).map(([partIndex, partContent]) => {
           return {
-            partContent: messageParser.parse(message.id, partContent),
+            partContent: messageParser.parse(makePartId(message.id, parseInt(partIndex)), partContent),
             partIndex: parseInt(partIndex),
           };
         });

@@ -141,6 +141,9 @@ export class PreviewsStore {
 
   async #init() {
     const webcontainer = await this.#webcontainer;
+    if (!webcontainer) {
+      return;
+    }
 
     // Listen for server ready events
     webcontainer.on('server-ready', (port, url) => {
