@@ -33,17 +33,19 @@ const messageParser = new StreamingMessageParser({
   },
 });
 
-function processMessage(message: Message): string {
+function processMessage(message: Message): Record<number, string> {
   if (!message.parts) {
-    return message.content;
+    console.error('message has no parts', message);
+    return { 0: message.content };
   }
-  const result = [];
+  const result: Record<number, string> = {};
   const artifactId = `toolArtifact-${message.id}`;
   let createdArtifact = false;
-  for (const part of message.parts) {
+  for (let i = 0; i < message.parts.length; i++) {
+    const part = message.parts[i];
     switch (part.type) {
       case 'text': {
-        result.push(part.text);
+        result[i] = part.text;
         break;
       }
       case 'tool-invocation': {
@@ -81,7 +83,7 @@ function processMessage(message: Message): string {
       }
     }
   }
-  return result.join('\n');
+  return result;
 }
 
 export function useMessageParser() {
@@ -99,11 +101,34 @@ export function useMessageParser() {
 
     for (const [index, message] of messages.entries()) {
       if (message.role === 'assistant' || message.role === 'user') {
+        const parts = message.parts;
+        if (!parts) {
+          const parsedContent = messageParser.parse(message.id, message.content);
+          setParsedMessages((prevParsed) => {
+            const newContent = reset ? parsedContent : (prevParsed[index]?.content || '') + parsedContent;
+            return { ...prevParsed, [index]: { content: newContent, parts: message.parts } };
+          });
+          continue;
+        }
         const content = processMessage(message);
-        const newParsedContent = messageParser.parse(message.id, content);
+        const parsedParts = Object.entries(content).map(([partIndex, partContent]) => {
+          return {
+            partContent: messageParser.parse(message.id, partContent),
+            partIndex: parseInt(partIndex),
+          };
+        });
+        const orderedParts = parsedParts.sort((a, b) => a.partIndex - b.partIndex);
+        const newParsedContent = orderedParts.map((part) => part.partContent).join('\n');
         setParsedMessages((prevParsed) => {
           const newContent = reset ? newParsedContent : (prevParsed[index]?.content || '') + newParsedContent;
-          return { ...prevParsed, [index]: { content: newContent, parts: message.parts } };
+          const newParts = parts.map((part, index) => {
+            const parsedPart = orderedParts.find((p) => p.partIndex === index);
+            if (parsedPart) {
+              return { type: 'text' as const, text: parsedPart.partContent };
+            }
+            return part;
+          });
+          return { ...prevParsed, [index]: { content: newContent, parts: newParts } };
         });
       }
     }
