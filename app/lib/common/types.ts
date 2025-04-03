@@ -5,7 +5,7 @@ type EmptyArgs = z.ZodObject<Record<string, never>>;
 
 export type ConvexToolSet = {
   deploy: Tool<EmptyArgs, string>;
-  str_replace_editor: Tool<any, any>;
+  npmInstall: Tool<z.ZodObject<{ packages: z.ZodArray<z.ZodString> }>, string>;
 };
 
 export type ConvexToolCall = ToolCallUnion<ConvexToolSet>;
@@ -17,8 +17,8 @@ export type ConvexToolResult =
       result?: string;
     }
   | {
-      toolName: 'str_replace_editor';
-      args?: any;
+      toolName: 'npmInstall';
+      args: { packages: string[] };
       result: string;
     };
 export type ConvexToolInvocation =

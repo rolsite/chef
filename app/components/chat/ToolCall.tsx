@@ -13,8 +13,7 @@ import { classNames } from '~/utils/classNames';
 import { path } from '~/utils/path';
 import { WORK_DIR } from '~/utils/constants';
 import type { ConvexToolInvocation } from '~/lib/common/types';
-import { ShellCodeBlock } from './Artifact';
-import { getTerminalTheme } from '../workbench/terminal/theme';
+import { getTerminalTheme } from '~/components/workbench/terminal/theme';
 import { FitAddon } from '@xterm/addon-fit';
 
 export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => {
@@ -106,223 +105,120 @@ export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => 
   );
 });
 
-export const ToolUseContents = memo(({ artifact, invocation }: { artifact: ArtifactState; invocation: ConvexToolInvocation }) => {
-  switch (invocation.toolName) {
-    case 'str_replace_editor': {
-      if (invocation.state !== 'result') {
-        return null;
+export const ToolUseContents = memo(
+  ({ artifact, invocation }: { artifact: ArtifactState; invocation: ConvexToolInvocation }) => {
+    switch (invocation.toolName) {
+      case 'npmInstall': {
+        return <NpmInstallTool artifact={artifact} invocation={invocation} />;
       }
-
-      const args = editorToolParameters.parse(invocation.args) as
-        | { command: 'create'; path: string; file_text: string }
-        | { command: 'view'; path: string }
-        | { command: 'str_replace'; path: string; old_str: string; new_str: string }
-        | { command: 'insert'; path: string; insert_line: number; new_str: string }
-        | { command: 'undo_edit'; path: string };
-
-      if (args.command === 'view') {
-        // Directory listing
-        if (invocation.result.startsWith('Directory:')) {
-          const items = invocation.result.split('\n').slice(1);
-          return (
-            <div className="space-y-1 font-mono text-sm p-4 rounded-lg border border-bolt-elements-borderColor text-bolt-elements-textPrimary">
-              {items.map((item: string, i: number) => {
-                const isDir = item.includes('(dir)');
-                return (
-                  <div key={i} className="flex items-center gap-2">
-                    <div
-                      className={
-                        isDir
-                          ? 'i-ph:folder-duotone text-bolt-elements-icon-folder'
-                          : 'i-ph:file-text-duotone text-bolt-elements-icon-file'
-                      }
-                    />
-                    {item}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        }
-
-        // File contents with line numbers
-        const lines = invocation.result.split('\n').map((line: string) => {
-          const [_, ...content] = line.split(':');
-          return content.join(':');
-        });
-        const startLine = Number(invocation.result.split('\n')[0].split(':')[0]);
-        return <LineNumberViewer lines={lines} startLineNumber={startLine} />;
+      case 'deploy': {
+        return <DeployTool artifact={artifact} invocation={invocation} />;
       }
-
-      if (args.command === 'create') {
-        const { file_text } = args;
-        return (
-          <div className="space-y-2">
-            <LineNumberViewer lines={file_text.split('\n')} />
-          </div>
-        );
-      }
-
-      if (args.command === 'insert') {
-        const { insert_line, new_str } = args;
-        return (
-          <div className="space-y-2">
-            <div className="font-mono text-sm bg-bolt-elements-background-depth-1 rounded-lg border border-bolt-elements-borderColor overflow-hidden text-bolt-elements-textPrimary">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <tbody>
-                    <tr>
-                      <td className="px-4 py-1 text-right select-none border-r border-bolt-elements-borderColor text-bolt-elements-textTertiary w-12 bg-bolt-elements-background-depth-1">
-                        {insert_line}
-                      </td>
-                      <td className="py-1 whitespace-pre group-hover:bg-bolt-elements-background-depth-2 bg-green-500/10 dark:bg-green-500/20 border-l-4 border-green-500">
-                        {new_str}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      if (args.command === 'str_replace') {
-        const { old_str, new_str } = args;
-        return (
-          <div className="space-y-2">
-            <div className="font-mono text-sm bg-bolt-elements-background-depth-1 rounded-lg border border-bolt-elements-borderColor overflow-hidden text-bolt-elements-textPrimary">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <tbody>
-                    {old_str.split('\n').map((line: string, i: number) => (
-                      <tr key={`old-${i}`} className="group">
-                        <td className="px-4 py-1 text-right select-none border-r border-bolt-elements-borderColor text-bolt-elements-textTertiary w-12 bg-bolt-elements-background-depth-1">
-                          {i + 1}
-                        </td>
-                        <td className="py-1 whitespace-pre group-hover:bg-bolt-elements-background-depth-2 bg-red-500/10 dark:bg-red-500/20 border-l-4 border-red-500">
-                          {line}
-                        </td>
-                      </tr>
-                    ))}
-                    <tr>
-                      <td
-                        colSpan={2}
-                        className="px-4 py-1 text-center text-bolt-elements-textTertiary border-y border-bolt-elements-borderColor"
-                      >
-                        ↓
-                      </td>
-                    </tr>
-                    {new_str.split('\n').map((line: string, i: number) => (
-                      <tr key={`new-${i}`} className="group">
-                        <td className="px-4 py-1 text-right select-none border-r border-bolt-elements-borderColor text-bolt-elements-textTertiary w-12 bg-bolt-elements-background-depth-1">
-                          {i + 1}
-                        </td>
-                        <td className="py-1 whitespace-pre group-hover:bg-bolt-elements-background-depth-2 bg-green-500/10 dark:bg-green-500/20 border-l-4 border-green-500">
-                          {line}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      if (args.command === 'undo_edit') {
-        return (
-          <div className="flex items-center gap-2 text-sm text-bolt-elements-textSecondary">
-            <div className="i-ph:arrow-counter-clockwise text-bolt-elements-icon-success" />
-            {invocation.result}
-          </div>
-        );
+      default: {
+        // Fallback for other tool types
+        return <pre className="whitespace-pre-wrap overflow-x-auto">{JSON.stringify(invocation, null, 2)}</pre>;
       }
     }
-    case 'deploy': {
-      return <DeployTool artifact={artifact} invocation={invocation} />
-    }
-    default: {
-      // Fallback for other tool types
-      return <pre className="whitespace-pre-wrap overflow-x-auto">{JSON.stringify(invocation, null, 2)}</pre>;
-    }
-  }
-});
+  },
+);
 
 function DeployTool({ artifact, invocation }: { artifact: ArtifactState; invocation: ConvexToolInvocation }) {
-  if (invocation.toolName !== "deploy") {
-    throw new Error("Terminal can only be used for the deploy tool");
+  if (invocation.toolName !== 'deploy') {
+    throw new Error('Terminal can only be used for the deploy tool');
   }
 
-  if (invocation.state === "call") {
+  if (invocation.state === 'call') {
     return (
       <div className="space-y-2">
         <div className="font-mono text-sm bg-bolt-elements-background-depth-1 rounded-lg border border-bolt-elements-borderColor overflow-hidden text-bolt-elements-textPrimary">
-          <DeployTerminal artifact={artifact} invocation={invocation} />
+          <Terminal artifact={artifact} invocation={invocation} />
         </div>
       </div>
-    )
+    );
   }
-  if (invocation.state === "result") {
+  if (invocation.state === 'result') {
     return (
       <div className="space-y-2 ">
         <div className="font-mono text-sm bg-bolt-elements-background-depth-1 rounded-lg border border-bolt-elements-borderColor overflow-hidden text-bolt-elements-textPrimary">
-          <DeployTerminal artifact={artifact} invocation={invocation} />
+          <Terminal artifact={artifact} invocation={invocation} />
         </div>
       </div>
-    )
+    );
   }
 }
 
-const DeployTerminal = memo(
-  forwardRef(
-    ({ artifact, invocation }: { artifact: ArtifactState; invocation: ConvexToolInvocation }, ref) => {
-      let terminalOutput = useStore(artifact.runner.terminalOutput);
-      if (!terminalOutput && invocation.state === "result" && invocation.result) {
-        terminalOutput = invocation.result;
-      }
-      const terminalElementRef = useRef<HTMLDivElement>(null);
-      const terminalRef = useRef<XTerm>();
-      useEffect(() => {
-        const element = terminalElementRef.current!;
-        const fitAddon = new FitAddon();
-        const terminal = new XTerm({
-          cursorBlink: true,
-          convertEol: true,
-          disableStdin: true,
-          theme: getTerminalTheme({ cursor: '#00000000' }),
-          fontSize: 12,
-          fontFamily: 'Menlo, courier-new, courier, monospace',
-        });
-        terminal.loadAddon(fitAddon);
-
-        terminalRef.current = terminal;
-        terminal.open(element);
-
-        const resizeObserver = new ResizeObserver(() => {
-          fitAddon.fit();
-        });
-        resizeObserver.observe(element);
-
-        return () => {
-          resizeObserver.disconnect();
-          terminal.dispose();
-        };
-      }, []);
-
-      const written = useRef(0);
-      useEffect(() => {
-        if (terminalRef.current && terminalOutput.length > written.current) {
-          terminalRef.current.write(terminalOutput.slice(written.current));
-          written.current = terminalOutput.length;
-        }
-      }, [terminalOutput]);
-
-      return <div className="h-40" ref={terminalElementRef} />;
+const Terminal = memo(
+  forwardRef(({ artifact, invocation }: { artifact: ArtifactState; invocation: ConvexToolInvocation }, ref) => {
+    let terminalOutput = useStore(artifact.runner.terminalOutput);
+    if (!terminalOutput && invocation.state === 'result' && invocation.result) {
+      terminalOutput = invocation.result;
     }
-  )
-)
+    const terminalElementRef = useRef<HTMLDivElement>(null);
+    const terminalRef = useRef<XTerm>();
+    useEffect(() => {
+      const element = terminalElementRef.current!;
+      const fitAddon = new FitAddon();
+      const terminal = new XTerm({
+        cursorBlink: true,
+        convertEol: true,
+        disableStdin: true,
+        theme: getTerminalTheme({ cursor: '#00000000' }),
+        fontSize: 12,
+        fontFamily: 'Menlo, courier-new, courier, monospace',
+      });
+      terminal.loadAddon(fitAddon);
+
+      terminalRef.current = terminal;
+      terminal.open(element);
+
+      const resizeObserver = new ResizeObserver(() => {
+        fitAddon.fit();
+      });
+      resizeObserver.observe(element);
+
+      return () => {
+        resizeObserver.disconnect();
+        terminal.dispose();
+      };
+    }, []);
+
+    const written = useRef(0);
+    useEffect(() => {
+      if (terminalRef.current && terminalOutput.length > written.current) {
+        terminalRef.current.write(terminalOutput.slice(written.current));
+        written.current = terminalOutput.length;
+      }
+    }, [terminalOutput]);
+
+    return <div className="h-40" ref={terminalElementRef} />;
+  }),
+);
+
+function NpmInstallTool({ artifact, invocation }: { artifact: ArtifactState; invocation: ConvexToolInvocation }) {
+  if (invocation.toolName !== 'npmInstall') {
+    throw new Error('Terminal can only be used for the npmInstall tool');
+  }
+  if (invocation.state === 'call') {
+    return (
+      <div className="space-y-2">
+        <div className="font-mono text-sm bg-bolt-elements-background-depth-1 rounded-lg border border-bolt-elements-borderColor overflow-hidden text-bolt-elements-textPrimary">
+          <Terminal artifact={artifact} invocation={invocation} />
+        </div>
+      </div>
+    );
+  }
+  if (invocation.state === 'result') {
+    if (invocation.result.startsWith('Error:')) {
+      return (
+        <div className="space-y-2">
+          <div className="font-mono text-sm bg-bolt-elements-background-depth-1 rounded-lg border border-bolt-elements-borderColor overflow-hidden text-bolt-elements-textPrimary">
+            <Terminal artifact={artifact} invocation={invocation} />
+          </div>
+        </div>
+      );
+    }
+  }
+}
 
 function statusIcon(status: ActionState['status'], invocation: ConvexToolInvocation) {
   let inner: React.ReactNode;
@@ -365,114 +261,33 @@ function statusIcon(status: ActionState['status'], invocation: ConvexToolInvocat
 
 function toolTitle(invocation: ConvexToolInvocation): React.ReactNode {
   switch (invocation.toolName) {
-    case 'str_replace_editor': {
-      if (invocation.state === 'partial-call') {
-        return `Editing file...`;
+    case 'npmInstall': {
+      if (invocation.state === 'partial-call' || invocation.state === 'call') {
+        return `Installing dependencies...`;
+      } else if (invocation.result?.startsWith('Error:')) {
+        return `Failed to install dependencies`;
       } else {
-        const args = editorToolParameters.parse(invocation.args ?? {});
-        const p = path.relative(WORK_DIR, args.path);
-        switch (args.command) {
-          case 'str_replace': {
-            return (
-              <div className="flex items-center gap-2">
-                <div className="i-ph:pencil-simple text-bolt-elements-textSecondary" />
-                <span>Edit {p}</span>
-              </div>
-            );
-          }
-          case 'insert': {
-            return (
-              <div className="flex items-center gap-2">
-                <div className="i-ph:pencil-simple text-bolt-elements-textSecondary" />
-                <span>
-                  Insert into {p} at line {args.insert_line}
-                </span>
-              </div>
-            );
-          }
-          case 'create': {
-            return (
-              <div className="flex items-center gap-2">
-                <div className="i-ph:file-plus text-bolt-elements-textSecondary" />
-                <span>Create {p}</span>
-              </div>
-            );
-          }
-          case 'view': {
-            let verb = 'Read';
-            if (invocation.state === 'result' && invocation.result.startsWith('Directory:')) {
-              verb = 'List';
-            }
-            let extra = '';
-            if (args.view_range) {
-              const [start, end] = args.view_range;
-              extra = ` (lines ${start} - ${end})`;
-            }
-            return (
-              <div className="flex items-center gap-2">
-                <div className="i-ph:file-text text-bolt-elements-textSecondary" />
-                <span>
-                  {verb} {p || '/home/project'}
-                  {extra}
-                </span>
-              </div>
-            );
-          }
-          case 'undo_edit': {
-            return (
-              <div className="flex items-center gap-2">
-                <div className="i-ph:arrow-counter-clockwise text-bolt-elements-textSecondary" />
-                <span>Undo edit to {p}</span>
-              </div>
-            );
-          }
-        }
+        return <span className="font-mono text-sm">{`npm i ${invocation.args.packages.join(' ')}`}</span>;
       }
     }
-    case "deploy": {
+    case 'deploy': {
       let msg: string;
-      if (invocation.state === "partial-call" || invocation.state === "call") {
-        msg = "Deploying to Convex...";
-      } else if (invocation.result?.startsWith("Error:")) {
-        msg = "Failed to deploy to Convex";
+      if (invocation.state === 'partial-call' || invocation.state === 'call') {
+        msg = 'Deploying to Convex...';
+      } else if (invocation.result?.startsWith('Error:')) {
+        msg = 'Failed to deploy to Convex';
       } else {
-        msg = "Deployed to Convex";
+        msg = 'Deployed to Convex';
       }
       return (
         <div className="flex items-center gap-2">
           <img className="w-4 h-4 mr-1" height="16" width="16" src="/icons/Convex.svg" alt="Convex" />
           <span>{msg}</span>
         </div>
-      )
+      );
     }
     default: {
       return (invocation as any).toolName;
     }
   }
 }
-
-interface LineNumberViewerProps {
-  lines: string[];
-  startLineNumber?: number;
-}
-
-const LineNumberViewer = memo(({ lines, startLineNumber = 1 }: LineNumberViewerProps) => {
-  return (
-    <div className="font-mono text-sm bg-bolt-elements-background-depth-1 rounded-lg border border-bolt-elements-borderColor overflow-hidden text-bolt-elements-textPrimary">
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <tbody>
-            {lines.map((line: string, i: number) => (
-              <tr key={i} className="group">
-                <td className="px-4 py-1 text-right select-none border-r border-bolt-elements-borderColor text-bolt-elements-textTertiary w-12 bg-bolt-elements-background-depth-1">
-                  {i + startLineNumber}
-                </td>
-                <td className="py-1 whitespace-pre group-hover:bg-bolt-elements-background-depth-2">{line}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-});
