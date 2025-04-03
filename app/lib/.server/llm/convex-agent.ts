@@ -193,3 +193,7 @@ async function logErrors(stream: AsyncIterable<TextStreamPart<any>>) {
     }
   }
 }
+
+export function getEnv(env: Env, name: keyof Env): string | undefined {
+  return env[name] || process.env[name];
+}
