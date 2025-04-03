@@ -1,5 +1,5 @@
 import { allowedHTMLElements } from "~/utils/markdown";
-import { convexGuidelines } from "./convex";
+import { convexGuidelines } from "./convexGuidelines";
 
 // This is the very first part of the system prompt that tells the model what
 // role to play.

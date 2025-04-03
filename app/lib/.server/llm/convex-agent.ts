@@ -6,18 +6,12 @@ import {
   type LanguageModelV1,
   type StepResult,
   type TextStreamPart,
-  type Tool,
   type ToolSet,
 } from 'ai';
 import type { Messages } from './stream-text';
 import type { ProgressAnnotation } from '~/types/context';
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { flexSystemPrompt } from '~/lib/common/prompts/flexPrompts';
-import { makeFlexGuidelinesPrompt } from '~/lib/common/prompts/flexPrompts';
-import { convexGuidelines } from '~/lib/common/prompts/convex';
-import { getSystemPrompt } from '~/lib/common/prompts/prompts';
-import { z } from 'zod';
-import { constantPrompt } from '~/lib/common/prompts/merged';
+import { constantPrompt, roleSystemPrompt } from '~/lib/common/prompts/system';
 import { deployTool } from '~/lib/runtime/deployTool';
 
 export type AITextDataStream = ReturnType<typeof createDataStream>;
@@ -120,7 +114,7 @@ function anthropicInjectCacheControl(guidelinesPrompt: string, options?: Request
   body.system = [
     {
       type: 'text',
-      text: flexSystemPrompt,
+      text: roleSystemPrompt,
     },
     {
       type: 'text',
