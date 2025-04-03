@@ -1,7 +1,7 @@
 import { useState } from 'react';
-// import JSZip from 'jszip';
-// import { webcontainer } from '~/lib/webcontainer';
-// import type { WebContainer } from '@webcontainer/api';
+import JSZip from 'jszip';
+import { webcontainer } from '~/lib/webcontainer';
+import type { WebContainer } from '@webcontainer/api';
 import { classNames } from '~/utils/classNames';
 import { useStore } from '@nanostores/react';
 import { convexStore } from '~/lib/stores/convex';
@@ -47,71 +47,71 @@ export function DeployButton() {
 
   const convex = useStore(convexStore);
 
-  // const addFilesToZip = async (container: WebContainer, zip: JSZip, basePath: string, currentPath: string = '') => {
-  //   const fullPath = currentPath ? `${basePath}/${currentPath}` : basePath;
-  //   const entries = await container.fs.readdir(fullPath, { withFileTypes: true });
+  const addFilesToZip = async (container: WebContainer, zip: JSZip, basePath: string, currentPath: string = '') => {
+    const fullPath = currentPath ? `${basePath}/${currentPath}` : basePath;
+    const entries = await container.fs.readdir(fullPath, { withFileTypes: true });
 
-  //   for (const entry of entries) {
-  //     const entryPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
+    for (const entry of entries) {
+      const entryPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
 
-  //     if (entry.isDirectory()) {
-  //       await addFilesToZip(container, zip, basePath, entryPath);
-  //     } else if (entry.isFile()) {
-  //       const content = await container.fs.readFile(`${basePath}/${entryPath}`);
-  //       zip.file(entryPath, content);
-  //     }
-  //   }
-  // };
+      if (entry.isDirectory()) {
+        await addFilesToZip(container, zip, basePath, entryPath);
+      } else if (entry.isFile()) {
+        const content = await container.fs.readFile(`${basePath}/${entryPath}`);
+        zip.file(entryPath, content);
+      }
+    }
+  };
 
-  // const handleDeploy = async () => {
-  //   try {
-  //     setStatus('building');
-  //     setErrorMessage('');
-  //     const container = await webcontainer;
+  const handleDeploy = async () => {
+    try {
+      setStatus('building');
+      setErrorMessage('');
+      const container = await webcontainer;
 
-  //     // Run the build command
-  //     const buildProcess = await container.spawn('npx', ['vite', 'build', '--mode', 'development']);
-  //     let buildOutput = '';
-  //     buildProcess.output.pipeTo(
-  //       new WritableStream({
-  //         write(data) {
-  //           buildOutput += data;
-  //         },
-  //       }),
-  //     );
-  //     const exitCode = await buildProcess.exit;
-  //     if (exitCode !== 0) {
-  //       throw new Error(`Build failed: ${buildOutput}`);
-  //     }
+      // Run the build command
+      const buildProcess = await container.spawn('npx', ['vite', 'build', '--mode', 'development']);
+      let buildOutput = '';
+      buildProcess.output.pipeTo(
+        new WritableStream({
+          write(data) {
+            buildOutput += data;
+          },
+        }),
+      );
+      const exitCode = await buildProcess.exit;
+      if (exitCode !== 0) {
+        throw new Error(`Build failed: ${buildOutput}`);
+      }
 
-  //     setStatus('zipping');
-  //     const zip = new JSZip();
-  //     await addFilesToZip(container, zip, 'dist');
-  //     const zipBlob = await zip.generateAsync({ type: 'blob' });
+      setStatus('zipping');
+      const zip = new JSZip();
+      await addFilesToZip(container, zip, 'dist');
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
 
-  //     setStatus('deploying');
-  //     const formData = new FormData();
-  //     formData.append('file', zipBlob, 'dist.zip');
-  //     formData.append('deploymentName', convex!.deploymentName);
-  //     formData.append('token', convex!.token);
+      setStatus('deploying');
+      const formData = new FormData();
+      formData.append('file', zipBlob, 'dist.zip');
+      formData.append('deploymentName', convex!.deploymentName);
+      formData.append('token', convex!.token);
 
-  //     const response = await fetch('/api/deploy-simple', {
-  //       method: 'POST',
-  //       body: formData,
-  //     });
+      const response = await fetch('/api/deploy-simple', {
+        method: 'POST',
+        body: formData,
+      });
 
-  //     if (!response.ok) {
-  //       const errorData = (await response.json()) as ErrorResponse | null;
-  //       throw new Error(errorData?.error ?? 'Deployment failed');
-  //     }
+      if (!response.ok) {
+        const errorData = (await response.json()) as ErrorResponse | null;
+        throw new Error(errorData?.error ?? 'Deployment failed');
+      }
 
-  //     setStatus('idle');
-  //   } catch (error) {
-  //     console.error('Deployment error:', error);
-  //     setStatus('error');
-  //     setErrorMessage(error instanceof Error ? error.message : 'Deployment failed');
-  //   }
-  // };
+      setStatus('idle');
+    } catch (error) {
+      console.error('Deployment error:', error);
+      setStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Deployment failed');
+    }
+  };
 
   const isLoading = status === 'building' || status === 'zipping' || status === 'deploying';
   const isDisabled = isLoading || !convex;
@@ -134,7 +134,7 @@ export function DeployButton() {
   return (
     <Button
       disabled={isDisabled}
-      // onClick={handleDeploy}
+      onClick={handleDeploy}
       title={status === 'error' ? errorMessage : undefined}
       className="mr-4"
     >
