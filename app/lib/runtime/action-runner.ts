@@ -5,11 +5,12 @@ import type { ActionAlert, BoltAction, FileHistory } from '~/types/actions';
 import { createScopedLogger } from '~/utils/logger';
 import { unreachable } from '~/utils/unreachable';
 import type { ActionCallbackData } from './message-parser';
-import type { BoltShell } from '~/utils/shell';
+import { cleanTerminalOutput, type BoltShell } from '~/utils/shell';
 import type { ToolInvocation } from 'ai';
 import { withResolvers } from '~/utils/promises';
 import { BackupStack, editor, editorToolParameters } from './editorTool';
 import { bashToolParameters } from './bashTool';
+import { ContainerBootState, waitForContainerBootState } from '../webcontainer';
 
 const logger = createScopedLogger('ActionRunner');
 
@@ -160,16 +161,15 @@ export class ActionRunner {
     try {
       switch (action.type) {
         case 'shell': {
-          logger.error('Convex action is not supported anymore. Use tool calls instead.');
-          await this.#runShellAction(action);
+          logger.error('Shell action is not supported anymore. Use tool calls instead.');
           break;
         }
         case 'npmInstall': {
-          await this.#runNpmInstallAction(action);
+          logger.error('Npm install action is not supported anymore. Use tool calls instead.');
           break;
         }
         case 'npmExec': {
-          await this.#runNpmExecAction(action);
+          logger.error('Npm exec action is not supported anymore. Use tool calls instead.');
           break;
         }
         case 'file': {
@@ -178,43 +178,13 @@ export class ActionRunner {
         }
         case 'build': {
           const buildOutput = await this.#runBuildAction(action);
-
           // Store build output for deployment
           this.buildOutput = buildOutput;
           break;
         }
         case 'start': {
-          // making the start app non blocking
-
-          this.#runStartAction(action)
-            .then(() => this.updateAction(actionId, { status: 'complete' }))
-            .catch((err: Error) => {
-              if (action.abortSignal.aborted) {
-                return;
-              }
-
-              this.updateAction(actionId, { status: 'failed', error: 'Action failed' });
-              logger.error(`[${action.type}]:Action failed\n\n`, err);
-
-              if (!(err instanceof ActionCommandError)) {
-                return;
-              }
-
-              this.onAlert?.({
-                type: 'error',
-                title: 'Dev Server Failed',
-                description: err.header,
-                content: err.output,
-              });
-            });
-
-          /*
-           * adding a delay to avoid any race condition between 2 start actions
-           * i am up for a better approach
-           */
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-
-          return;
+          logger.error('Start action is not supported anymore. Use tool calls instead.');
+          break;
         }
         case 'convex': {
           logger.error('Convex action is not supported anymore. Use tool calls instead.');
@@ -251,102 +221,6 @@ export class ActionRunner {
       // re-throw the error to be caught in the promise chain
       throw error;
     }
-  }
-
-  async #runShellAction(action: ActionState) {
-    if (action.type !== 'shell') {
-      unreachable('Expected shell action');
-    }
-    logger.debug(`[${action.type}]:Running Shell Action\n\n`, action);
-
-    const shell = this.#shellTerminal();
-    await shell.ready();
-
-    if (!shell || !shell.terminal || !shell.process) {
-      unreachable('Shell terminal not found');
-    }
-
-    const resp = await shell.executeCommand(this.runnerId.get(), action.content, () => {
-      logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
-      action.abort();
-    });
-    logger.debug(`${action.type} Shell Response: [exit code:${resp?.exitCode}]`);
-
-    if (resp?.exitCode != 0) {
-      throw new ActionCommandError(`Failed To Execute Shell Command`, resp?.output || 'No Output Available');
-    }
-  }
-
-  async #runNpmInstallAction(action: ActionState) {
-    if (action.type !== 'npmInstall') {
-      unreachable('Expected npmInstall action');
-    }
-    const normalizedCommand = action.content.startsWith('npm install')
-      ? action.content.slice('npm install'.length)
-      : action.content.startsWith('npm i')
-        ? action.content.slice('npm i'.length)
-        : action.content;
-    if (normalizedCommand.match(/\bconvex\b/)) {
-      logger.error('Convex is already installed');
-      return;
-    }
-    await this.#runShellAction({
-      ...action,
-      type: 'shell',
-      content: `npm install ${normalizedCommand}`,
-    });
-  }
-
-  async #runNpmExecAction(action: ActionState) {
-    if (action.type !== 'npmExec') {
-      unreachable('Expected npmExec action');
-    }
-    if (!action.content.startsWith('npm run ') && !action.content.startsWith('npx ')) {
-      logger.error(`Invalid npmExec action: ${action.content}`);
-      return;
-    }
-    if (action.content.match(/\bconvex\b/)) {
-      logger.error('Convex should be run as a tool call');
-      return;
-    }
-    if (action.content === 'npm run dev') {
-      logger.error('Dev server should be run as a tool call');
-      return;
-    }
-    await this.#runShellAction({
-      ...action,
-      type: 'shell',
-      content: action.content,
-    });
-  }
-
-  async #runStartAction(action: ActionState) {
-    if (action.type !== 'start') {
-      unreachable('Expected shell action');
-    }
-
-    if (!this.#shellTerminal) {
-      unreachable('Shell terminal not found');
-    }
-
-    const shell = this.#shellTerminal();
-    await shell.ready();
-
-    if (!shell || !shell.terminal || !shell.process) {
-      unreachable('Shell terminal not found');
-    }
-
-    const resp = await shell.executeCommand(this.runnerId.get(), action.content, () => {
-      logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
-      action.abort();
-    });
-    logger.debug(`${action.type} Shell Response: [exit code:${resp?.exitCode}]`);
-
-    if (resp?.exitCode != 0) {
-      throw new ActionCommandError('Failed To Start Application', resp?.output || 'No Output Available');
-    }
-
-    return resp;
   }
 
   async #runFileAction(action: ActionState) {
@@ -477,42 +351,44 @@ export class ActionRunner {
           if (!args.command.length) {
             throw new Error('A nonempty command is required');
           }
-          const shell = this.#shellTerminal();
-          await shell.ready();
-          const resp = await shell.executeCommand(this.runnerId.get(), args.command, () => {
-            logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
-            action.abort();
-          });
-          logger.debug(`${action.type} Shell Response: [exit code:${resp?.exitCode}]`);
-          if (resp?.exitCode !== 0) {
-            throw new Error(`Process exited with code ${resp?.exitCode}: ${resp?.output}`);
-          } else {
-            result = resp?.output || '';
-          }
+          throw new Error('Bash action is not supported anymore.');
           break;
         }
         case 'deploy': {
-          result = await this._runShellCommand(`npx convex dev --once`, () => {
+          const shell = this.#shellTerminal();
+          const container = await this.#webcontainer;
+          await waitForContainerBootState(ContainerBootState.READY);
+          const convexProc = await container.spawn('npx', ['convex', 'dev', '--once']);
+          action.abortSignal.addEventListener('abort', () => {
+            convexProc.kill();
+          });
+          const pieces: string[] = [];
+          const { resolve, promise } = withResolvers<number>();
+          convexProc.output.pipeTo(
+            new WritableStream({
+              write(data) {
+                pieces.push(data.toString());
+                if (data.startsWith("Error: ")) {
+                  resolve(-1);
+                  return;
+                }
+              },
+            })
+          );
+          const convexExitCode = await Promise.race([promise, convexProc.exit]);
+          const output = cleanConvexOutput(pieces.join(''));
+          if (convexExitCode !== 0) {
+            throw new Error(`Convex failed with exit code ${convexExitCode}: ${output}`);
+          }
+          result = output;
+
+          await shell.startCommand(this.runnerId.get(), 'npx vite --open', () => {
             logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
             action.abort();
           });
-          // Check if the dev server (vite) is already running on port 5173
-          // const devServerRunning = await this._runShellCommand(`netstat -an | grep 5173`, () => {
-          //   logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
-          //   action.abort();
-          // });
-          // if (!devServerRunning.includes('LISTEN')) {
-          //   // Start the dev server
-          //   result += await this._runShellCommand(`npx vite`, () => {
-          //     logger.debug(`[${action.type}]:Aborting Action\n\n`, action);
-          //     action.abort();
-          //   });
-          // } else {
-          //   logger.info('Vite dev server is already running');
-          // }
+          result += "\n\nDev server started successfully!";
           break;
         }
-
         default: {
           throw new Error(`Unknown tool: ${parsed.toolName}`);
         }
@@ -528,18 +404,6 @@ export class ActionRunner {
       throw e;
     }
   }
-
-  async _runShellCommand(command: string, onAbort: () => void) {
-    const shell = this.#shellTerminal();
-    await shell.ready();
-    const resp = await shell.executeCommand(this.runnerId.get(), command, () => {
-      onAbort();
-    });
-    if (resp?.exitCode !== 0) {
-      throw new Error(`Process exited with code ${resp?.exitCode}: ${cleanConvexOutput(command, resp?.output || '')}`);
-    }
-    return resp?.output || '';
-  }
 }
 
 const BANNED_LINES = [
@@ -551,10 +415,8 @@ const BANNED_LINES = [
 
 // Cleaning terminal output helps the agent focus on the important parts and
 // not waste input tokens.
-function cleanConvexOutput(command: string, output: string) {
-  if (command !== 'npm run lint') {
-    return output;
-  }
+function cleanConvexOutput(output: string) {
+  output = cleanTerminalOutput(output);
   const normalizedNewlines = output.replace('\r\n', '\n').replace('\r', '\n');
   const result = normalizedNewlines
     // Remove lines that include "Preparing Convex functions..."
@@ -562,7 +424,7 @@ function cleanConvexOutput(command: string, output: string) {
     .filter((line) => !BANNED_LINES.some((bannedLine) => line.includes(bannedLine)))
     .join('\n');
   if (output !== result) {
-    console.log(`Sanitized output of ${command}: ${output.length} -> ${result.length}`);
+    console.log(`Sanitized output: ${output.length} -> ${result.length}`);
   }
   return result;
 }
