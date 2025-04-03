@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Markdown } from './Markdown';
-import type { Message, ToolInvocation } from 'ai';
+import type { Message } from 'ai';
 import { ToolCall } from './ToolCall';
 
 interface AssistantMessageProps {

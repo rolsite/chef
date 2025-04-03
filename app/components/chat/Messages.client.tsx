@@ -60,6 +60,7 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(
       <div id={id} className={props.className} ref={ref}>
         {messages.length > 0
           ? messages.map((message, index) => {
+              console.log('message', message);
               const { role, content, id: messageId, annotations } = message;
               const isUserMessage = role === 'user';
               const isFirst = index === 0;
