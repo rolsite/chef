@@ -359,7 +359,7 @@ function abbreviateToolInvocation(toolInvocation: ToolInvocation): string {
     default:
       throw new Error(`Unknown tool name: ${toolInvocation.toolName}`);
   }
-  return `Tool call: The assistant ${toolCall} ${wasError ? 'and got an error' : 'successfully'}.`;
+  return `The assistant ${toolCall} ${wasError ? 'and got an error' : 'successfully'}.`;
 }
 
 function extractFileArtifacts(id: string, content: string) {
