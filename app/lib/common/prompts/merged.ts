@@ -320,7 +320,7 @@ Certainly, I can help you create a query that calculates the factorial of a numb
 <deploy_tool>
 Once you've used an artifact to write files to the filesystem, you MUST deploy the changes to the Convex backend
 using the deploy tool. This tool call will execute a few steps:
-1. Deploy the filesystem state to the Convex backend. If this fails, you MUST fix the errors with another artifact
+1. Deploy the \`convex/\` folder to the Convex backend. If this fails, you MUST fix the errors with another artifact
    and then try again.
 2. Check the Vite app for any errors. Similarly, if this fails, you MUST fix the errors with another artifact
    and then try again.
