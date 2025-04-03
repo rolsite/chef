@@ -1,7 +1,8 @@
 import type { Message } from 'ai';
 import { useCallback, useState } from 'react';
 import { StreamingMessageParser } from '~/lib/runtime/message-parser';
-import { makePartId, workbenchStore } from '~/lib/stores/workbench';
+import { workbenchStore } from '~/lib/stores/workbench';
+import { makePartId } from '../stores/Artifacts';
 import { createScopedLogger } from '~/utils/logger';
 
 const logger = createScopedLogger('useMessageParser');
@@ -33,34 +34,37 @@ const messageParser = new StreamingMessageParser({
   },
 });
 
-function processMessage(message: Message): Record<number, string> {
-  if (!message.parts) {
-    console.error('message has no parts', message);
-    return { 0: message.content };
+function processMessage(message: Message): Message {
+  if (message.role === "user") {
+    return message;
   }
-  const result: Record<number, string> = {};
-  const artifactId = `toolArtifact-${message.id}`;
-  let createdArtifact = false;
+  if (!message.parts) {
+    throw new Error('Message has no parts');
+  }
+  console.log('message', message);
+  const parsedParts = [];
   for (let i = 0; i < message.parts.length; i++) {
     const part = message.parts[i];
+    const partId = makePartId(message.id, i);
     switch (part.type) {
       case 'text': {
-        result[i] = part.text;
+        messageParser.reset();
+        parsedParts.push({
+          type: 'text' as const,
+          text: messageParser.parse(partId, part.text),
+        });
         break;
       }
       case 'tool-invocation': {
         const { toolInvocation } = part;
-        if (!createdArtifact) {
-          workbenchStore.addArtifact({
-            id: artifactId,
-            partId: makePartId(message.id, i),
-            title: 'Agentic Coding',
-          });
-          createdArtifact = true;
-        }
+        workbenchStore.addArtifact({
+          id: partId,
+          partId,
+          title: 'Editing files...',
+        });
         const data = {
-          artifactId,
-          partId: makePartId(message.id, i),
+          artifactId: partId,
+          partId,
           actionId: toolInvocation.toolCallId,
           action: {
             type: 'toolUse' as const,
@@ -72,24 +76,25 @@ function processMessage(message: Message): Record<number, string> {
         if (toolInvocation.state === 'call' || toolInvocation.state === 'result') {
           workbenchStore.runAction(data);
         }
+        parsedParts.push({
+          type: 'tool-invocation' as const,
+          toolInvocation,
+        });
         break;
-      }
-      case 'step-start': {
-        continue;
       }
       default: {
-        logger.warn('unknown part type', JSON.stringify(part));
-        break;
+        parsedParts.push(part);
       }
     }
   }
-  return result;
+  return {
+    ...message,
+    parts: parsedParts,
+  }
 }
 
 export function useMessageParser() {
-  const [parsedMessages, setParsedMessages] = useState<{ [key: number]: { content: string; parts: Message['parts'] } }>(
-    {},
-  );
+  const [parsedMessages, setParsedMessages] = useState<Message[]>([]);
 
   const parseMessages = useCallback((messages: Message[], isLoading: boolean) => {
     let reset = false;
@@ -99,39 +104,11 @@ export function useMessageParser() {
       messageParser.reset();
     }
 
-    for (const [index, message] of messages.entries()) {
-      if (message.role === 'assistant' || message.role === 'user') {
-        const parts = message.parts;
-        if (!parts) {
-          const parsedContent = messageParser.parse(makePartId(message.id, 0), message.content);
-          setParsedMessages((prevParsed) => {
-            const newContent = reset ? parsedContent : (prevParsed[index]?.content || '') + parsedContent;
-            return { ...prevParsed, [index]: { content: newContent, parts: message.parts } };
-          });
-          continue;
-        }
-        const content = processMessage(message);
-        const parsedParts = Object.entries(content).map(([partIndex, partContent]) => {
-          return {
-            partContent: messageParser.parse(makePartId(message.id, parseInt(partIndex)), partContent),
-            partIndex: parseInt(partIndex),
-          };
-        });
-        const orderedParts = parsedParts.sort((a, b) => a.partIndex - b.partIndex);
-        const newParsedContent = orderedParts.map((part) => part.partContent).join('\n');
-        setParsedMessages((prevParsed) => {
-          const newContent = reset ? newParsedContent : (prevParsed[index]?.content || '') + newParsedContent;
-          const newParts = parts.map((part, index) => {
-            const parsedPart = orderedParts.find((p) => p.partIndex === index);
-            if (parsedPart) {
-              return { type: 'text' as const, text: parsedPart.partContent };
-            }
-            return part;
-          });
-          return { ...prevParsed, [index]: { content: newContent, parts: newParts } };
-        });
-      }
+    const processedMessages: Message[] = [];
+    for (const message of messages) {
+      processedMessages.push(processMessage(message));
     }
+    setParsedMessages(processedMessages);
   }, []);
 
   return { parsedMessages, parseMessages };

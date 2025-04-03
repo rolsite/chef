@@ -5,7 +5,8 @@ import { AnimatePresence } from 'framer-motion';
 import { motion } from 'framer-motion';
 import { forwardRef, memo, useEffect, useMemo, useRef, useState } from 'react';
 import type { ActionState } from '~/lib/runtime/action-runner';
-import { workbenchStore, type ArtifactState, type PartId } from '~/lib/stores/workbench';
+import { workbenchStore, type ArtifactState } from '~/lib/stores/workbench';
+import { type PartId } from '~/lib/stores/Artifacts';
 import { cubicEasingFn } from '~/utils/easings';
 import { editorToolParameters } from '~/lib/runtime/editorTool';
 import { classNames } from '~/utils/classNames';
@@ -22,6 +23,7 @@ export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => 
   const [showAction, setShowAction] = useState(false);
 
   const artifacts = useStore(workbenchStore.artifacts);
+  console.log('artifacts', artifacts, partId);
   const artifact = artifacts[partId];
 
   const actions = useStore(artifact.runner.actions);

@@ -8,7 +8,7 @@ import { CodeBlock } from './CodeBlock';
 
 import styles from './Markdown.module.scss';
 import ThoughtBox from './ThoughtBox';
-import type { PartId } from '~/lib/stores/workbench';
+import type { PartId } from '~/lib/stores/Artifacts';
 
 const logger = createScopedLogger('MarkdownComponent');
 

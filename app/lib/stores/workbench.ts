@@ -1,4 +1,4 @@
-import { atom, map, type MapStore, type ReadableAtom, type WritableAtom } from 'nanostores';
+import { atom, map, type ReadableAtom, type WritableAtom } from 'nanostores';
 import type { EditorDocument, ScrollPosition } from '~/components/editor/codemirror/CodeMirrorEditor';
 import { ActionRunner } from '~/lib/runtime/action-runner';
 import type { ActionCallbackData, ArtifactCallbackData } from '~/lib/runtime/message-parser';
@@ -25,7 +25,8 @@ import type { Id } from '@convex/_generated/dataModel';
 import { buildSnapshot, compressSnapshot } from '~/lib/snapshot';
 import { sessionIdStore } from './convex';
 import { withResolvers } from '~/utils/promises';
-import { BackupStack } from '~/lib/runtime/editorTool';
+import { BackupStack } from '../runtime/editorTool';
+import type { Artifacts, PartId } from './Artifacts';
 
 const BACKUP_DEBOUNCE_MS = 1000 * 5;
 
@@ -40,13 +41,6 @@ export interface ArtifactState {
 }
 
 export type ArtifactUpdateState = Pick<ArtifactState, 'title' | 'closed'>;
-
-export type PartId = `${string}-${number}`;
-type Artifacts = MapStore<Record<PartId, ArtifactState>>;
-
-export function makePartId(messageId: string, index: number): PartId {
-  return `${messageId}-${index}`;
-}
 
 export type WorkbenchViewType = 'code' | 'diff' | 'preview' | 'dashboard';
 
