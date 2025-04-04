@@ -8,6 +8,7 @@ import { StreamingMessageParser } from './runtime/message-parser';
 import { path } from '~/utils/path';
 import { editorToolParameters } from './runtime/editorTool';
 import { bashToolParameters } from './runtime/bashTool';
+import { viewParameters } from './runtime/viewTool';
 // import { bashToolParameters, editorToolParameters } from "./tools";
 
 // It's wasteful to actually tokenize the content, so we'll just use character
@@ -326,37 +327,19 @@ function abbreviateToolInvocation(toolInvocation: ToolInvocation): string {
   const wasError = toolInvocation.result.startsWith('Error:');
   let toolCall: string;
   switch (toolInvocation.toolName) {
-    case 'str_replace_editor': {
-      const args = editorToolParameters.parse(toolInvocation.args);
-      switch (args.command) {
-        case 'create':
-          toolCall = `created ${args.path}`;
-          break;
-        case 'view':
-          toolCall = `viewed ${args.path}`;
-          break;
-        case 'str_replace':
-        case 'insert':
-          toolCall = `edited ${args.path}`;
-          break;
-        case 'undo_edit':
-          toolCall = `undid an edit to ${args.path}`;
-          break;
-        default:
-          throw new Error(`Unknown command: ${args.command}`);
+    case 'view': {
+      const args = viewParameters.parse(toolInvocation.args);
+      let verb = 'viewed';
+      if (toolInvocation.result.startsWith('Directory:')) {
+        verb = 'listed';
       }
-      break;
-    }
-    case 'bash': {
-      const args = bashToolParameters.parse(toolInvocation.args);
-      toolCall = `ran the command ${args.command}`;
+      toolCall = `${verb} ${args.path}`;
       break;
     }
     case 'deploy': {
       toolCall = `deployed the app`;
       break;
     }
-
     default:
       throw new Error(`Unknown tool name: ${toolInvocation.toolName}`);
   }

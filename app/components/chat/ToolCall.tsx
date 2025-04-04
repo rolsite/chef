@@ -13,6 +13,10 @@ import type { ConvexToolInvocation } from '~/lib/common/types';
 import { getTerminalTheme } from '../workbench/terminal/theme';
 import { FitAddon } from '@xterm/addon-fit';
 import { viewParameters } from '~/lib/runtime/viewTool';
+import { type BundledLanguage, type BundledTheme, getHighlighter } from 'shiki';
+import { themeStore } from '~/lib/stores/theme';
+import { getLanguageFromExtension } from '~/utils/getLanguageFromExtension';
+import { path } from '~/utils/path';
 
 export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => {
   const { partId, toolCallId } = props;
@@ -324,19 +328,33 @@ function ViewTool({ invocation }: { invocation: ConvexToolInvocation }) {
     const [_, ...content] = line.split(':');
     return content.join(':');
   });
-  const startLine = Number(invocation.result.split('\n')[0].split(':')[0]);
-  return <LineNumberViewer lines={lines} startLineNumber={startLine} />;
+  const args = viewParameters.parse(invocation.args);
+  const startLine = args.view_range?.[0] ?? 1;
+  const ext = path.extname(args.path);
+  const language = getLanguageFromExtension(ext);
+  return <LineNumberViewer lines={lines} startLineNumber={startLine} language={language} />;
 }
 
 interface LineNumberViewerProps {
   lines: string[];
   startLineNumber?: number;
+  language?: string;
 }
 
-const LineNumberViewer = memo(({ lines, startLineNumber = 1 }: LineNumberViewerProps) => {
+const LineNumberViewer = memo(({ lines, startLineNumber = 1, language = 'typescript' }: LineNumberViewerProps) => {
+  const [highlighter, setHighlighter] = useState<any>(null);
+  const theme = useStore(themeStore);
+
+  useEffect(() => {
+    getHighlighter({
+      themes: ['github-dark', 'github-light'],
+      langs: ['typescript', 'javascript', 'json', 'html', 'css', 'jsx', 'tsx', 'python', 'java', 'ruby', 'cpp', 'c', 'csharp', 'go', 'rust', 'php', 'swift', 'bash'],
+    }).then(setHighlighter);
+  }, []);
+
   return (
     <div className="font-mono text-sm bg-bolt-elements-background-depth-1 rounded-lg border border-bolt-elements-borderColor overflow-hidden text-bolt-elements-textPrimary">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-auto max-h-[400px]">
         <table className="w-full border-collapse">
           <tbody>
             {lines.map((line: string, i: number) => (
@@ -344,7 +362,21 @@ const LineNumberViewer = memo(({ lines, startLineNumber = 1 }: LineNumberViewerP
                 <td className="px-4 py-1 text-right select-none border-r border-bolt-elements-borderColor text-bolt-elements-textTertiary w-12 bg-bolt-elements-background-depth-1">
                   {i + startLineNumber}
                 </td>
-                <td className="py-1 whitespace-pre group-hover:bg-bolt-elements-background-depth-2">{line}</td>
+                <td className="py-1 whitespace-pre group-hover:bg-bolt-elements-background-depth-2">
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: highlighter
+                        ? highlighter
+                            .codeToHtml(line || ' ', {
+                              lang: language,
+                              theme: theme === 'dark' ? 'github-dark' : 'github-light',
+                            })
+                            .replace(/<\/?pre[^>]*>/g, '')
+                            .replace(/<\/?code[^>]*>/g, '')
+                        : line || ' '
+                    }}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
