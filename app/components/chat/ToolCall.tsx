@@ -71,7 +71,7 @@ export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => 
               disabled={parsed.state === 'partial-call'}
               onClick={toggleAction}
             >
-              <div className="p-4">
+              <div className="p-4 text-bolt-elements-textPrimary">
                 <div className={showAction ? 'i-ph:caret-up-bold' : 'i-ph:caret-down-bold'}></div>
               </div>
             </motion.button>
