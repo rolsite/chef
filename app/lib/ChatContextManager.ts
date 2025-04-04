@@ -102,7 +102,7 @@ export class ChatContextManager {
     }
     const debugInfo: string[] = [];
     if (sortedByLastUsed.length > 0) {
-      relevantFiles.push(makeSystemMessage('Here are some relevant files in the project.'));
+      relevantFiles.push(makeSystemMessage('Here are some relevant files in the project (with line numbers).'));
       for (const [path] of sortedByLastUsed) {
         if (sizeEstimate > MAX_RELEVANT_FILES_SIZE) {
           break;
@@ -125,7 +125,7 @@ export class ChatContextManager {
     }
 
     if (currentDocument) {
-      let message = `The user currently has an editor open at ${currentDocument.filePath}. Here are the contents:\n`;
+      let message = `The user currently has an editor open at ${currentDocument.filePath}. Here are its contents (with line numbers):\n`;
       message += renderFile(currentDocument.value);
       relevantFiles.push(makeSystemMessage(message));
     }

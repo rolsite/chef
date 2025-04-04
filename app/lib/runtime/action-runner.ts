@@ -11,6 +11,8 @@ import { withResolvers } from '~/utils/promises';
 import { BackupStack, editor, editorToolParameters } from './editorTool';
 import { bashToolParameters } from './bashTool';
 import { ContainerBootState, waitForContainerBootState } from '../webcontainer';
+import { viewParameters } from './viewTool';
+import { readPath, renderDirectory, renderFile, workDirRelative } from '~/utils/fileUtils';
 
 const logger = createScopedLogger('ActionRunner');
 
@@ -353,6 +355,21 @@ export class ActionRunner {
             throw new Error('A nonempty command is required');
           }
           throw new Error('Bash action is not supported anymore.');
+          break;
+        }
+        case "view": {
+          const args = viewParameters.parse(parsed.args);
+          const container = await this.#webcontainer;
+          const relPath = workDirRelative(args.path);
+          const file = await readPath(container, relPath);
+          if (file.type === 'directory') {
+            result = renderDirectory(file.children);
+          } else {
+            if (args.view_range && args.view_range.length !== 2) {
+              throw new Error('When provided, view_range must be an array of two numbers');
+            }
+            result = renderFile(file.content, args.view_range as [number, number]);
+          }
           break;
         }
         case 'deploy': {
