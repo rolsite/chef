@@ -326,7 +326,8 @@ function toolTitle(invocation: ConvexToolInvocation): React.ReactNode {
       if (invocation.state === 'partial-call' || invocation.state === 'call') {
         return (
           <div className="flex items-center gap-2">
-            <span>Checking code...</span>
+            <img className="w-4 h-4 mr-1" height="16" width="16" src="/icons/TypeScript.svg" alt="TypeScript" />
+            <span>Running TypeScript checks...</span>
           </div>
         );
       } else if (invocation.result?.startsWith('Error:')) {
@@ -334,6 +335,7 @@ function toolTitle(invocation: ConvexToolInvocation): React.ReactNode {
         if (invocation.result.includes('To ignore failing typecheck')) {
           return (
             <div className="flex items-center gap-2">
+              <img className="w-4 h-4 mr-1" height="16" width="16" src="/icons/TypeScript.svg" alt="TypeScript" />
               <span>Typecheck failed</span>
             </div>
           );

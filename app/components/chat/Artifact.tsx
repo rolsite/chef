@@ -9,6 +9,7 @@ import { type PartId } from '~/lib/stores/Artifacts';
 import { classNames } from '~/utils/classNames';
 import { cubicEasingFn } from '~/utils/easings';
 import { WORK_DIR } from '~/utils/constants';
+import { path } from '~/utils/path';
 
 const highlighterOptions = {
   langs: ['shell'],
@@ -171,6 +172,12 @@ const ActionList = memo(({ actions }: ActionListProps) => {
             console.log('action', action);
             throw new Error('Action is not a file');
           }
+          // It's okay for this to be non-reactive since an action is either
+          // a create or an edit.
+          const files = workbenchStore.files.get();
+          const absPath = path.join(WORK_DIR, action.filePath);
+          const existing = !!files[absPath];
+          const message = existing ? 'Edit' : 'Create';
           return (
             <motion.li
               key={index}
@@ -195,7 +202,7 @@ const ActionList = memo(({ actions }: ActionListProps) => {
                   ) : null}
                 </div>
                 <div>
-                  Create{' '}
+                  {message}{' '}
                   <code
                     className="bg-bolt-elements-artifacts-inlineCode-background text-bolt-elements-artifacts-inlineCode-text px-1.5 py-1 rounded-md text-bolt-elements-item-contentAccent hover:underline cursor-pointer"
                     onClick={() => openArtifactInWorkbench(action.filePath)}
