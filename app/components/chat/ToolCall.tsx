@@ -3,7 +3,7 @@ import { useStore } from '@nanostores/react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { AnimatePresence } from 'framer-motion';
 import { motion } from 'framer-motion';
-import { forwardRef, memo, useEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, memo, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { ActionState } from '~/lib/runtime/action-runner';
 import { workbenchStore, type ArtifactState } from '~/lib/stores/workbench';
 import { type PartId } from '~/lib/stores/Artifacts';
@@ -151,6 +151,7 @@ function DeployTool({ artifact, invocation }: { artifact: ArtifactState; invocat
 
 const DeployTerminal = memo(
   forwardRef(({ artifact, invocation }: { artifact: ArtifactState; invocation: ConvexToolInvocation }, ref) => {
+    const theme = useStore(themeStore);
     let terminalOutput = useStore(artifact.runner.terminalOutput);
     if (!terminalOutput && invocation.state === 'result' && invocation.result) {
       terminalOutput = invocation.result;
@@ -191,6 +192,27 @@ const DeployTerminal = memo(
         written.current = terminalOutput.length;
       }
     }, [terminalOutput]);
+
+    useEffect(() => {
+      const terminal = terminalRef.current;
+      if (!terminal) {
+        return;
+      }
+      terminal.options.theme = getTerminalTheme({ cursor: '#00000000' });
+      terminal.options.disableStdin = true;
+    }, [theme]);
+
+    useImperativeHandle(ref, () => {
+      return {
+        reloadStyles: () => {
+          const terminal = terminalRef.current;
+          if (!terminal) {
+            return;
+          }
+          terminal.options.theme = getTerminalTheme({ cursor: '#00000000' });
+        },
+      };
+    }, []);
 
     return <div className="h-40" ref={terminalElementRef} />;
   }),
