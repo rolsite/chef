@@ -34,7 +34,7 @@ const tools: ConvexToolSet = {
   deploy: deployTool,
   view: viewTool,
   npmInstall: npmInstallTool,
-}
+};
 
 export async function convexAgent(env: Env, firstUserMessage: boolean, messages: Messages): Promise<AITextDataStream> {
   const progress: RequestProgress = {
@@ -56,20 +56,53 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
       } satisfies ProgressAnnotation);
       let provider: Provider;
       if (getEnv(env, 'USE_OPENAI')) {
-        const model = getEnv(env, 'OPENAI_MODEL') || "gpt-4o-2024-11-20";
+        const model = getEnv(env, 'OPENAI_MODEL') || 'gpt-4o-2024-11-20';
         provider = {
           model: openai(model),
           maxTokens: 8192,
           systemPrompt: [roleSystemPrompt, constantPrompt].join('\n'),
-        }
+        };
       } else {
+        // Falls back to the low Quality-of-Service Anthropic API key if the primary key is rate limited
+        const createRateLimitAwareFetch = () => {
+          return async (input: RequestInfo | URL, init?: RequestInit) => {
+            const enrichedOptions = anthropicInjectCacheControl(constantPrompt, init);
+            try {
+              const response = await fetch(input, enrichedOptions);
+
+              if (response.status == 429) {
+                // Add sentry logging here
+                const lowQosKey = getEnv(env, 'ANTHROPIC_LOW_QOS_API_KEY');
+
+                if (!lowQosKey) {
+                  return response;
+                }
+
+                if (enrichedOptions && enrichedOptions.headers) {
+                  const headers = new Headers(enrichedOptions.headers);
+                  headers.set('x-api-key', lowQosKey);
+                  enrichedOptions.headers = headers;
+                }
+
+                return fetch(input, enrichedOptions);
+              }
+
+              return response;
+            } catch (error) {
+              console.error('Error with Anthropic API call:', error);
+              throw new Error();
+            }
+          };
+        };
+
+        const primaryApiKey = getEnv(env, 'ANTHROPIC_API_KEY') || '';
+
         const anthropic = createAnthropic({
-          apiKey: getEnv(env, 'ANTHROPIC_API_KEY'),
-          fetch: async (url, options) => {
-            return fetch(url, anthropicInjectCacheControl(constantPrompt, options));
-          },
+          apiKey: primaryApiKey,
+          fetch: createRateLimitAwareFetch(),
         });
-        const model = getEnv(env, 'ANTHROPIC_MODEL') || "claude-3-5-sonnet-20241022";
+
+        const model = getEnv(env, 'ANTHROPIC_MODEL') || 'claude-3-5-sonnet-20241022';
         provider = {
           model: anthropic(model),
           maxTokens: 8192,

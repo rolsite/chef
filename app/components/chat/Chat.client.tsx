@@ -160,6 +160,7 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
       return result;
     },
     onError: (e) => {
+      // TODO: Add sentry logging here
       console.log('Error', e);
       logger.error('Request failed\n\n', e, error);
       logStore.logError('Chat request failed', e, {
