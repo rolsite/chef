@@ -36,6 +36,34 @@ export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => 
   };
 
   const parsed: ConvexToolInvocation = useMemo(() => JSON.parse(action?.content ?? '{}'), [action?.content]);
+
+  // Check for npm install with missing packages array and update the result
+  useEffect(() => {
+    if (
+      action &&
+      parsed.toolName === 'npmInstall' &&
+      parsed.state === 'result' &&
+      action.status === 'complete' &&
+      !parsed.result?.startsWith('Error:')
+    ) {
+      try {
+        npmInstallToolParameters.parse(parsed.args);
+      } catch (_error) {
+        // Modify the parsed content to indicate an error
+        parsed.result = 'Error: Missing required packages array';
+
+        // Update the action status in the store
+        if (artifact && artifact.runner) {
+          // Update the action status to failed
+          artifact.runner.updateAction(toolCallId, {
+            status: 'failed',
+            error: 'Missing required packages array',
+          });
+        }
+      }
+    }
+  }, [parsed, action, artifact, toolCallId]);
+
   const title = action && toolTitle(parsed);
   const icon = action && statusIcon(action.status, parsed);
 
@@ -318,8 +346,16 @@ function toolTitle(invocation: ConvexToolInvocation): React.ReactNode {
       } else if (invocation.result?.startsWith('Error:')) {
         return `Failed to install dependencies`;
       } else {
-        const args = npmInstallToolParameters.parse(invocation.args);
-        return <span className="font-mono text-sm">{`npm i ${args.packages.join(' ')}`}</span>;
+        try {
+          const args = npmInstallToolParameters.parse(invocation.args);
+          return <span className="font-mono text-sm">{`npm i ${args.packages.join(' ')}`}</span>;
+        } catch (_error: unknown) {
+          // Set invocation.result to an error message so statusIcon detects it as an error
+          if (invocation.state === 'result') {
+            invocation.result = 'Error: Missing required packages array';
+          }
+          return `Failed to install dependencies`;
+        }
       }
     }
     case 'deploy': {
