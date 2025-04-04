@@ -27,6 +27,7 @@ import type { ActionRunner } from '~/lib/runtime/action-runner';
 import { ConvexConnection } from '~/components/convex/ConvexConnection';
 import { FlexAuthWrapper } from './FlexAuthWrapper';
 import { useFlexAuthMode } from '~/lib/stores/convex';
+import { SuggestionButtons } from './SuggestionButtons';
 const TEXTAREA_MIN_HEIGHT = 76;
 
 interface BaseChatProps {
@@ -352,9 +353,12 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 </div>
               </div>
             </div>
-            <div id="suggestions" className="flex flex-col justify-center gap-5">
-              {!chatStarted && <div>{/* … */}</div>}
-            </div>
+            <SuggestionButtons
+              chatStarted={chatStarted}
+              onSuggestionClick={(suggestion) => {
+                handleInputChange?.({ target: { value: suggestion } } as React.ChangeEvent<HTMLTextAreaElement>);
+              }}
+            />
           </div>
           <ClientOnly>
             {() => (
