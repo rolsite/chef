@@ -163,18 +163,20 @@ function openArtifactInWorkbench(filePath: any) {
 }
 
 const ActionList = memo(({ actions }: ActionListProps) => {
+  // Map of file paths keyed by file path relative to WORK_DIR
   const isEdit = useRef<Map<string, boolean>>(new Map());
   useEffect(() => {
+    // Files keyed by absolute path
     const files = workbenchStore.files.get();
     for (const action of actions) {
       if (action.type !== 'file') {
         continue;
       }
       const absPath = path.join(WORK_DIR, action.filePath);
-      if (isEdit.current.has(absPath)) {
+      if (isEdit.current.has(action.filePath)) {
         continue;
       }
-      isEdit.current.set(absPath, !!files[absPath]);
+      isEdit.current.set(action.filePath, !!files[absPath]);
     }
   }, [actions]);
 
