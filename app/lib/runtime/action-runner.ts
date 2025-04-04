@@ -403,7 +403,7 @@ export class ActionRunner {
             result = output;
           } catch (error: unknown) {
             if (error instanceof z.ZodError) {
-              result = `Error: Invalid npm install arguments. The 'packages' array is required and must contain at least one package name.`;
+              result = `Error: Invalid npm install arguments.  ${error}`;
             } else if (error instanceof Error) {
               result = `Error: ${error.message}`;
             } else {
