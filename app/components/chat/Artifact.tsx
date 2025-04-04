@@ -163,6 +163,21 @@ function openArtifactInWorkbench(filePath: any) {
 }
 
 const ActionList = memo(({ actions }: ActionListProps) => {
+  const isEdit = useRef<Map<string, boolean>>(new Map());
+  useEffect(() => {
+    const files = workbenchStore.files.get();
+    for (const action of actions) {
+      if (action.type !== 'file') {
+        continue;
+      }
+      const absPath = path.join(WORK_DIR, action.filePath);
+      if (isEdit.current.has(absPath)) {
+        continue;
+      }
+      isEdit.current.set(absPath, !!files[absPath]);
+    }
+  }, [actions]);
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
       <ul className="list-none space-y-2.5">
@@ -172,12 +187,8 @@ const ActionList = memo(({ actions }: ActionListProps) => {
             console.log('action', action);
             throw new Error('Action is not a file');
           }
-          // It's okay for this to be non-reactive since an action is either
-          // a create or an edit.
-          const files = workbenchStore.files.get();
-          const absPath = path.join(WORK_DIR, action.filePath);
-          const existing = !!files[absPath];
-          const message = existing ? 'Edit' : 'Create';
+          const fileIsEdit = isEdit.current.get(action.filePath) ?? false;
+          const message = fileIsEdit ? 'Edit' : 'Create';
           return (
             <motion.li
               key={index}
