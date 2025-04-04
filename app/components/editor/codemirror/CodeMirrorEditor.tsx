@@ -53,6 +53,10 @@ export interface ScrollPosition {
 export interface EditorUpdate {
   selection: EditorSelection;
   content: string;
+  // This isn't a change, it's just to avoid updating the wrong file since
+  // by the time this debounced onChange callback runs the current file may
+  // have changed.
+  filePath: string;
 }
 
 export type OnChangeCallback = (update: EditorUpdate) => void;
@@ -177,6 +181,7 @@ export const CodeMirrorEditor = memo(
             onUpdate({
               selection: view.state.selection,
               content: view.state.doc.toString(),
+              filePath: docRef.current.filePath,
             });
 
             editorStatesRef.current!.set(docRef.current.filePath, view.state);
@@ -241,7 +246,14 @@ export const CodeMirrorEditor = memo(
         editorStates.set(doc.filePath, state);
       }
 
-      view.setState(state);
+      // Heuristic for "should we use restore the scroll position,"
+      const simpleAppend = doc.value.startsWith(view.state.doc.toString());
+      const empty = doc.value.length < 50;
+      const isFileChange = empty || !simpleAppend;
+
+      if (isFileChange) {
+        view.setState(state);
+      }
 
       setEditorDocument(
         view,
@@ -250,6 +262,7 @@ export const CodeMirrorEditor = memo(
         languageCompartment,
         autoFocusOnDocumentChange,
         doc as TextEditorDocument,
+        isFileChange,
       );
     }, [doc?.value, editable, doc?.filePath, autoFocusOnDocumentChange]);
 
@@ -380,6 +393,7 @@ function setEditorDocument(
   languageCompartment: Compartment,
   autoFocus: boolean,
   doc: TextEditorDocument,
+  isFileChange: boolean,
 ) {
   if (doc.value !== view.state.doc.toString()) {
     view.dispatch({
@@ -405,32 +419,29 @@ function setEditorDocument(
       effects: [languageCompartment.reconfigure([languageSupport]), reconfigureTheme(theme)],
     });
 
-    requestAnimationFrame(() => {
-      const currentLeft = view.scrollDOM.scrollLeft;
-      const currentTop = view.scrollDOM.scrollTop;
-      const newLeft = doc.scroll?.left ?? 0;
-      const newTop = doc.scroll?.top ?? 0;
+    if (isFileChange) {
+      requestAnimationFrame(() => {
+        const currentLeft = view.scrollDOM.scrollLeft;
+        const currentTop = view.scrollDOM.scrollTop;
+        const newLeft = doc.scroll?.left ?? 0;
+        const newTop = doc.scroll?.top ?? 0;
 
-      const needsScrolling = currentLeft !== newLeft || currentTop !== newTop;
+        const needsScrolling = currentLeft !== newLeft || currentTop !== newTop;
 
-      if (autoFocus && editable) {
-        if (needsScrolling) {
-          // we have to wait until the scroll position was changed before we can set the focus
-          view.scrollDOM.addEventListener(
-            'scroll',
-            () => {
-              view.focus();
-            },
-            { once: true },
-          );
-        } else {
-          // if the scroll position is still the same we can focus immediately
-          view.focus();
+        if (autoFocus && editable) {
+          if (needsScrolling) {
+            // we have to wait until the scroll position was changed before we can set the focus
+            view.scrollDOM.addEventListener('scroll', () => view.focus(), { once: true });
+          } else {
+            // if the scroll position is still the same we can focus immediately
+            view.focus();
+          }
         }
-      }
 
-      view.scrollDOM.scrollTo(newLeft, newTop);
-    });
+        console.log('scroll restoration for doc change', newTop);
+        view.scrollDOM.scrollTo(newLeft, newTop);
+      });
+    }
   });
 }
 

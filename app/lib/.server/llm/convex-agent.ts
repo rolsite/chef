@@ -35,6 +35,7 @@ const tools: ConvexToolSet = {
   view: viewTool,
   npmInstall: npmInstallTool,
 };
+};
 
 export async function convexAgent(env: Env, firstUserMessage: boolean, messages: Messages): Promise<AITextDataStream> {
   const progress: RequestProgress = {
@@ -101,7 +102,6 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
           apiKey: primaryApiKey,
           fetch: createRateLimitAwareFetch(),
         });
-
         const model = getEnv(env, 'ANTHROPIC_MODEL') || 'claude-3-5-sonnet-20241022';
         provider = {
           model: anthropic(model),
