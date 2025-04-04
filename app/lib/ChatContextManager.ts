@@ -6,8 +6,6 @@ import { workbenchStore } from './stores/workbench';
 import { makePartId, type PartId } from './stores/Artifacts';
 import { StreamingMessageParser } from './runtime/message-parser';
 import { path } from '~/utils/path';
-import { editorToolParameters } from './runtime/editorTool';
-import { bashToolParameters } from './runtime/bashTool';
 import { viewParameters } from './runtime/viewTool';
 // import { bashToolParameters, editorToolParameters } from "./tools";
 
@@ -237,10 +235,10 @@ export class ChatContextManager {
       }
       if (
         part.type == 'tool-invocation' &&
-        part.toolInvocation.toolName == 'str_replace_editor' &&
+        part.toolInvocation.toolName == 'view' &&
         part.toolInvocation.state !== 'partial-call'
       ) {
-        const args = editorToolParameters.parse(part.toolInvocation.args);
+        const args = viewParameters.parse(part.toolInvocation.args);
         filesTouched.set(args.path, j);
       }
     }

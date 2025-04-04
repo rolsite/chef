@@ -8,8 +8,6 @@ import type { ActionCallbackData } from './message-parser';
 import { cleanTerminalOutput, type BoltShell } from '~/utils/shell';
 import type { ToolInvocation } from 'ai';
 import { withResolvers } from '~/utils/promises';
-import { BackupStack, editor, editorToolParameters } from './editorTool';
-import { bashToolParameters } from './bashTool';
 import { ContainerBootState, waitForContainerBootState } from '../webcontainer';
 import { viewParameters } from './viewTool';
 import { readPath, renderDirectory, renderFile, workDirRelative } from '~/utils/fileUtils';
@@ -83,7 +81,6 @@ export class ActionRunner {
 
   constructor(
     private toolCalls: Map<string, PromiseWithResolvers<string>>,
-    private backupStack: BackupStack,
     webcontainerPromise: Promise<WebContainer>,
     getShellTerminal: () => BoltShell,
     onAlert?: (alert: ActionAlert) => void,
@@ -343,20 +340,6 @@ export class ActionRunner {
     let result: string;
     try {
       switch (parsed.toolName) {
-        case 'str_replace_editor': {
-          const args = editorToolParameters.parse(parsed.args);
-          const container = await this.#webcontainer;
-          result = await editor(container, args, this.backupStack);
-          break;
-        }
-        case 'bash': {
-          const args = bashToolParameters.parse(parsed.args);
-          if (!args.command.length) {
-            throw new Error('A nonempty command is required');
-          }
-          throw new Error('Bash action is not supported anymore.');
-          break;
-        }
         case "view": {
           const args = viewParameters.parse(parsed.args);
           const container = await this.#webcontainer;
