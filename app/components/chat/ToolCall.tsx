@@ -35,34 +35,39 @@ export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => 
     setShowAction(!showAction);
   };
 
-  const parsed: ConvexToolInvocation = useMemo(() => JSON.parse(action?.content ?? '{}'), [action?.content]);
+  const parsed: ConvexToolInvocation = useMemo(() => {
+    try {
+      const parsedContent = JSON.parse(action?.content ?? '{}');
 
-  // Check for npm install with missing packages array and update the result
-  useEffect(() => {
-    if (
-      action &&
-      parsed.toolName === 'npmInstall' &&
-      parsed.state === 'result' &&
-      action.status === 'complete' &&
-      !parsed.result?.startsWith('Error:')
-    ) {
-      try {
-        npmInstallToolParameters.parse(parsed.args);
-      } catch (_error) {
-        // Modify the parsed content to indicate an error
-        parsed.result = 'Error: Missing required packages array';
-
-        // Update the action status in the store
-        if (artifact && artifact.runner) {
-          // Update the action status to failed
-          artifact.runner.updateAction(toolCallId, {
-            status: 'failed',
-            error: 'Missing required packages array',
-          });
+      // Check if this is a completed npm install without errors but with invalid args
+      if (
+        action &&
+        action.status === 'complete' &&
+        parsedContent.toolName === 'npmInstall' &&
+        parsedContent.state === 'result' &&
+        !parsedContent.result?.startsWith('Error:')
+      ) {
+        try {
+          npmInstallToolParameters.parse(parsedContent.args);
+        } catch (error) {
+          // Update the action status to failed if the args don't parse.
+          if (artifact && artifact.runner) {
+            const errorMessage = `Error: Could not parse arguments: ${error}`;
+            artifact.runner.updateAction(toolCallId, {
+              status: 'failed',
+              error: errorMessage,
+            });
+            // Modify the result to indicate an error
+            parsedContent.result = errorMessage;
+          }
         }
       }
+
+      return parsedContent;
+    } catch (_error) {
+      return {} as ConvexToolInvocation;
     }
-  }, [parsed, action, artifact, toolCallId]);
+  }, [action?.content, action?.status, artifact, toolCallId]);
 
   const title = action && toolTitle(parsed);
   const icon = action && statusIcon(action.status, parsed);
@@ -349,10 +354,9 @@ function toolTitle(invocation: ConvexToolInvocation): React.ReactNode {
         try {
           const args = npmInstallToolParameters.parse(invocation.args);
           return <span className="font-mono text-sm">{`npm i ${args.packages.join(' ')}`}</span>;
-        } catch (_error: unknown) {
-          // Set invocation.result to an error message so statusIcon detects it as an error
+        } catch (error: unknown) {
           if (invocation.state === 'result') {
-            invocation.result = 'Error: Missing required packages array';
+            invocation.result = `Error: Could not parse arguments ${error}`;
           }
           return `Failed to install dependencies`;
         }
