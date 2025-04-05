@@ -1,5 +1,3 @@
-
-
 export interface NetlifySiteInfo {
   id: string;
   name: string;

@@ -1,5 +1,3 @@
-
-
 type TabType =
   | 'profile'
   | 'settings'

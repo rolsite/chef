@@ -1,5 +1,3 @@
-
-
 export const DEFAULT_TAB_CONFIG = [
   // User Window Tabs (Always visible by default)
   { id: 'features', visible: true, window: 'user' as const, order: 0 },
