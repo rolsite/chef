@@ -1,6 +1,6 @@
 import type { TabType } from './types';
 
-export const TAB_ICONS: Record<TabType, string> = {
+const TAB_ICONS: Record<TabType, string> = {
   profile: 'i-ph:user-circle-fill',
   settings: 'i-ph:gear-six-fill',
   notifications: 'i-ph:bell-fill',
@@ -17,7 +17,7 @@ export const TAB_ICONS: Record<TabType, string> = {
   'tab-management': 'i-ph:squares-four-fill',
 };
 
-export const TAB_LABELS: Record<TabType, string> = {
+const TAB_LABELS: Record<TabType, string> = {
   profile: 'Profile',
   settings: 'Settings',
   notifications: 'Notifications',
@@ -34,7 +34,7 @@ export const TAB_LABELS: Record<TabType, string> = {
   'tab-management': 'Tab Management',
 };
 
-export const TAB_DESCRIPTIONS: Record<TabType, string> = {
+const TAB_DESCRIPTIONS: Record<TabType, string> = {
   profile: 'Manage your profile and account settings',
   settings: 'Configure application preferences',
   notifications: 'View and manage your notifications',

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-export type SettingCategory = 'profile' | 'file_sharing' | 'connectivity' | 'system' | 'services' | 'preferences';
+type SettingCategory = 'profile' | 'file_sharing' | 'connectivity' | 'system' | 'services' | 'preferences';
 
 export type TabType =
   | 'profile'
@@ -18,9 +18,9 @@ export type TabType =
   | 'task-manager'
   | 'tab-management';
 
-export type WindowType = 'user' | 'developer';
+type WindowType = 'user' | 'developer';
 
-export interface UserProfile {
+interface UserProfile {
   nickname: any;
   name: string;
   email: string;
@@ -33,7 +33,7 @@ export interface UserProfile {
   timezone: string;
 }
 
-export interface SettingItem {
+interface SettingItem {
   id: TabType;
   label: string;
   icon: string;
@@ -66,7 +66,7 @@ export interface TabWindowConfig {
   developerTabs: DevTabConfig[];
 }
 
-export const TAB_LABELS: Record<TabType, string> = {
+const TAB_LABELS: Record<TabType, string> = {
   profile: 'Profile',
   settings: 'Settings',
   notifications: 'Notifications',
@@ -83,7 +83,7 @@ export const TAB_LABELS: Record<TabType, string> = {
   'tab-management': 'Tab Management',
 };
 
-export const categoryLabels: Record<SettingCategory, string> = {
+const categoryLabels: Record<SettingCategory, string> = {
   profile: 'Profile & Account',
   file_sharing: 'File Sharing',
   connectivity: 'Connectivity',
@@ -92,7 +92,7 @@ export const categoryLabels: Record<SettingCategory, string> = {
   preferences: 'Preferences',
 };
 
-export const categoryIcons: Record<SettingCategory, string> = {
+const categoryIcons: Record<SettingCategory, string> = {
   profile: 'i-ph:user-circle',
   file_sharing: 'i-ph:folder-simple',
   connectivity: 'i-ph:wifi-high',
@@ -101,7 +101,7 @@ export const categoryIcons: Record<SettingCategory, string> = {
   preferences: 'i-ph:sliders',
 };
 
-export interface Profile {
+interface Profile {
   username?: string;
   bio?: string;
   avatar?: string;

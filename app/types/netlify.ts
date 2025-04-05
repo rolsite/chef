@@ -1,4 +1,4 @@
-export interface NetlifySite {
+interface NetlifySite {
   id: string;
   name: string;
   url: string;
@@ -14,7 +14,7 @@ export interface NetlifySite {
   };
 }
 
-export interface NetlifyUser {
+interface NetlifyUser {
   id: string;
   slug: string;
   email: string;
@@ -22,12 +22,12 @@ export interface NetlifyUser {
   avatar_url: string;
 }
 
-export interface NetlifyStats {
+interface NetlifyStats {
   sites: NetlifySite[];
   totalSites: number;
 }
 
-export interface NetlifyConnection {
+interface NetlifyConnection {
   user: NetlifyUser | null;
   token: string;
   stats?: NetlifyStats;

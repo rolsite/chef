@@ -4,7 +4,7 @@ import { WORK_DIR } from './constants';
 import type { WebContainer } from '@webcontainer/api';
 
 // Common patterns to ignore, similar to .gitignore
-export const IGNORE_PATTERNS = [
+const IGNORE_PATTERNS = [
   'node_modules/**',
   '.git/**',
   'dist/**',
@@ -21,12 +21,12 @@ export const IGNORE_PATTERNS = [
   '**/yarn-error.log*',
 ];
 
-export const MAX_FILES = 1000;
-export const ig = ignore().add(IGNORE_PATTERNS);
+const MAX_FILES = 1000;
+const ig = ignore().add(IGNORE_PATTERNS);
 
 export const generateId = () => Math.random().toString(36).substring(2, 15);
 
-export const isBinaryFile = async (file: File): Promise<boolean> => {
+const isBinaryFile = async (file: File): Promise<boolean> => {
   const chunkSize = 1024;
   const buffer = new Uint8Array(await file.slice(0, chunkSize).arrayBuffer());
 
@@ -41,7 +41,7 @@ export const isBinaryFile = async (file: File): Promise<boolean> => {
   return false;
 };
 
-export const shouldIncludeFile = (path: string): boolean => {
+const shouldIncludeFile = (path: string): boolean => {
   return !ig.ignores(path);
 };
 
@@ -67,7 +67,7 @@ const readPackageJson = async (files: File[]): Promise<{ scripts?: Record<string
   }
 };
 
-export const detectProjectType = async (
+const detectProjectType = async (
   files: File[],
 ): Promise<{ type: string; setupCommand: string; followupMessage: string }> => {
   const hasFile = (name: string) => files.some((f) => f.webkitRelativePath.endsWith(name));
@@ -134,7 +134,7 @@ export function workDirRelative(absPath: string) {
   return absPath.slice(withSlash.length);
 }
 
-export async function readDir(container: WebContainer, relPath: string): Promise<DirEnt<string>[]> {
+async function readDir(container: WebContainer, relPath: string): Promise<DirEnt<string>[]> {
   const children = await container.fs.readdir(relPath, {
     withFileTypes: true,
   });
@@ -174,7 +174,7 @@ export async function readPath(
   return { type: 'file', content, isBinary: false };
 }
 
-export function dirname(relPath: string) {
+function dirname(relPath: string) {
   const lastSlash = relPath.lastIndexOf('/');
   if (lastSlash === -1) {
     return '';

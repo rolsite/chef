@@ -50,7 +50,7 @@ export interface ScrollPosition {
   left: number;
 }
 
-export interface EditorUpdate {
+interface EditorUpdate {
   selection: EditorSelection;
   content: string;
   // This isn't a change, it's just to avoid updating the wrong file since
@@ -275,7 +275,6 @@ export const CodeMirrorEditor = memo(
   },
 );
 
-export default CodeMirrorEditor;
 
 CodeMirrorEditor.displayName = 'CodeMirrorEditor';
 

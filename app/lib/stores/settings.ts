@@ -12,7 +12,7 @@ import Cookies from 'js-cookie';
 import { toggleTheme } from './theme';
 import { create } from 'zustand';
 
-export interface Shortcut {
+interface Shortcut {
   key: string;
   ctrlKey?: boolean;
   shiftKey?: boolean;
@@ -29,10 +29,10 @@ export interface Shortcuts {
   toggleTerminal: Shortcut;
 }
 
-export const URL_CONFIGURABLE_PROVIDERS = ['Ollama', 'LMStudio', 'OpenAILike'];
-export const LOCAL_PROVIDERS = ['OpenAILike', 'LMStudio', 'Ollama'];
+const URL_CONFIGURABLE_PROVIDERS = ['Ollama', 'LMStudio', 'OpenAILike'];
+const LOCAL_PROVIDERS = ['OpenAILike', 'LMStudio', 'Ollama'];
 
-export type ProviderSetting = Record<string, IProviderConfig>;
+type ProviderSetting = Record<string, IProviderConfig>;
 
 // Simplified shortcuts store with only theme toggle
 export const shortcutsStore = map<Shortcuts>({
@@ -267,9 +267,9 @@ export const resetTabConfiguration = () => {
 };
 
 // Developer mode store with persistence
-export const developerModeStore = atom<boolean>(initialSettings.developerMode);
+const developerModeStore = atom<boolean>(initialSettings.developerMode);
 
-export const setDeveloperMode = (value: boolean) => {
+const setDeveloperMode = (value: boolean) => {
   developerModeStore.set(value);
 
   if (isBrowser) {
@@ -286,7 +286,7 @@ interface SettingsStore {
   setSelectedTab: (tab: string) => void;
 }
 
-export const useSettingsStore = create<SettingsStore>((set) => ({
+const useSettingsStore = create<SettingsStore>((set) => ({
   isOpen: false,
   selectedTab: 'user', // Default tab
 

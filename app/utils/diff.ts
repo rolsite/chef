@@ -2,7 +2,7 @@ import { createTwoFilesPatch } from 'diff';
 import type { FileMap } from '~/lib/stores/files';
 import { MODIFICATIONS_TAG_NAME, WORK_DIR } from './constants';
 
-export const modificationsRegex = new RegExp(
+const modificationsRegex = new RegExp(
   `^<${MODIFICATIONS_TAG_NAME}>[\\s\\S]*?<\\/${MODIFICATIONS_TAG_NAME}>\\s+`,
   'g',
 );
@@ -58,7 +58,7 @@ export function computeFileModifications(files: FileMap, modifiedFiles: Map<stri
  *
  * @see https://www.gnu.org/software/diffutils/manual/html_node/Unified-Format.html
  */
-export function diffFiles(fileName: string, oldFileContent: string, newFileContent: string) {
+function diffFiles(fileName: string, oldFileContent: string, newFileContent: string) {
   let unifiedDiff = createTwoFilesPatch(fileName, fileName, oldFileContent, newFileContent);
 
   const patchHeaderEnd = `--- ${fileName}\n+++ ${fileName}\n`;
@@ -98,7 +98,7 @@ export function extractRelativePath(filePath: string) {
  * </bolt_file_modifications>
  * ```
  */
-export function fileModificationsToHTML(modifications: FileModifications) {
+function fileModificationsToHTML(modifications: FileModifications) {
   const entries = Object.entries(modifications);
 
   if (entries.length === 0) {

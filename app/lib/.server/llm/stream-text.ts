@@ -10,14 +10,14 @@ import { getFilePaths } from './select-context';
 
 export type Messages = Message[];
 
-export interface StreamingOptions extends Omit<Parameters<typeof _streamText>[0], 'model'> {
+interface StreamingOptions extends Omit<Parameters<typeof _streamText>[0], 'model'> {
   convexProjectConnected: boolean;
   convexProjectToken: string | null;
 }
 
 const logger = createScopedLogger('stream-text');
 
-export async function boltStreamText(props: {
+async function boltStreamText(props: {
   messages: Omit<Message, 'id'>[];
   env?: Env;
   options?: StreamingOptions;

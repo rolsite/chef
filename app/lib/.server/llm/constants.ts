@@ -2,15 +2,15 @@
 export const MAX_TOKENS = 8000;
 
 // limits the number of model responses that can be returned in a single request
-export const MAX_RESPONSE_SEGMENTS = 2;
+const MAX_RESPONSE_SEGMENTS = 2;
 
-export interface File {
+interface File {
   type: 'file';
   content: string;
   isBinary: boolean;
 }
 
-export interface Folder {
+interface Folder {
   type: 'folder';
 }
 

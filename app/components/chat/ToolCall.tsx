@@ -140,7 +140,7 @@ export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => 
   );
 });
 
-export const ToolUseContents = memo(
+const ToolUseContents = memo(
   ({ artifact, invocation }: { artifact: ArtifactState; invocation: ConvexToolInvocation }) => {
     switch (invocation.toolName) {
       case 'deploy': {

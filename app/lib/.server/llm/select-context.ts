@@ -12,7 +12,7 @@ import { LLMManager } from '~/lib/modules/llm/manager';
 const ig = ignore().add(IGNORE_PATTERNS);
 const logger = createScopedLogger('select-context');
 
-export async function selectContext(props: {
+async function selectContext(props: {
   messages: Message[];
   env?: Env;
   apiKeys?: Record<string, string>;
