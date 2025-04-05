@@ -28,8 +28,6 @@ export interface Shortcuts {
   toggleTheme: Shortcut;
   toggleTerminal: Shortcut;
 }
-
-const URL_CONFIGURABLE_PROVIDERS = ['Ollama', 'LMStudio', 'OpenAILike'];
 const LOCAL_PROVIDERS = ['OpenAILike', 'LMStudio', 'Ollama'];
 
 type ProviderSetting = Record<string, IProviderConfig>;
@@ -269,14 +267,6 @@ export const resetTabConfiguration = () => {
 // Developer mode store with persistence
 const developerModeStore = atom<boolean>(initialSettings.developerMode);
 
-const setDeveloperMode = (value: boolean) => {
-  developerModeStore.set(value);
-
-  if (isBrowser) {
-    localStorage.setItem(SETTINGS_KEYS.DEVELOPER_MODE, JSON.stringify(value));
-  }
-};
-
 // First, let's define the SettingsStore interface
 interface SettingsStore {
   isOpen: boolean;
@@ -285,26 +275,3 @@ interface SettingsStore {
   closeSettings: () => void;
   setSelectedTab: (tab: string) => void;
 }
-
-const useSettingsStore = create<SettingsStore>((set) => ({
-  isOpen: false,
-  selectedTab: 'user', // Default tab
-
-  openSettings: () => {
-    set({
-      isOpen: true,
-      selectedTab: 'user', // Always open to user tab
-    });
-  },
-
-  closeSettings: () => {
-    set({
-      isOpen: false,
-      selectedTab: 'user', // Reset to user tab when closing
-    });
-  },
-
-  setSelectedTab: (tab: string) => {
-    set({ selectedTab: tab });
-  },
-}));

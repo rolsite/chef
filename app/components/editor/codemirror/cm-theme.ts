@@ -3,8 +3,6 @@ import { EditorView } from '@codemirror/view';
 import { vscodeDark, vscodeLight } from '@uiw/codemirror-theme-vscode';
 import type { Theme } from '~/types/theme.js';
 import type { EditorSettings } from './CodeMirrorEditor.js';
-
-const darkTheme = EditorView.theme({}, { dark: true });
 const themeSelection = new Compartment();
 
 export function getTheme(theme: Theme, settings: EditorSettings = {}): Extension {

@@ -130,20 +130,6 @@ interface ShellCodeBlockProps {
   code: string;
 }
 
-function ShellCodeBlock({ className, code }: ShellCodeBlockProps) {
-  return (
-    <div
-      className={classNames('text-xs', className)}
-      dangerouslySetInnerHTML={{
-        __html: shellHighlighter.codeToHtml(code, {
-          lang: 'shell',
-          theme: 'dark-plus',
-        }),
-      }}
-    ></div>
-  );
-}
-
 interface ActionListProps {
   actions: ActionState[];
 }

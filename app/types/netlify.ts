@@ -27,12 +27,6 @@ interface NetlifyStats {
   totalSites: number;
 }
 
-interface NetlifyConnection {
-  user: NetlifyUser | null;
-  token: string;
-  stats?: NetlifyStats;
-}
-
 export interface NetlifySiteInfo {
   id: string;
   name: string;

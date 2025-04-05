@@ -64,7 +64,7 @@ export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => 
       }
 
       return parsedContent;
-    } catch (_error) {
+    } catch {
       return {} as ConvexToolInvocation;
     }
   }, [action?.content, action?.status, artifact, toolCallId]);

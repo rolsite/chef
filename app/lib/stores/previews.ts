@@ -302,15 +302,3 @@ export class PreviewsStore {
 
 // Create a singleton instance
 let previewsStore: PreviewsStore | null = null;
-
-function usePreviewStore() {
-  if (!previewsStore) {
-    /*
-     * Initialize with a Promise that resolves to WebContainer
-     * This should match how you're initializing WebContainer elsewhere
-     */
-    previewsStore = new PreviewsStore(Promise.resolve({} as WebContainer));
-  }
-
-  return previewsStore;
-}
