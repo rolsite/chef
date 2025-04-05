@@ -15,7 +15,7 @@ import { deployTool } from '~/lib/runtime/deployTool';
 import { viewTool } from '~/lib/runtime/viewTool';
 import type { ConvexToolSet } from '~/lib/common/types';
 import { npmInstallTool } from '~/lib/runtime/npmInstallTool';
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 
 export type AITextDataStream = ReturnType<typeof createDataStream>;
 
@@ -57,6 +57,9 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
       let provider: Provider;
       if (true) {
         const model = 'gpt-4o-alpha-2025-03-23';
+        const openai = createOpenAI({
+          apiKey: getEnv(env, 'OPENAI_API_KEY'),
+        })
         provider = {
           model: openai(model),
           maxTokens: 8192,
