@@ -55,8 +55,8 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
         message: 'Analyzing Messages',
       } satisfies ProgressAnnotation);
       let provider: Provider;
-      if (getEnv(env, 'USE_OPENAI')) {
-        const model = getEnv(env, 'OPENAI_MODEL') || 'gpt-4o-2024-11-20';
+      if (true) {
+        const model = 'gpt-4o-alpha-2025-03-23';
         provider = {
           model: openai(model),
           maxTokens: 8192,
