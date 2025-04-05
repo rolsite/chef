@@ -1,50 +1,8 @@
 import type { DirEnt } from '@webcontainer/api';
-import ignore from 'ignore';
 import { WORK_DIR } from './constants';
 import type { WebContainer } from '@webcontainer/api';
 
-// Common patterns to ignore, similar to .gitignore
-const IGNORE_PATTERNS = [
-  'node_modules/**',
-  '.git/**',
-  'dist/**',
-  'build/**',
-  '.next/**',
-  'coverage/**',
-  '.cache/**',
-  '.vscode/**',
-  '.idea/**',
-  '**/*.log',
-  '**/.DS_Store',
-  '**/npm-debug.log*',
-  '**/yarn-debug.log*',
-  '**/yarn-error.log*',
-];
-const ig = ignore().add(IGNORE_PATTERNS);
-
 export const generateId = () => Math.random().toString(36).substring(2, 15);
-
-const readPackageJson = async (files: File[]): Promise<{ scripts?: Record<string, string> } | null> => {
-  const packageJsonFile = files.find((f) => f.webkitRelativePath.endsWith('package.json'));
-
-  if (!packageJsonFile) {
-    return null;
-  }
-
-  try {
-    const content = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsText(packageJsonFile);
-    });
-
-    return JSON.parse(content);
-  } catch (error) {
-    console.error('Error reading package.json:', error);
-    return null;
-  }
-};
 
 export const filesToArtifacts = (files: { [path: string]: { content: string } }, id: string): string => {
   return `

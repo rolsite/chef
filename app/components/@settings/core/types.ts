@@ -1,8 +1,6 @@
-import type { ReactNode } from 'react';
 
-type SettingCategory = 'profile' | 'file_sharing' | 'connectivity' | 'system' | 'services' | 'preferences';
 
-export type TabType =
+type TabType =
   | 'profile'
   | 'settings'
   | 'notifications'

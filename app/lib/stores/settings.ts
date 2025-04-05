@@ -10,7 +10,6 @@ import type {
 import { DEFAULT_TAB_CONFIG } from '~/components/@settings/core/constants';
 import Cookies from 'js-cookie';
 import { toggleTheme } from './theme';
-import { create } from 'zustand';
 
 interface Shortcut {
   key: string;
@@ -263,15 +262,3 @@ export const resetTabConfiguration = () => {
   tabConfigurationStore.set(defaultConfig);
   localStorage.setItem('bolt_tab_configuration', JSON.stringify(defaultConfig));
 };
-
-// Developer mode store with persistence
-const developerModeStore = atom<boolean>(initialSettings.developerMode);
-
-// First, let's define the SettingsStore interface
-interface SettingsStore {
-  isOpen: boolean;
-  selectedTab: string;
-  openSettings: () => void;
-  closeSettings: () => void;
-  setSelectedTab: (tab: string) => void;
-}

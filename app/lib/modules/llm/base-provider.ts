@@ -1,7 +1,6 @@
 import type { LanguageModelV1 } from 'ai';
 import type { ProviderInfo, ProviderConfig, ModelInfo } from './types';
 import type { IProviderSetting } from '~/types/model';
-import { createOpenAI } from '@ai-sdk/openai';
 import { LLMManager } from './manager';
 
 export abstract class BaseProvider implements ProviderInfo {
@@ -116,5 +115,3 @@ export abstract class BaseProvider implements ProviderInfo {
     providerSettings?: Record<string, IProviderSetting>;
   }): LanguageModelV1;
 }
-
-type OptionalApiKey = string | undefined;

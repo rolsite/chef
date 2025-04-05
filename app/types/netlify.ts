@@ -1,31 +1,4 @@
-interface NetlifySite {
-  id: string;
-  name: string;
-  url: string;
-  admin_url: string;
-  build_settings: {
-    provider: string;
-    repo_url: string;
-    cmd: string;
-  };
-  published_deploy: {
-    published_at: string;
-    deploy_time: number;
-  };
-}
 
-interface NetlifyUser {
-  id: string;
-  slug: string;
-  email: string;
-  full_name: string;
-  avatar_url: string;
-}
-
-interface NetlifyStats {
-  sites: NetlifySite[];
-  totalSites: number;
-}
 
 export interface NetlifySiteInfo {
   id: string;

@@ -299,6 +299,3 @@ export class PreviewsStore {
     this.#refreshTimeouts.set(previewId, timeout);
   }
 }
-
-// Create a singleton instance
-let previewsStore: PreviewsStore | null = null;

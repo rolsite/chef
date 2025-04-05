@@ -125,11 +125,6 @@ export const Artifact = memo(({ partId }: ArtifactProps) => {
   );
 });
 
-interface ShellCodeBlockProps {
-  className?: string;
-  code: string;
-}
-
 interface ActionListProps {
   actions: ActionState[];
 }

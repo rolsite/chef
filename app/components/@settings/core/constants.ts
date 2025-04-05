@@ -1,4 +1,4 @@
-import type { TabType } from './types';
+
 
 export const DEFAULT_TAB_CONFIG = [
   // User Window Tabs (Always visible by default)

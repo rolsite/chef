@@ -1,6 +1,5 @@
 import { WORK_DIR } from '~/utils/constants';
 import { allowedHTMLElements } from '~/utils/markdown';
-import { stripIndents } from '~/utils/stripIndent';
 
 export const getSystemPrompt = (cwd: string = WORK_DIR) => `
 You are Flow, an expert AI assistant and exceptional senior software developer with vast knowledge across multiple programming languages, frameworks, and best practices.
