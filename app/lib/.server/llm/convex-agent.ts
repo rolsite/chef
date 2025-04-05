@@ -16,6 +16,7 @@ import { viewTool } from '~/lib/runtime/viewTool';
 import type { ConvexToolSet } from '~/lib/common/types';
 import { npmInstallTool } from '~/lib/runtime/npmInstallTool';
 import { openai } from '@ai-sdk/openai';
+import { captureException } from '@sentry/remix';
 
 export type AITextDataStream = ReturnType<typeof createDataStream>;
 
@@ -34,7 +35,6 @@ const tools: ConvexToolSet = {
   deploy: deployTool,
   view: viewTool,
   npmInstall: npmInstallTool,
-};
 };
 
 export async function convexAgent(env: Env, firstUserMessage: boolean, messages: Messages): Promise<AITextDataStream> {
@@ -72,7 +72,12 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
               const response = await fetch(input, enrichedOptions);
 
               if (response.status == 429) {
-                // Add sentry logging here
+                captureException('Rate limited by Anthropic, switching to low QoS API key', {
+                  level: 'error',
+                  extra: {
+                    response,
+                  },
+                });
                 const lowQosKey = getEnv(env, 'ANTHROPIC_LOW_QOS_API_KEY');
 
                 if (!lowQosKey) {
@@ -91,12 +96,12 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
               return response;
             } catch (error) {
               console.error('Error with Anthropic API call:', error);
-              throw new Error();
+              throw error;
             }
           };
         };
 
-        const primaryApiKey = getEnv(env, 'ANTHROPIC_API_KEY') || '';
+        const primaryApiKey = getEnv(env, 'ANTHROPIC_API_KEY');
 
         const anthropic = createAnthropic({
           apiKey: primaryApiKey,

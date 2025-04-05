@@ -27,6 +27,7 @@ import { convexStore, useConvexSessionIdOrNullOrLoading } from '~/lib/stores/con
 import { useQuery } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { toast, Toaster } from 'sonner';
+import { captureException } from '@sentry/remix';
 
 const logger = createScopedLogger('Chat');
 
@@ -160,7 +161,12 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
       return result;
     },
     onError: (e) => {
-      // TODO: Add sentry logging here
+      captureException('Failed to process chat request: ' + e.message, {
+        level: 'error',
+        extra: {
+          error: e,
+        },
+      });
       console.log('Error', e);
       logger.error('Request failed\n\n', e, error);
       logStore.logError('Chat request failed', e, {
