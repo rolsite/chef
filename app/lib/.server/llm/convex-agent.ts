@@ -73,7 +73,7 @@ export async function convexAgent(env: Env, firstUserMessage: boolean, messages:
 
               if (response.status == 429) {
                 captureException('Rate limited by Anthropic, switching to low QoS API key', {
-                  level: 'error',
+                  level: 'warning',
                   extra: {
                     response,
                   },
