@@ -69,7 +69,6 @@ export async function convexAgent(
       };
     };
 
-    const primaryApiKey = getEnv(env, 'ANTHROPIC_API_KEY');
     const anthropic = createAnthropic({
       apiKey: getEnv(env, 'ANTHROPIC_API_KEY'),
       fetch: rateLimitAwareFetch(),
