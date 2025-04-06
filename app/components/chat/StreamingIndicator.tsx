@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import type { ToolStatus } from '~/lib/common/types';
 import type { ActionStatus } from '~/lib/runtime/action-runner';
 import type { PartId } from '~/lib/stores/Artifacts';
 import { classNames } from '~/utils/classNames';
@@ -7,17 +8,17 @@ import { classNames } from '~/utils/classNames';
 interface StreamingIndicatorProps {
   streamStatus: 'streaming' | 'submitted' | 'ready' | 'error';
   numMessages: number;
+  toolStatus?: ToolStatus;
   currentError?: Error;
 }
 
 export default function StreamingIndicator(props: StreamingIndicatorProps) {
-  const toolStatus = useCurrentToolStatus();
-
   let streamStatus = props.streamStatus;
-  if (Object.values(toolStatus).some((status) => status === 'running' || status === 'pending')) {
+  const anyToolRunning = props.toolStatus
+    && Object.values(props.toolStatus).some((status) => status === 'running' || status === 'pending');
+  if (anyToolRunning) {
     streamStatus = 'streaming';
   }
-
   if (streamStatus === "ready" && props.numMessages === 0) {
     return null;
   }
@@ -84,47 +85,4 @@ export default function StreamingIndicator(props: StreamingIndicatorProps) {
       </div>
     </AnimatePresence>
   );
-}
-
-function useCurrentToolStatus() {
-  const [toolStatus, setToolStatus] = useState<Record<string, ActionStatus>>({});
-  useEffect(() => {
-    let canceled = false;
-    let artifactSubscription: (() => void) | null = null;
-    const partSubscriptions: Record<PartId, () => void> = {};
-    const subscribe = async () => {
-      const { workbenchStore } = await import('~/lib/stores/workbench');
-      artifactSubscription = workbenchStore.artifacts.subscribe((artifacts) => {
-        if (canceled) {
-          return;
-        }
-        for (const [partId, artifactState] of Object.entries(artifacts)) {
-          if (partSubscriptions[partId as PartId]) {
-            continue;
-          }
-          const { actions } = artifactState.runner;
-          const sub = actions.subscribe((actionsMap) => {
-            for (const [id, action] of Object.entries(actionsMap)) {
-              setToolStatus((prev) => {
-                if (prev[id] !== action.status) {
-                  return { ...prev, [id]: action.status };
-                }
-                return prev;
-              })
-            }
-          })
-          partSubscriptions[partId as PartId] = sub;
-        }
-      })
-    };
-    void subscribe();
-    return () => {
-      canceled = true;
-      artifactSubscription?.();
-      for (const sub of Object.values(partSubscriptions)) {
-        sub();
-      }
-    };
-  }, [])
-  return toolStatus;
 }

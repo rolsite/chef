@@ -26,6 +26,7 @@ import { useFlexAuthMode } from '~/lib/stores/convex';
 import { SuggestionButtons } from './SuggestionButtons';
 import { KeyboardShortcut } from '~/components/ui/KeyboardShortcut';
 import StreamingIndicator from './StreamingIndicator';
+import type { ToolStatus } from '~/lib/common/types';
 const TEXTAREA_MIN_HEIGHT = 76;
 
 interface BaseChatProps {
@@ -56,6 +57,7 @@ interface BaseChatProps {
   data?: JSONValue[] | undefined;
   actionRunner?: ActionRunner;
   currentError?: Error;
+  toolStatus?: ToolStatus;
 }
 
 export const WrappedBaseChat = (props: BaseChatProps) => {
@@ -86,6 +88,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       clearAlert,
       data,
       actionRunner,
+      toolStatus,
     },
     ref,
   ) => {
@@ -186,7 +189,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     />
                   )}
                 </div>
-                {<StreamingIndicator streamStatus={streamStatus} numMessages={messages?.length ?? 0} />}
+                {<StreamingIndicator streamStatus={streamStatus} numMessages={messages?.length ?? 0} toolStatus={toolStatus} />}
                 <div
                   className={classNames(
                     'bg-bolt-elements-background-depth-2 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt',
