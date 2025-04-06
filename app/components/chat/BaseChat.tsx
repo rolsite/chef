@@ -3,7 +3,7 @@
  * Preventing TS checks with files presented in the video for a better presentation.
  */
 import type { JSONValue, Message } from 'ai';
-import React, { type RefCallback, useEffect, useState } from 'react';
+import React, { type RefCallback, useEffect } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
 import { Menu } from '~/components/sidebar/Menu.client';
 import { Workbench } from '~/components/workbench/Workbench.client';
@@ -19,14 +19,14 @@ import type { ProviderInfo } from '~/types/model';
 import { ScreenshotStateManager } from './ScreenshotStateManager';
 import type { ActionAlert } from '~/types/actions';
 import ChatAlert from './ChatAlert';
-import ProgressCompilation from './ProgressCompilation';
-import type { ProgressAnnotation } from '~/types/context';
 import type { ActionRunner } from '~/lib/runtime/action-runner';
 import { ConvexConnection } from '~/components/convex/ConvexConnection';
 import { FlexAuthWrapper } from './FlexAuthWrapper';
 import { useFlexAuthMode } from '~/lib/stores/convex';
 import { SuggestionButtons } from './SuggestionButtons';
 import { KeyboardShortcut } from '~/components/ui/KeyboardShortcut';
+import StreamingIndicator from './StreamingIndicator';
+import type { ToolStatus } from '~/lib/common/types';
 const TEXTAREA_MIN_HEIGHT = 76;
 
 interface BaseChatProps {
@@ -35,7 +35,7 @@ interface BaseChatProps {
   scrollRef?: RefCallback<HTMLDivElement> | undefined;
   showChat?: boolean;
   chatStarted?: boolean;
-  isStreaming?: boolean;
+  streamStatus?: 'streaming' | 'submitted' | 'ready' | 'error';
   onStreamingChange?: (streaming: boolean) => void;
   messages?: Message[];
   description?: string;
@@ -56,6 +56,8 @@ interface BaseChatProps {
   clearAlert?: () => void;
   data?: JSONValue[] | undefined;
   actionRunner?: ActionRunner;
+  currentError?: Error;
+  toolStatus?: ToolStatus;
 }
 
 export const WrappedBaseChat = (props: BaseChatProps) => {
@@ -70,7 +72,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       scrollRef,
       showChat = true,
       chatStarted = false,
-      isStreaming = false,
+      streamStatus = 'ready',
       onStreamingChange,
       providerList,
       input = '',
@@ -84,23 +86,15 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       messages,
       actionAlert,
       clearAlert,
-      data,
       actionRunner,
+      toolStatus,
     },
     ref,
   ) => {
     const flexAuthMode = useFlexAuthMode();
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
-    const [progressAnnotations, setProgressAnnotations] = useState<ProgressAnnotation[]>([]);
-    useEffect(() => {
-      if (data) {
-        const progressList = data.filter(
-          (x) => typeof x === 'object' && (x as any).type === 'progress',
-        ) as ProgressAnnotation[];
-        setProgressAnnotations(progressList);
-      }
-    }, [data]);
 
+    const isStreaming = streamStatus === 'streaming' || streamStatus === 'submitted';
     useEffect(() => {
       onStreamingChange?.(isStreaming);
     }, [isStreaming, onStreamingChange]);
@@ -194,7 +188,13 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     />
                   )}
                 </div>
-                {progressAnnotations && <ProgressCompilation data={progressAnnotations} />}
+                {
+                  <StreamingIndicator
+                    streamStatus={streamStatus}
+                    numMessages={messages?.length ?? 0}
+                    toolStatus={toolStatus}
+                  />
+                }
                 <div
                   className={classNames(
                     'bg-bolt-elements-background-depth-2 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt',

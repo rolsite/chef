@@ -18,7 +18,7 @@ import { z } from 'zod';
 import { editToolParameters } from './editTool';
 const logger = createScopedLogger('ActionRunner');
 
-type ActionStatus = 'pending' | 'running' | 'complete' | 'aborted' | 'failed';
+export type ActionStatus = 'pending' | 'running' | 'complete' | 'aborted' | 'failed';
 
 type BaseActionState = BoltAction & {
   status: Exclude<ActionStatus, 'failed'>;
@@ -507,7 +507,7 @@ const BANNED_LINES = [
   'computing gzip size',
   'Collecting TypeScript errors',
   'idealTree buildDeps',
-  'timing reify:unpack'
+  'timing reify:unpack',
 ];
 
 // Cleaning terminal output helps the agent focus on the important parts and
