@@ -192,7 +192,6 @@ const ChatImpl = memo(({ description, initialMessages, storeMessageHistory, init
       logger.debug('Finished streaming');
     },
   });
-  const isLoading = status === 'streaming' || status === 'submitted';
   useEffect(() => {
     const prompt = searchParams.get('prompt');
 
@@ -221,11 +220,11 @@ const ChatImpl = memo(({ description, initialMessages, storeMessageHistory, init
     processSampledMessages({
       messages,
       initialMessages,
-      isLoading,
+      isLoading: status === 'streaming' || status === 'submitted',
       parseMessages,
       storeMessageHistory,
     });
-  }, [messages, isLoading, parseMessages]);
+  }, [messages, status, parseMessages]);
 
   const abort = () => {
     stop();
@@ -275,7 +274,7 @@ const ChatImpl = memo(({ description, initialMessages, storeMessageHistory, init
       return;
     }
 
-    if (isLoading) {
+    if (status === 'streaming' || status === 'submitted') {
       abort();
       return;
     }
@@ -308,10 +307,6 @@ const ChatImpl = memo(({ description, initialMessages, storeMessageHistory, init
       reload();
 
       return;
-    }
-
-    if (error != null) {
-      setMessages(messages.slice(0, -1));
     }
 
     const modifiedFiles = workbenchStore.getModifiedFiles();
@@ -403,7 +398,7 @@ const ChatImpl = memo(({ description, initialMessages, storeMessageHistory, init
       input={input}
       showChat={showChat}
       chatStarted={chatStarted}
-      isStreaming={isLoading}
+      streamStatus={status}
       onStreamingChange={(streaming) => {
         streamingState.set(streaming);
       }}
@@ -438,6 +433,7 @@ const ChatImpl = memo(({ description, initialMessages, storeMessageHistory, init
       actionAlert={actionAlert}
       clearAlert={() => workbenchStore.clearAlert()}
       data={chatData}
+      currentError={error}
     />
   );
 });

@@ -25,6 +25,7 @@ import { FlexAuthWrapper } from './FlexAuthWrapper';
 import { useFlexAuthMode } from '~/lib/stores/convex';
 import { SuggestionButtons } from './SuggestionButtons';
 import { KeyboardShortcut } from '~/components/ui/KeyboardShortcut';
+import StreamingIndicator from './StreamingIndicator';
 const TEXTAREA_MIN_HEIGHT = 76;
 
 interface BaseChatProps {
@@ -33,7 +34,7 @@ interface BaseChatProps {
   scrollRef?: RefCallback<HTMLDivElement> | undefined;
   showChat?: boolean;
   chatStarted?: boolean;
-  isStreaming?: boolean;
+  streamStatus?: 'streaming' | 'submitted' | 'ready' | 'error';
   onStreamingChange?: (streaming: boolean) => void;
   messages?: Message[];
   description?: string;
@@ -54,6 +55,7 @@ interface BaseChatProps {
   clearAlert?: () => void;
   data?: JSONValue[] | undefined;
   actionRunner?: ActionRunner;
+  currentError?: Error;
 }
 
 export const WrappedBaseChat = (props: BaseChatProps) => {
@@ -68,7 +70,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       scrollRef,
       showChat = true,
       chatStarted = false,
-      isStreaming = false,
+      streamStatus = 'ready',
       onStreamingChange,
       providerList,
       input = '',
@@ -90,6 +92,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     const flexAuthMode = useFlexAuthMode();
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
 
+    const isStreaming = streamStatus === 'streaming' || streamStatus === 'submitted';
     useEffect(() => {
       onStreamingChange?.(isStreaming);
     }, [isStreaming, onStreamingChange]);
@@ -183,6 +186,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     />
                   )}
                 </div>
+                {<StreamingIndicator streamStatus={streamStatus} numMessages={messages?.length ?? 0} />}
                 <div
                   className={classNames(
                     'bg-bolt-elements-background-depth-2 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt',
