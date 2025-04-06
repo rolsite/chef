@@ -1,8 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
 import type { ToolStatus } from '~/lib/common/types';
-import type { ActionStatus } from '~/lib/runtime/action-runner';
-import type { PartId } from '~/lib/stores/Artifacts';
 import { classNames } from '~/utils/classNames';
 
 interface StreamingIndicatorProps {
