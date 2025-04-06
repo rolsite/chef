@@ -268,20 +268,43 @@ Note: \`paginationOpts\` is an object with the following properties:
   query by "field1" then "field2" and by "field2" then "field1", you must create separate indexes.
 - Index definitions MUST be nonempty. \`.index("by_creation_time", [])\` is ALWAYS wrong.
 
-### Examples
-
-Prefer relational data modeling over document modeling. For example, when modeling a chat app with
-reactions, don't store reactions as an array. Instead, create a separate \`reactions\` table:
+Here's an example of correctly using the built-in \`by_creation_time\` index:
+Path: \`convex/schema.ts\`
 \`\`\`ts
+import { defineSchema } from "convex/server";
+
 export default defineSchema({
+  // IMPORTANT: No explicit \`.index("by_creation_time", ["_creationTime"]) \` is needed.
   messages: defineTable({
+    name: v.string(),
     body: v.string(),
-  }),
-  reactions: defineTable({
-    messageId: v.id("messages"),
-    userId: v.id("users"),
-    reaction: v.string(),
-  }).index("by_message_id_and_user_id_and_reaction", ["messageId", "userId", "reaction"]),
+  })
+    // IMPORTANT: This index sorts by \`(name, _creationTime)\`.
+    .index("by_name", ["name"]),
+});
+\`\`\`
+Path: \`convex/messages.ts\`
+\`\`\`ts
+import { query } from "./_generated/server";
+
+export const exampleQuery = query({
+  args: {},
+  handler: async (ctx) => {
+    // This is automatically in ascending \`_creationTime\` order.
+    const recentMessages = await ctx.db.query("messages")
+      .withIndex("by_creation_time", (q) => q.gt("_creationTime", Date.now() - 60 * 60 * 1000))
+      .collect();
+
+    // This is automatically in \`_creationTime\` order.
+    const allMessages = await ctx.db.query("messages").order("desc").collect();
+
+    // This query uses the index to filter by the name field and then implicitly
+    // orders by \`_creationTime\`.
+    const byName = await ctx.db.query("messages")
+      .withIndex("by_name", (q) => q.eq("name", "Alice"))
+      .order("asc")
+      .collect();
+  },
 });
 \`\`\`
 
@@ -636,26 +659,7 @@ export const listMessages = query({
       .withIndex("by_channel", (q) => q.eq("channelId", args.channelId))
       .order("desc")
       .take(10);
-    const messagesWithReactions = await Promise.all(
-      messages.map(async (message) => {
-        const rows = await ctx.db.query("reactions")
-          .withIndex("by_message_id_and_user_id_and_reaction", (q) => q
-            .eq("messageId", message._id)
-          )
-          .collect();
-        const reactions: Record<string, { count: number, currentUserReacted: boolean }> = {};
-        for (const row of rows) {
-          const existingCount = reactions[row.reaction]?.count || 0;
-          const existingCurrentUserReacted = reactions[row.reaction]?.currentUserReacted || false;
-          reactions[row.reaction] = {
-            count: existingCount + 1,
-            currentUserReacted: existingCurrentUserReacted || row.userId === userId,
-          };
-        }
-        return { ...message, reactions };
-      }),
-    );
-    return messagesWithReactions;
+    return messages;
   },
 });
 
@@ -687,37 +691,6 @@ export const sendMessage = mutation({
       channelId: args.channelId,
     });
     return null;
-  },
-});
-
-/**
- * Toggle message reaction.
- */
-export const reactToMessage = mutation({
-  args: {
-    messageId: v.id("messages"),
-    reaction: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getLoggedInUser(ctx);
-    const existing = await ctx.db.query("reactions")
-      .withIndex(
-        "by_message_id_and_user_id_and_reaction",
-        (q) => q
-          .eq("messageId", args.messageId)
-          .eq("userId", userId)
-          .eq("reaction", args.reaction)
-      )
-      .unique();
-    if (existing) {
-      await ctx.db.delete(existing._id);
-    } else {
-      await ctx.db.insert("reactions", {
-        messageId: args.messageId,
-        userId: userId,
-        reaction: args.reaction,
-      });
-    }
   },
 });
 
@@ -812,12 +785,6 @@ const applicationTables = {
     authorId: v.optional(v.id("users")),
     content: v.string(),
   }).index("by_channel", ["channelId"]),
-
-  reactions: defineTable({
-    messageId: v.id("messages"),
-    userId: v.id("users"),
-    reaction: v.string(),
-  }).index("by_message_id_and_user_id_and_reaction", ["messageId", "userId", "reaction"]),
 };
 
 export default defineSchema({
