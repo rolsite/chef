@@ -4,7 +4,7 @@ import { useChat } from '@ai-sdk/react';
 import { useAnimate } from 'framer-motion';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useMessageParser, useShortcuts, useSnapScroll } from '~/lib/hooks';
-import { description, useChatHistoryConvex } from '~/lib/persistence';
+import { chatIdStore, description, useChatHistoryConvex } from '~/lib/persistence';
 import { chatStore, useChatIdOrNull } from '~/lib/stores/chat';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { DEFAULT_MODEL, DEFAULT_PROVIDER, PROMPT_COOKIE_KEY, PROVIDER_LIST } from '~/utils/constants';
@@ -27,6 +27,8 @@ import { convexStore, useConvexSessionIdOrNullOrLoading } from '~/lib/stores/con
 import { useQuery } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { toast, Toaster } from 'sonner';
+import type { ActionStatus } from '~/lib/runtime/action-runner';
+import type { PartId } from '~/lib/stores/Artifacts';
 
 const logger = createScopedLogger('Chat');
 
@@ -102,7 +104,7 @@ interface ChatProps {
   description?: string;
 }
 
-export const ChatImpl = memo(({ description, initialMessages, storeMessageHistory, initializeChat }: ChatProps) => {
+const ChatImpl = memo(({ description, initialMessages, storeMessageHistory, initializeChat }: ChatProps) => {
   useShortcuts();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -147,9 +149,11 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
     api: '/api/chat',
     sendExtraMessageFields: true,
     experimental_prepareRequestBody: ({ messages }) => {
+      const chatId = chatIdStore.get() ?? '';
       return {
         messages: chatContextManager.current.prepareContext(messages),
         firstUserMessage: messages.filter((message) => message.role == 'user').length == 1,
+        chatId,
       };
     },
     maxSteps: 64,
@@ -190,7 +194,6 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
       logger.debug('Finished streaming');
     },
   });
-  const isLoading = status === 'streaming' || status === 'submitted';
   useEffect(() => {
     const prompt = searchParams.get('prompt');
 
@@ -219,11 +222,11 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
     processSampledMessages({
       messages,
       initialMessages,
-      isLoading,
+      isLoading: status === 'streaming' || status === 'submitted',
       parseMessages,
       storeMessageHistory,
     });
-  }, [messages, isLoading, parseMessages]);
+  }, [messages, status, parseMessages]);
 
   const abort = () => {
     stop();
@@ -251,6 +254,8 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
     }
   }, [input, textareaRef]);
 
+  const toolStatus = useCurrentToolStatus();
+
   const runAnimation = async () => {
     if (chatStarted) {
       return;
@@ -273,7 +278,7 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
       return;
     }
 
-    if (isLoading) {
+    if (status === 'streaming' || status === 'submitted') {
       abort();
       return;
     }
@@ -306,10 +311,6 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
       reload();
 
       return;
-    }
-
-    if (error != null) {
-      setMessages(messages.slice(0, -1));
     }
 
     const modifiedFiles = workbenchStore.getModifiedFiles();
@@ -401,7 +402,7 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
       input={input}
       showChat={showChat}
       chatStarted={chatStarted}
-      isStreaming={isLoading}
+      streamStatus={status}
       onStreamingChange={(streaming) => {
         streamingState.set(streaming);
       }}
@@ -419,6 +420,7 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
       }}
       handleStop={abort}
       description={description}
+      toolStatus={toolStatus}
       messages={messages.map((message, i) => {
         if (message.role === 'user') {
           return message;
@@ -436,7 +438,50 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
       actionAlert={actionAlert}
       clearAlert={() => workbenchStore.clearAlert()}
       data={chatData}
+      currentError={error}
     />
   );
 });
 ChatImpl.displayName = 'ChatImpl';
+
+function useCurrentToolStatus() {
+  const [toolStatus, setToolStatus] = useState<Record<string, ActionStatus>>({});
+  useEffect(() => {
+    let canceled = false;
+    let artifactSubscription: (() => void) | null = null;
+    const partSubscriptions: Record<PartId, () => void> = {};
+    const subscribe = async () => {
+      artifactSubscription = workbenchStore.artifacts.subscribe((artifacts) => {
+        if (canceled) {
+          return;
+        }
+        for (const [partId, artifactState] of Object.entries(artifacts)) {
+          if (partSubscriptions[partId as PartId]) {
+            continue;
+          }
+          const { actions } = artifactState.runner;
+          const sub = actions.subscribe((actionsMap) => {
+            for (const [id, action] of Object.entries(actionsMap)) {
+              setToolStatus((prev) => {
+                if (prev[id] !== action.status) {
+                  return { ...prev, [id]: action.status };
+                }
+                return prev;
+              });
+            }
+          });
+          partSubscriptions[partId as PartId] = sub;
+        }
+      });
+    };
+    void subscribe();
+    return () => {
+      canceled = true;
+      artifactSubscription?.();
+      for (const sub of Object.values(partSubscriptions)) {
+        sub();
+      }
+    };
+  }, []);
+  return toolStatus;
+}
