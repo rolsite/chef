@@ -17,6 +17,7 @@ import { themeStore } from '~/lib/stores/theme';
 import { getLanguageFromExtension } from '~/utils/getLanguageFromExtension';
 import { path } from '~/utils/path';
 import { npmInstallToolParameters } from '~/lib/runtime/npmInstallTool';
+import { editToolParameters } from '~/lib/runtime/editTool';
 
 export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => {
   const { partId, toolCallId } = props;
@@ -140,7 +141,7 @@ export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => 
   );
 });
 
-export const ToolUseContents = memo(
+const ToolUseContents = memo(
   ({ artifact, invocation }: { artifact: ArtifactState; invocation: ConvexToolInvocation }) => {
     switch (invocation.toolName) {
       case 'deploy': {
@@ -151,6 +152,9 @@ export const ToolUseContents = memo(
       }
       case 'npmInstall': {
         return <NpmInstallTool artifact={artifact} invocation={invocation} />;
+      }
+      case 'edit': {
+        return <EditTool invocation={invocation} />;
       }
       default: {
         // Fallback for other tool types
@@ -328,22 +332,22 @@ function toolTitle(invocation: ConvexToolInvocation): React.ReactNode {
       if (invocation.state === 'result' && invocation.result.startsWith('Directory:')) {
         verb = 'List';
         icon = 'i-ph:folder';
-        let extra = '';
-        if (args.view_range) {
-          const [start, end] = args.view_range;
-          const endName = end === -1 ? 'end' : end.toString();
-          extra = ` (lines ${start} - ${endName})`;
-        }
-        return (
-          <div className="flex items-center gap-2">
-            <div className={`${icon} text-bolt-elements-textSecondary`} />
-            <span>
-              {verb} {args.path || '/home/project'}
-              {extra}
-            </span>
-          </div>
-        );
       }
+      let extra = '';
+      if (args.view_range) {
+        const [start, end] = args.view_range;
+        const endName = end === -1 ? 'end' : end.toString();
+        extra = ` (lines ${start} - ${endName})`;
+      }
+      return (
+        <div className="flex items-center gap-2">
+          <div className={`${icon} text-bolt-elements-textSecondary`} />
+          <span>
+            {verb} {args.path || '/home/project'}
+            {extra}
+          </span>
+        </div>
+      );
     }
     case 'npmInstall': {
       if (invocation.state === 'partial-call' || invocation.state === 'call') {
@@ -353,7 +357,7 @@ function toolTitle(invocation: ConvexToolInvocation): React.ReactNode {
       } else {
         try {
           const args = npmInstallToolParameters.parse(invocation.args);
-          return <span className="font-mono text-sm">{`npm i ${args.packages.join(' ')}`}</span>;
+          return <span className="font-mono text-sm">{`npm i ${args.packages}`}</span>;
         } catch (error: unknown) {
           if (invocation.state === 'result') {
             invocation.result = `Error: Could not parse arguments ${error}`;
@@ -392,6 +396,15 @@ function toolTitle(invocation: ConvexToolInvocation): React.ReactNode {
         <div className="flex items-center gap-2">
           <img className="w-4 h-4 mr-1" height="16" width="16" src="/icons/Convex.svg" alt="Convex" />
           <span>Pushed functions to Convex</span>
+        </div>
+      );
+    }
+    case 'edit': {
+      const args = editToolParameters.parse(invocation.args);
+      return (
+        <div className="flex items-center gap-2">
+          <div className={`i-ph:pencil-line text-bolt-elements-textSecondary`} />
+          <span>Edited {args.path}</span>
         </div>
       );
     }
@@ -522,3 +535,28 @@ const LineNumberViewer = memo(({ lines, startLineNumber = 1, language = 'typescr
     </div>
   );
 });
+
+function EditTool({ invocation }: { invocation: ConvexToolInvocation }) {
+  if (invocation.toolName !== 'edit') {
+    throw new Error('Edit tool can only be used for the edit tool');
+  }
+  if (invocation.state === 'partial-call') {
+    return null;
+  }
+
+  const args = editToolParameters.parse(invocation.args);
+  return (
+    <div className="font-mono text-sm bg-bolt-elements-background-depth-1 rounded-lg border border-bolt-elements-borderColor overflow-hidden text-bolt-elements-textPrimary">
+      <div className="p-4 space-y-4">
+        <div className="space-y-2 overflow-x-auto">
+        <div className="flex items-center gap-2">
+            <pre className="text-bolt-elements-icon-error">{args.old}</pre>
+          </div>
+          <div className="flex items-center gap-2">
+            <pre className="text-bolt-elements-icon-success">{args.new}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

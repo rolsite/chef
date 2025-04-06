@@ -15,18 +15,19 @@ import { npmInstallToolParameters } from '~/lib/runtime/npmInstallTool';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { WORK_DIR } from '~/utils/constants';
 import { z } from 'zod';
+import { editToolParameters } from './editTool';
 const logger = createScopedLogger('ActionRunner');
 
-export type ActionStatus = 'pending' | 'running' | 'complete' | 'aborted' | 'failed';
+type ActionStatus = 'pending' | 'running' | 'complete' | 'aborted' | 'failed';
 
-export type BaseActionState = BoltAction & {
+type BaseActionState = BoltAction & {
   status: Exclude<ActionStatus, 'failed'>;
   abort: () => void;
   executed: boolean;
   abortSignal: AbortSignal;
 };
 
-export type FailedActionState = BoltAction &
+type FailedActionState = BoltAction &
   Omit<BaseActionState, 'status'> & {
     status: Extract<ActionStatus, 'failed'>;
     error: string;
@@ -36,7 +37,7 @@ export type ActionState = (BaseActionState | FailedActionState) & { isEdit?: boo
 
 type BaseActionUpdate = Partial<Pick<BaseActionState, 'status' | 'abort' | 'executed' | 'content'>>;
 
-export type ActionStateUpdate =
+type ActionStateUpdate =
   | BaseActionUpdate
   | (Omit<BaseActionUpdate, 'status'> & { status: 'failed'; error: string })
   | Pick<BaseActionState & { type: 'convex' }, 'output'>;
@@ -365,12 +366,40 @@ export class ActionRunner {
           }
           break;
         }
+        case 'edit': {
+          const args = editToolParameters.parse(parsed.args);
+          const container = await this.#webcontainer;
+          const relPath = workDirRelative(args.path);
+          const file = await readPath(container, relPath);
+          if (file.type !== 'file') {
+            throw new Error('Expected a file');
+          }
+          let content = file.content;
+          if (args.old.length > 1024) {
+            throw new Error(`Old text must be less than 1024 characters: ${args.old}`);
+          }
+          if (args.new.length > 1024) {
+            throw new Error(`New text must be less than 1024 characters: ${args.new}`);
+          }
+          const matchPos = content.indexOf(args.old);
+          if (matchPos === -1) {
+            throw new Error(`Old text not found: ${args.old}`);
+          }
+          const secondMatchPos = content.indexOf(args.old, matchPos + args.old.length);
+          if (secondMatchPos !== -1) {
+            throw new Error(`Old text found multiple times: ${args.old}`);
+          }
+          content = content.replace(args.old, args.new);
+          await container.fs.writeFile(relPath, content);
+          result = `Successfully edited ${args.path}`;
+          break;
+        }
         case 'npmInstall': {
           try {
             const args = npmInstallToolParameters.parse(parsed.args);
             const container = await this.#webcontainer;
             await waitForContainerBootState(ContainerBootState.READY);
-            const npmInstallProc = await container.spawn('npm', ['install', ...args.packages]);
+            const npmInstallProc = await container.spawn('npm', ['install', ...args.packages.split(' ')]);
             action.abortSignal.addEventListener('abort', () => {
               npmInstallProc.kill();
             });
@@ -397,10 +426,11 @@ export class ActionRunner {
             );
             this.terminalOutput.set(output);
             const npmInstallExitCode = await Promise.race([promise, npmInstallProc.exit]);
+            const cleanedOutput = cleanConvexOutput(output);
             if (npmInstallExitCode !== 0) {
-              throw new Error(`Npm install failed with exit code ${npmInstallExitCode}: ${output}`);
+              throw new Error(`Npm install failed with exit code ${npmInstallExitCode}: ${cleanedOutput}`);
             }
-            result = output;
+            result = cleanedOutput;
           } catch (error: unknown) {
             if (error instanceof z.ZodError) {
               result = `Error: Invalid npm install arguments.  ${error}`;
@@ -475,6 +505,9 @@ const BANNED_LINES = [
   'Checking that documents match your schema...',
   'transforming (',
   'computing gzip size',
+  'Collecting TypeScript errors',
+  'idealTree buildDeps',
+  'timing reify:unpack'
 ];
 
 // Cleaning terminal output helps the agent focus on the important parts and

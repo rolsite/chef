@@ -4,7 +4,7 @@ import { useChat } from '@ai-sdk/react';
 import { useAnimate } from 'framer-motion';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useMessageParser, useShortcuts, useSnapScroll } from '~/lib/hooks';
-import { description, useChatHistoryConvex } from '~/lib/persistence';
+import { chatIdStore, description, useChatHistoryConvex } from '~/lib/persistence';
 import { chatStore, useChatIdOrNull } from '~/lib/stores/chat';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { DEFAULT_MODEL, DEFAULT_PROVIDER, PROMPT_COOKIE_KEY, PROVIDER_LIST } from '~/utils/constants';
@@ -102,7 +102,7 @@ interface ChatProps {
   description?: string;
 }
 
-export const ChatImpl = memo(({ description, initialMessages, storeMessageHistory, initializeChat }: ChatProps) => {
+const ChatImpl = memo(({ description, initialMessages, storeMessageHistory, initializeChat }: ChatProps) => {
   useShortcuts();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -147,9 +147,11 @@ export const ChatImpl = memo(({ description, initialMessages, storeMessageHistor
     api: '/api/chat',
     sendExtraMessageFields: true,
     experimental_prepareRequestBody: ({ messages }) => {
+      const chatId = chatIdStore.get() ?? "";
       return {
         messages: chatContextManager.current.prepareContext(messages),
         firstUserMessage: messages.filter((message) => message.role == 'user').length == 1,
+        chatId,
       };
     },
     maxSteps: 64,

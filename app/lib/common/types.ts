@@ -2,6 +2,7 @@ import type { Tool, ToolCallUnion } from 'ai';
 import { z } from 'zod';
 import type { viewParameters } from '~/lib/runtime/viewTool';
 import type { npmInstallToolParameters } from '~/lib/runtime/npmInstallTool';
+import type { editToolParameters } from '../runtime/editTool';
 
 type EmptyArgs = z.ZodObject<Record<string, never>>;
 
@@ -9,11 +10,12 @@ export type ConvexToolSet = {
   deploy: Tool<EmptyArgs, string>;
   view: Tool<typeof viewParameters, string>;
   npmInstall: Tool<typeof npmInstallToolParameters, string>;
+  edit: Tool<typeof editToolParameters, string>;
 };
 
-export type ConvexToolCall = ToolCallUnion<ConvexToolSet>;
+type ConvexToolCall = ToolCallUnion<ConvexToolSet>;
 
-export type ConvexToolResult =
+type ConvexToolResult =
   | {
       toolName: 'deploy';
       args?: EmptyArgs;
@@ -27,6 +29,11 @@ export type ConvexToolResult =
   | {
       toolName: 'npmInstall';
       args: typeof npmInstallToolParameters;
+      result: string;
+    }
+  | {
+      toolName: 'edit';
+      args: typeof editToolParameters;
       result: string;
     };
 

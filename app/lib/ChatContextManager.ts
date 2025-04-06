@@ -8,13 +8,14 @@ import { StreamingMessageParser } from './runtime/message-parser';
 import { path } from '~/utils/path';
 import { viewParameters } from './runtime/viewTool';
 import { npmInstallToolParameters } from './runtime/npmInstallTool';
+import { editToolParameters } from './runtime/editTool';
 
 // It's wasteful to actually tokenize the content, so we'll just use character
 // counts as a heuristic.
-const MAX_RELEVANT_FILES_SIZE = 8192;
-const MAX_RELEVANT_FILES = 16;
+const MAX_RELEVANT_FILES_SIZE = 16384;
+const MAX_RELEVANT_FILES = 32;
 
-const MAX_COLLAPSED_MESSAGES_SIZE = 4096;
+const MAX_COLLAPSED_MESSAGES_SIZE = 16384;
 
 type UIMessagePart = UIMessage['parts'][number];
 
@@ -241,6 +242,14 @@ export class ChatContextManager {
         const args = viewParameters.parse(part.toolInvocation.args);
         filesTouched.set(args.path, j);
       }
+      if (
+        part.type == 'tool-invocation' &&
+        part.toolInvocation.toolName == 'edit' &&
+        part.toolInvocation.state !== 'partial-call'
+      ) {
+        const args = editToolParameters.parse(part.toolInvocation.args);
+        filesTouched.set(args.path, j);
+      }
     }
     const result = {
       filesTouched,
@@ -342,9 +351,14 @@ function abbreviateToolInvocation(toolInvocation: ToolInvocation): string {
       try {
         const args = npmInstallToolParameters.parse(toolInvocation.args);
         toolCall = `installed the dependencies ${args.packages.join(', ')}`;
-      } catch (_error) {
+      } catch {
         toolCall = `attempted to install dependencies`;
       }
+      break;
+    }
+    case 'edit': {
+      const args = editToolParameters.parse(toolInvocation.args);
+      toolCall = `edited the file ${args.path}`;
       break;
     }
     default:
