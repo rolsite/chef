@@ -19,8 +19,6 @@ import type { ProviderInfo } from '~/types/model';
 import { ScreenshotStateManager } from './ScreenshotStateManager';
 import type { ActionAlert } from '~/types/actions';
 import ChatAlert from './ChatAlert';
-import ProgressCompilation from './ProgressCompilation';
-import type { ProgressAnnotation } from '~/types/context';
 import type { ActionRunner } from '~/lib/runtime/action-runner';
 import { ConvexConnection } from '~/components/convex/ConvexConnection';
 import { FlexAuthWrapper } from './FlexAuthWrapper';
@@ -91,15 +89,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
   ) => {
     const flexAuthMode = useFlexAuthMode();
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
-    const [progressAnnotations, setProgressAnnotations] = useState<ProgressAnnotation[]>([]);
-    useEffect(() => {
-      if (data) {
-        const progressList = data.filter(
-          (x) => typeof x === 'object' && (x as any).type === 'progress',
-        ) as ProgressAnnotation[];
-        setProgressAnnotations(progressList);
-      }
-    }, [data]);
 
     useEffect(() => {
       onStreamingChange?.(isStreaming);
@@ -194,7 +183,6 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     />
                   )}
                 </div>
-                {progressAnnotations && <ProgressCompilation data={progressAnnotations} />}
                 <div
                   className={classNames(
                     'bg-bolt-elements-background-depth-2 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt',
