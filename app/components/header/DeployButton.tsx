@@ -6,6 +6,7 @@ import { classNames } from '~/utils/classNames';
 import { useStore } from '@nanostores/react';
 import { convexStore } from '~/lib/stores/convex';
 import { getFileUpdateCounter, useFileUpdateCounter } from '~/lib/stores/fileUpdateCounter';
+import { toast } from 'sonner';
 
 interface ErrorResponse {
   error: string;
@@ -116,6 +117,7 @@ export function DeployButton() {
       const updateCounter = getFileUpdateCounter();
       setStatus({ type: 'success', updateCounter });
     } catch (error) {
+      toast.error("Failed to deploy. Please try again.")
       console.error('Deployment error:', error);
       setStatus({ type: 'error', message: error instanceof Error ? error.message : 'Deployment failed' });
     }
@@ -124,27 +126,40 @@ export function DeployButton() {
   const isLoading = ['building', 'zipping', 'deploying'].includes(status.type);
   const isDisabled = isLoading || !convex;
 
-  const getButtonText = () => {
-    switch (status.type) {
-      case 'building':
-        return 'Building...';
-      case 'zipping':
-        return 'Creating package...';
-      case 'deploying':
-        return 'Deploying...';
-      case 'error':
-        return 'Deploy';
-      case 'success': {
-        if (status.updateCounter === currentCounter) {
-          return 'Deployed';
-        } else {
-          return 'Redeploy';
-        }
+  let buttonText: string;
+  let icon: string;
+  switch (status.type) {
+    case 'idle':
+      buttonText = 'Deploy';
+      icon = 'i-ph:rocket-launch';
+      break;
+    case 'building':
+      buttonText = 'Building...';
+      icon = 'i-ph:spinner-gap animate-spin'
+      break;
+    case 'zipping':
+      buttonText = 'Creating package...';
+      icon = 'i-ph:spinner-gap animate-spin'
+      break;
+    case 'deploying':
+      buttonText = 'Deploying...';
+      icon = 'i-ph:spinner-gap animate-spin'
+      break;
+    case 'error':
+      buttonText = 'Deploy';
+      icon = 'i-ph:rocket-launch';
+      break;
+    case 'success': {
+      if (status.updateCounter === currentCounter) {
+        buttonText = 'Deployed';
+        icon = 'i-ph:check text-green-500'
+      } else {
+        buttonText = 'Redeploy';
+        icon = 'i-ph:arrows-clockwise'
       }
-      default:
-        return 'Deploy';
+      break;
     }
-  };
+  }
 
   return (
     <div className="flex items-center gap-2">
@@ -154,8 +169,8 @@ export function DeployButton() {
         title={status.type === 'error' ? status.message : undefined}
         className="mr-4"
       >
-        <div className={classNames('w-4 h-4', isLoading ? 'i-ph:spinner-gap animate-spin' : 'i-ph:rocket-launch')} />
-        <span>{getButtonText()}</span>
+        <div className={classNames('w-4 h-4', icon)} />
+        <span>{buttonText}</span>
       </Button>
       {status.type === 'success' && convex && (
         <a
