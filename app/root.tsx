@@ -4,7 +4,6 @@ import { Links, Meta, Outlet, Scripts, ScrollRestoration, json, useRouteLoaderDa
 import tailwindReset from '@unocss/reset/tailwind-compat.css?url';
 import { themeStore } from './lib/stores/theme';
 import { stripIndents } from './utils/stripIndent';
-import { createHead } from 'remix-island';
 import { useEffect, useState } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -65,16 +64,6 @@ const inlineThemeCode = stripIndents`
   }
 `;
 
-export const Head = createHead(() => (
-  <>
-    <meta charSet="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <Meta />
-    <Links />
-    <script dangerouslySetInnerHTML={{ __html: inlineThemeCode }} />
-  </>
-));
-
 export function Layout({ children }: { children: React.ReactNode }) {
   const theme = useStore(themeStore);
   const loaderData = useRouteLoaderData<typeof loader>('root');
@@ -93,32 +82,37 @@ export function Layout({ children }: { children: React.ReactNode }) {
       ),
   );
 
-  useEffect(() => {
-    document.querySelector('html')?.setAttribute('data-theme', theme);
-  }, [theme]);
-
   return (
-    <>
-      <ClientOnly>
-        {() => (
-          <DndProvider backend={HTML5Backend}>
-            <Auth0Provider
-              domain={import.meta.env.VITE_AUTH0_DOMAIN}
-              clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
-              authorizationParams={{
-                redirect_uri: window.location.origin,
-              }}
-              useRefreshTokens={true}
-              cacheLocation="localstorage"
-            >
-              <ConvexProviderWithAuth0 client={convex}>{children}</ConvexProviderWithAuth0>
-            </Auth0Provider>
-          </DndProvider>
-        )}
-      </ClientOnly>
-      <ScrollRestoration />
-      <Scripts />
-    </>
+    <html lang="en" data-theme={theme}>
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+        <script dangerouslySetInnerHTML={{ __html: inlineThemeCode }} />
+      </head>
+      <body>
+        <ClientOnly>
+          {() => (
+            <DndProvider backend={HTML5Backend}>
+              <Auth0Provider
+                domain={import.meta.env.VITE_AUTH0_DOMAIN}
+                clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
+                authorizationParams={{
+                  redirect_uri: window.location.origin,
+                }}
+                useRefreshTokens={true}
+                cacheLocation="localstorage"
+              >
+                <ConvexProviderWithAuth0 client={convex}>{children}</ConvexProviderWithAuth0>
+              </Auth0Provider>
+            </DndProvider>
+          )}
+        </ClientOnly>
+        <ScrollRestoration />
+        <Scripts />
+      </body>
+    </html>
   );
 }
 
