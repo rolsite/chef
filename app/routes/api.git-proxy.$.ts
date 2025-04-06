@@ -1,5 +1,5 @@
-import { json } from '@remix-run/cloudflare';
-import type { ActionFunctionArgs, LoaderFunctionArgs } from '@remix-run/cloudflare';
+import { json } from '@vercel/remix';
+import type { ActionFunctionArgs, LoaderFunctionArgs } from '@vercel/remix';
 
 // Allowed headers to forward to the target server
 const ALLOW_HEADERS = [

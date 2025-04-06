@@ -1,5 +1,5 @@
-import type { ActionFunctionArgs, LoaderFunction } from '@remix-run/cloudflare';
-import { json } from '@remix-run/cloudflare';
+import type { ActionFunctionArgs, LoaderFunction } from '@vercel/remix';
+import { json } from '@vercel/remix';
 
 // These are injected by Vite at build time
 declare const __APP_VERSION: string;
@@ -49,11 +49,11 @@ const getAppResponse = () => {
     version: __APP_VERSION || '0.1.0',
     description: __PKG_DESCRIPTION || 'A DIY LLM interface',
     license: __PKG_LICENSE || 'MIT',
-    environment: 'cloudflare',
+    environment: process.env.NODE_ENV || 'development',
     gitInfo,
     timestamp: new Date().toISOString(),
     runtimeInfo: {
-      nodeVersion: 'cloudflare',
+      nodeVersion: process.version,
     },
     dependencies: {
       production: formatDependencies(__PKG_DEPENDENCIES, 'production'),

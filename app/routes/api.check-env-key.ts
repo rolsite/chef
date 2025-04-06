@@ -1,4 +1,4 @@
-import type { LoaderFunction } from '@remix-run/cloudflare';
+import type { LoaderFunction } from '@vercel/remix';
 import { LLMManager } from '~/lib/modules/llm/manager';
 import { getApiKeysFromCookie } from '~/lib/api/cookies';
 
@@ -10,7 +10,7 @@ export const loader: LoaderFunction = async ({ context, request }) => {
     return Response.json({ isSet: false });
   }
 
-  const llmManager = LLMManager.getInstance(context?.cloudflare?.env as any);
+  const llmManager = LLMManager.getInstance(process.env as any);
   const providerInstance = llmManager.getProvider(provider);
 
   if (!providerInstance || !providerInstance.config.apiTokenKey) {
@@ -26,16 +26,10 @@ export const loader: LoaderFunction = async ({ context, request }) => {
   /*
    * Check API key in order of precedence:
    * 1. Client-side API keys (from cookies)
-   * 2. Server environment variables (from Cloudflare env)
-   * 3. Process environment variables (from .env.local)
-   * 4. LLMManager environment variables
+   * 2. Process environment variables (from .env.local)
+   * 3. LLMManager environment variables
    */
-  const isSet = !!(
-    apiKeys?.[provider] ||
-    (context?.cloudflare?.env as Record<string, any>)?.[envVarName] ||
-    process.env[envVarName] ||
-    llmManager.env[envVarName]
-  );
+  const isSet = !!(apiKeys?.[provider] || process.env[envVarName] || llmManager.env[envVarName]);
 
   return Response.json({ isSet });
 };

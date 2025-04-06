@@ -1,4 +1,5 @@
-import { cloudflareDevProxyVitePlugin as remixCloudflareDevProxy, vitePlugin as remixVitePlugin } from '@remix-run/dev';
+import { vitePlugin as remixVitePlugin } from '@remix-run/dev';
+import { vercelPreset } from '@vercel/remix/vite';
 import UnoCSS from 'unocss/vite';
 import { defineConfig, type ViteDevServer } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
@@ -9,8 +10,6 @@ import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import wasm from 'vite-plugin-wasm';
-// importing it is ok, but using it breaks things
-//import topLevelAwait from 'vite-plugin-top-level-await';
 
 dotenv.config();
 
@@ -127,6 +126,7 @@ export default defineConfig((config) => {
           global: true,
         },
         protocolImports: true,
+        // TODO try these!
         // Exclude Node.js modules that shouldn't be polyfilled in Cloudflare
         exclude: ['child_process', 'fs', 'path'],
       }),
@@ -141,7 +141,6 @@ export default defineConfig((config) => {
           }
         },
       },
-      config.mode !== 'test' && remixCloudflareDevProxy(),
       remixVitePlugin({
         future: {
           v3_fetcherPersist: true,
@@ -149,13 +148,13 @@ export default defineConfig((config) => {
           v3_throwAbortReason: true,
           v3_lazyRouteDiscovery: true,
         },
+        presets: [vercelPreset()],
       }),
       UnoCSS(),
       tsconfigPaths(),
       chrome129IssuePlugin(),
       config.mode === 'production' && optimizeCssModules({ apply: 'build' }),
       wasm(),
-      //      topLevelAwait(),  // including this breaks the build, only in cloudflare
     ],
     envPrefix: [
       'VITE_',

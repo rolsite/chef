@@ -1,4 +1,4 @@
-import { json, type LoaderFunctionArgs } from '@remix-run/cloudflare';
+import { json, type LoaderFunctionArgs } from '@vercel/remix';
 import { useLoaderData } from '@remix-run/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 

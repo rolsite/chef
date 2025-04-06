@@ -1,5 +1,5 @@
-import { json } from '@remix-run/cloudflare';
-import type { ActionFunctionArgs } from '@remix-run/cloudflare';
+import { json } from '@vercel/remix';
+import type { ActionFunctionArgs } from '@vercel/remix';
 import Cloudflare from 'cloudflare';
 
 const PROVISION_HOST = 'https://provision.convex.dev';
@@ -15,7 +15,7 @@ export async function action({ request, context }: ActionFunctionArgs) {
     // If it's a project token, great
     if (!token.includes('project')) {
       // if not then use our hardcoded project token
-      token = (context.cloudflare.env as Record<string, any>).BIG_BRAIN_API_KEY || process.env.BIG_BRAIN_API_KEY;
+      token = (process.env as Record<string, any>).BIG_BRAIN_API_KEY || process.env.BIG_BRAIN_API_KEY;
     }
     console.log(deploymentName);
 
@@ -47,9 +47,8 @@ export async function action({ request, context }: ActionFunctionArgs) {
     const result = await response.json();
 
     // Try to purge Cloudflare cache
-    const cfApiToken =
-      (context.cloudflare.env as Record<string, any>).CLOUDFLARE_API_KEY || process.env.CLOUDFLARE_API_KEY;
-    const zoneId = (context.cloudflare.env as Record<string, any>).CLOUDFLARE_ZONE_ID || process.env.CLOUDFLARE_ZONE_ID;
+    const cfApiToken = (process.env as Record<string, any>).CLOUDFLARE_API_KEY || process.env.CLOUDFLARE_API_KEY;
+    const zoneId = (process.env as Record<string, any>).CLOUDFLARE_ZONE_ID || process.env.CLOUDFLARE_ZONE_ID;
 
     if (cfApiToken && zoneId) {
       try {

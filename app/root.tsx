@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import type { LinksFunction, LoaderFunctionArgs } from '@remix-run/cloudflare';
+import type { LinksFunction, LoaderFunctionArgs } from '@vercel/remix';
 import { Links, Meta, Outlet, Scripts, ScrollRestoration, json, useRouteLoaderData } from '@remix-run/react';
 import tailwindReset from '@unocss/reset/tailwind-compat.css?url';
 import { themeStore } from './lib/stores/theme';

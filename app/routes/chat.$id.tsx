@@ -1,4 +1,4 @@
-import { type LoaderFunctionArgs } from '@remix-run/cloudflare';
+import { type LoaderFunctionArgs } from '@vercel/remix';
 import { default as IndexRoute } from './_index';
 import { getFlexAuthModeInLoader } from '~/lib/persistence/convex';
 

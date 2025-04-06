@@ -1,4 +1,4 @@
-import { json, type LoaderFunction } from '@remix-run/cloudflare';
+import { json, type LoaderFunction } from '@vercel/remix';
 
 interface GitInfo {
   local: {

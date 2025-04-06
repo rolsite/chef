@@ -1,4 +1,4 @@
-import { type ActionFunctionArgs } from '@remix-run/cloudflare';
+import { type ActionFunctionArgs } from '@vercel/remix';
 import { createScopedLogger } from '~/utils/logger';
 import { convexAgent, getEnv } from '~/lib/.server/llm/convex-agent';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
@@ -10,7 +10,8 @@ type Messages = Message[];
 const logger = createScopedLogger('api.chat');
 
 export async function action(args: ActionFunctionArgs) {
-  return chatAction(args, args.context.cloudflare.env);
+  // TODO get a nicely typed process.env somehow
+  return chatAction(args, process.env as any);
 }
 
 export type Tracer = ReturnType<typeof WebTracerProvider.prototype.getTracer>;

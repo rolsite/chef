@@ -1,34 +1,22 @@
-import type { AppLoadContext, EntryContext } from '@remix-run/cloudflare';
+import type { EntryContext } from '@vercel/remix';
 import { RemixServer } from '@remix-run/react';
-import { isbot } from 'isbot';
-import { renderToReadableStream } from 'react-dom/server';
+import { handleRequest } from '@vercel/remix';
 
-export default async function handleRequest(
+export default async function (
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
   remixContext: EntryContext,
-  _loadContext: AppLoadContext,
 ) {
-  const body = await renderToReadableStream(<RemixServer context={remixContext} url={request.url} />, {
-    signal: request.signal,
-    onError(error: unknown) {
-      console.error(error);
-      responseStatusCode = 500;
-    },
-  });
-
-  if (isbot(request.headers.get('user-agent') || '')) {
-    await body.allReady;
-  }
-
-  responseHeaders.set('Content-Type', 'text/html');
-
+  // Set COOP and COEP headers for isolation
   responseHeaders.set('Cross-Origin-Embedder-Policy', 'require-corp');
   responseHeaders.set('Cross-Origin-Opener-Policy', 'same-origin');
-
-  return new Response(body, {
-    headers: responseHeaders,
-    status: responseStatusCode,
-  });
+  
+  let remixServer = <RemixServer context={remixContext} url={request.url} />;
+  return handleRequest(
+    request,
+    responseStatusCode,
+    responseHeaders,
+    remixServer,
+  );
 }
