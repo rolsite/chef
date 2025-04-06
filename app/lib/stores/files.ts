@@ -189,6 +189,7 @@ export class FilesStore {
     for (const { type, path, buffer } of watchEvents) {
       // remove any trailing slashes
       const sanitizedPath = path.replace(/\/+$/g, '');
+      incrementFileUpdateCounter(sanitizedPath);
 
       switch (type) {
         case 'add_dir': {
@@ -241,8 +242,6 @@ export class FilesStore {
         }
       }
     }
-
-    incrementFileUpdateCounter();
   }
 
   #decodeFileContent(buffer?: Uint8Array) {
