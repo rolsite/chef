@@ -136,9 +136,5 @@ export default function App() {
     });
   }, []);
 
-  return (
-    <Layout>
-      <Outlet />
-    </Layout>
-  );
+  return <Outlet />;
 }
