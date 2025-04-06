@@ -40,8 +40,8 @@ export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => 
   };
 
   const parsed: ConvexToolInvocation = useMemo(() => {
-    return parseToolInvocation(action?.content, artifact, toolCallId);
-  }, [action?.content, artifact, toolCallId]);
+    return parseToolInvocation(action?.content, action?.status, artifact, toolCallId);
+  }, [action?.content, action?.status, artifact, toolCallId]);
 
   const title = action && toolTitle(parsed);
   const icon = action && statusIcon(action.status, parsed);
@@ -258,7 +258,7 @@ function NpmInstallTool({ artifact, invocation }: { artifact: ArtifactState; inv
   }
 }
 
-function parseToolInvocation(content: string | undefined, artifact: ArtifactState, toolCallId: string): ConvexToolInvocation {
+function parseToolInvocation(content: string | undefined, status: ActionState['status'] | undefined, artifact: ArtifactState, toolCallId: string): ConvexToolInvocation {
   if (!content) {
     return {} as ConvexToolInvocation;
   }
@@ -268,7 +268,7 @@ function parseToolInvocation(content: string | undefined, artifact: ArtifactStat
   } catch {
     return {} as ConvexToolInvocation;
   }
-  if (parsedContent.state === "result") {
+  if (status === "complete" && parsedContent.state === "result" && !parsedContent.result?.startsWith("Error:")) {
     let zodError: ZodError | null = null;
     switch (parsedContent.toolName) {
       case "deploy": {
