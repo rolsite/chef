@@ -56,6 +56,16 @@ export function useConvexSessionId(): Id<'sessions'> {
 const SESSION_ID_KEY = 'sessionIdForConvex';
 export const sessionIdStore = atom<Id<'sessions'> | null | undefined>(undefined);
 
+const SELECTED_TEAM_SLUG_KEY = 'selectedConvexTeamSlug';
+
+export function getSelectedTeamSlug(): string | null {
+  return getLocalStorage(SELECTED_TEAM_SLUG_KEY);
+}
+
+export function setSelectedTeamSlug(teamSlug: string | null) {
+  setLocalStorage(SELECTED_TEAM_SLUG_KEY, teamSlug);
+}
+
 export function setInitialConvexSessionId(
   convex: ConvexReactClient,
   args: {

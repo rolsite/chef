@@ -29,12 +29,12 @@ export const SuggestionButtons = ({ chatStarted, onSuggestionClick }: Suggestion
 
   return (
     <div id="suggestions" className="flex flex-col justify-center items-center">
-      <div className="flex gap-6">
+      <div className="flex gap-6 flex-wrap">
         {suggestions.map((suggestion) => (
           <button
             key={suggestion.title}
             onClick={() => onSuggestionClick?.(suggestion.prompt)}
-            className="flex gap-1 items-center rounded-full px-3 py-1 border bg-bolt-elements-item-backgroundDefault hover:bg-bolt-elements-item-backgroundActive text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary"
+            className="flex gap-1 items-center rounded-full px-3 py-1 border border-bolt-elements-borderColor bg-bolt-elements-item-backgroundDefault hover:bg-bolt-elements-item-backgroundActive text-bolt-elements-textSecondary hover:text-bolt-elements-textPrimary"
           >
             <ArrowUp className="size-4" />
             {suggestion.title}

@@ -1,5 +1,5 @@
 import type { JSONValue, Message } from 'ai';
-import React, { type RefCallback, useEffect } from 'react';
+import React, { type RefCallback, useEffect, useState } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
 import { Menu } from '~/components/sidebar/Menu.client';
 import { Workbench } from '~/components/workbench/Workbench.client';
@@ -22,6 +22,9 @@ import { SuggestionButtons } from './SuggestionButtons';
 import { KeyboardShortcut } from '~/components/ui/KeyboardShortcut';
 import StreamingIndicator from './StreamingIndicator';
 import type { ToolStatus } from '~/lib/common/types';
+import { TeamSelector } from '~/components/convex/TeamSelector';
+import { getSelectedTeamSlug } from '~/lib/stores/convex';
+
 const TEXTAREA_MIN_HEIGHT = 76;
 
 interface BaseChatProps {
@@ -36,7 +39,7 @@ interface BaseChatProps {
   description?: string;
   input?: string;
   handleStop?: () => void;
-  sendMessage?: (event: React.UIEvent, messageInput?: string) => void;
+  sendMessage?: (event: React.UIEvent, teamSlug: string, messageInput?: string) => void;
   handleInputChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   uploadedFiles?: File[];
   setUploadedFiles?: (files: File[]) => void;
@@ -48,6 +51,19 @@ interface BaseChatProps {
   actionRunner?: ActionRunner;
   currentError?: Error;
   toolStatus?: ToolStatus;
+  projectInfo?:
+    | {
+        kind: 'connected';
+        projectSlug: string;
+        teamSlug: string;
+        deploymentUrl: string;
+        deploymentName: string;
+        adminKey: string;
+      }
+    | {
+        kind: 'connecting';
+      }
+    | null;
 }
 
 export const WrappedBaseChat = (props: BaseChatProps) => {
@@ -77,11 +93,16 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       clearAlert,
       actionRunner,
       toolStatus,
+      projectInfo,
     },
     ref,
   ) => {
     const flexAuthMode = useFlexAuthMode();
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
+    const [selectedTeamSlug, setSelectedTeamSlug] = useState<string | null>(() => {
+      const stored = getSelectedTeamSlug();
+      return stored || 'atrakh'; // Default to first team
+    });
 
     const isStreaming = streamStatus === 'streaming' || streamStatus === 'submitted';
     useEffect(() => {
@@ -89,8 +110,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     }, [isStreaming, onStreamingChange]);
 
     const handleSendMessage = (event: React.UIEvent, messageInput?: string) => {
-      if (sendMessage) {
-        sendMessage(event, messageInput);
+      if (sendMessage && selectedTeamSlug) {
+        sendMessage(event, selectedTeamSlug, messageInput);
       }
     };
 
@@ -106,7 +127,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
             {!chatStarted && (
               <div id="intro" className="mt-[16vh] max-w-chat mx-auto text-center px-4 lg:px-0">
                 <h1 className="text-4xl lg:text-6xl font-black text-bolt-elements-textPrimary mb-4 animate-fade-in font-display tracking-tight">
-                  Now you’re cooking
+                  Now you're cooking
                 </h1>
                 <p className="text-md lg:text-2xl text-balance mb-8 text-bolt-elements-textSecondary animate-fade-in animation-delay-200 font-medium font-display">
                   Generate and launch realtime full‑stack apps you never thought possible
@@ -240,7 +261,12 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                             return;
                           }
 
-                          handleSendMessage?.(event);
+                          if (!selectedTeamSlug) {
+                            console.error('Cannot send message with no team slug');
+                            return;
+                          }
+
+                          handleSendMessage(event, selectedTeamSlug);
                         }
                       }}
                       value={input}
@@ -259,22 +285,25 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         <SendButton
                           show={input.length > 0 || isStreaming || uploadedFiles.length > 0}
                           isStreaming={isStreaming}
-                          disabled={false}
+                          disabled={!selectedTeamSlug}
                           onClick={(event) => {
+                            if (!selectedTeamSlug) {
+                              console.error('Cannot send message with no team slug');
+                              return;
+                            }
                             if (isStreaming) {
                               handleStop?.();
                               return;
                             }
 
                             if (input.length > 0 || uploadedFiles.length > 0) {
-                              handleSendMessage?.(event);
+                              handleSendMessage(event, selectedTeamSlug);
                             }
                           }}
                         />
                       )}
                     </ClientOnly>
-                    <div className="flex justify-between items-center text-sm p-4 pt-2">
-                      <div></div>
+                    <div className="flex justify-end gap-4 items-center text-sm p-4 pt-2">
                       {input.length > 3 ? (
                         <div className="text-xs text-bolt-elements-textTertiary">
                           <KeyboardShortcut
@@ -284,7 +313,14 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           for new line
                         </div>
                       ) : null}
-                      {chatStarted && flexAuthMode === 'ConvexOAuth' && <ConvexConnection size="small" />}
+                      {chatStarted && flexAuthMode === 'ConvexOAuth' && projectInfo && (
+                        <ConvexConnection size="small" />
+                      )}
+                      {flexAuthMode === 'ConvexOAuth'
+                        ? !projectInfo && (
+                            <TeamSelector selectedTeamSlug={selectedTeamSlug} onTeamSelect={setSelectedTeamSlug} />
+                          )
+                        : null}
                     </div>
                   </div>
                 </div>
