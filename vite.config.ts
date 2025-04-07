@@ -9,6 +9,7 @@ import { execSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import wasm from 'vite-plugin-wasm';
+import { vercelPreset } from '@vercel/remix/vite';
 // importing it is ok, but using it breaks things
 //import topLevelAwait from 'vite-plugin-top-level-await';
 
@@ -141,7 +142,6 @@ export default defineConfig((config) => {
           }
         },
       },
-      config.mode !== 'test' && remixCloudflareDevProxy(),
       remixVitePlugin({
         future: {
           v3_fetcherPersist: true,
@@ -149,6 +149,7 @@ export default defineConfig((config) => {
           v3_throwAbortReason: true,
           v3_lazyRouteDiscovery: true,
         },
+        presets: [vercelPreset()],
       }),
       UnoCSS(),
       tsconfigPaths(),

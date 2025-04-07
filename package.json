@@ -35,6 +35,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.4",
     "@ai-sdk/openai": "^1.3.6",
+    "@ai-sdk/provider-utils": "^2.2.4",
     "@ai-sdk/react": "^1.2.5",
     "@auth0/auth0-react": "^2.3.0",
     "@codemirror/autocomplete": "^6.18.3",
@@ -70,6 +71,7 @@
     "@remix-run/react": "^2.15.2",
     "@uiw/codemirror-theme-vscode": "^4.23.6",
     "@unocss/reset": "^0.61.9",
+    "@vercel/remix": "^2.15.3",
     "@webcontainer/api": "1.5.1-internal.10",
     "@webcontainer/snapshot": "^0.1.0",
     "@xterm/addon-fit": "^0.10.0",
@@ -109,6 +111,7 @@
     "shiki": "^1.24.0",
     "sonner": "^2.0.3",
     "unist-util-visit": "^5.0.0",
+    "vite": "^6.2.5",
     "vite-plugin-wasm": "^3.4.1"
   },
   "devDependencies": {
@@ -134,7 +137,6 @@
     "typescript": "^5.7.3",
     "unified": "^11.0.5",
     "unocss": "^0.61.9",
-    "vite": "^5.4.11",
     "vite-plugin-node-polyfills": "^0.22.0",
     "vite-plugin-optimize-css-modules": "^1.1.0",
     "vite-tsconfig-paths": "^4.3.2",
