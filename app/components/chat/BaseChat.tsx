@@ -91,6 +91,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
     const handleSendMessage = (event: React.UIEvent, messageInput?: string) => {
       if (sendMessage) {
         sendMessage(event, messageInput);
+        if (handleInputChange) {
+          handleInputChange({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
+        }
       }
     };
 
