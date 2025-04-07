@@ -38,8 +38,8 @@ export async function convexAgent(
       maxTokens: 8192,
     };
   } else {
-     // Falls back to the low Quality-of-Service Anthropic API key if the primary key is rate limited
-     const rateLimitAwareFetch = () => {
+    // Falls back to the low Quality-of-Service Anthropic API key if the primary key is rate limited
+    const rateLimitAwareFetch = () => {
       return async (input: RequestInfo | URL, init?: RequestInit) => {
         const enrichedOptions = anthropicInjectCacheControl(constantPrompt, init);
         try {
