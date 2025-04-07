@@ -3,6 +3,7 @@ import { api } from "../convex/_generated/api";
 import { SignInForm } from "./SignInForm";
 import { SignOutButton } from "./SignOutButton";
 import { Toaster } from "./components/ui/toaster";
+import { AutoLoginWrapper } from "./AutoLoginWrapper";
 
 export default function App() {
   return (
@@ -13,7 +14,9 @@ export default function App() {
       </header>
       <main className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md mx-auto">
-          <Content />
+          <AutoLoginWrapper>
+            <Content />
+          </AutoLoginWrapper>
         </div>
       </main>
       <Toaster />
@@ -37,7 +40,9 @@ function Content() {
       <div className="text-center">
         <h1 className="text-5xl font-bold accent-text mb-4">Cook with Chef</h1>
         <Authenticated>
-          <p className="text-xl text-slate-600">Welcome back, {loggedInUser?.email ?? "friend"}!</p>
+          <p className="text-xl text-slate-600">
+            Welcome back, {loggedInUser?.name ?? loggedInUser?.email ?? "friend"}!
+          </p>
         </Authenticated>
         <Unauthenticated>
           <p className="text-xl text-slate-600">Sign in to get started</p>
