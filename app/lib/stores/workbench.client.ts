@@ -27,12 +27,17 @@ import type { Id } from '@convex/_generated/dataModel';
 import { buildUncompressedSnapshot, compressSnapshot } from '~/lib/snapshot.client';
 import { waitForConvexSessionId } from './sessionId';
 import { withResolvers } from '~/utils/promises';
+<<<<<<< HEAD:app/lib/stores/workbench.client.ts
 import type { Artifacts, PartId } from './artifacts';
 import { backoffTime, WORK_DIR } from '~/utils/constants';
 import { chatIdStore } from '~/lib/stores/chatId';
 import { getFileUpdateCounter, waitForFileUpdateCounterChanged } from './fileUpdateCounter';
 import { generateReadmeContent } from '~/lib/readmeContent';
 import { getConvexSiteUrl } from '~/lib/convexSiteUrl';
+=======
+import type { Artifacts, PartId } from './Artifacts';
+import { generateReadmeContent } from '../readmeContent';
+>>>>>>> 1baa0eb (Update auth template with automatic log in, also add a README on download):app/lib/stores/workbench.ts
 
 const BACKUP_DEBOUNCE_MS = 1000;
 
@@ -112,10 +117,7 @@ export class WorkbenchStore {
     this._lastChangedFile = Date.now();
   }
 
-  // Start the backup worker, assuming that the current filesystem state is
-  // fully saved. Therefore, this method must be called early in initialization
-  // after the snapshot has been loaded but before any subsequent changes are
-  // made.
+
   async startBackup() {
     // This is a bit racy, but we need to flush the current file events before
     // deciding that we're synced up to the current update counter. Sleep for
@@ -519,6 +521,9 @@ export class WorkbenchStore {
     return artifacts[partId];
   }
 
+  /**
+   * This is used when a user downloads their project as a zip file.
+   */
   async downloadZip(args: { convexDeploymentName: string | null }) {
     const zip = new JSZip();
     const files = this.files.get();
@@ -531,10 +536,13 @@ export class WorkbenchStore {
     const uniqueProjectName = `${projectName}_${timestampHash}`;
 
     let hasReadme = false;
-
     for (const [filePath, dirent] of Object.entries(files)) {
       if (dirent?.type === 'file' && !dirent.isBinary) {
         const relativePath = getRelativePath(filePath);
+
+        if (relativePath.toLowerCase() === 'readme.md') {
+          hasReadme = true;
+        }
 
         // split the path into segments
         const pathSegments = relativePath.split('/');
@@ -556,6 +564,10 @@ export class WorkbenchStore {
         }
       }
     }
+    // Add a README.md file specific to Chef here, but don't clobber an existing one
+    const readmeContent = generateReadmeContent(description.value ?? 'project', args.convexDeploymentName);
+    const readmePath = hasReadme ? `CHEF_README_${timestampHash}.md` : 'README.md';
+    zip.file(readmePath, readmeContent);
 
     // Add a README.md file specific to Chef here, but don't clobber an existing one
     const readmeContent = generateReadmeContent(description.value ?? 'project', args.convexDeploymentName);

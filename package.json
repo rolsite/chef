@@ -10,7 +10,7 @@
     "deploy": "npm run build && wrangler pages deploy",
     "build": "remix vite:build",
     "dev": "remix vite:dev",
-    "rebuild-template": "node make-bootstrap-snapshot.js && open http://localhost:5173/admin/build-snapshot",
+    "rebuild-template": "node make-bootstrap-snapshot.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint:app": "eslint --cache --cache-location ./node_modules/.cache/eslint app",

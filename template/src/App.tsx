@@ -11,10 +11,15 @@ export default function App() {
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm p-4 flex justify-between items-center border-b">
         <h2 className="text-xl font-semibold accent-text">Chef</h2>
-        <button onClick={() => setEnableAutoLogin(!enableAutoLogin)}>
-          {enableAutoLogin ? "Disable auto login" : "Enable auto login"}
-        </button>
-        <SignOutButton />
+        <div className="flex gap-2">
+          <button
+            className="px-4 py-2 rounded-lg transition-colors border border-blue-500 text-black"
+            onClick={() => setEnableAutoLogin(!enableAutoLogin)}
+          >
+            {enableAutoLogin ? "Disable auto login" : "Enable auto login"}
+          </button>
+          <SignOutButton />
+        </div>
       </header>
       <main className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md mx-auto">

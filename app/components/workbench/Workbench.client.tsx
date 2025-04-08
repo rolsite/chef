@@ -81,6 +81,7 @@ export const Workbench = memo(({ chatStarted, isStreaming, terminalInitializatio
   }, [files]);
   const currentDocumentPath = currentDocument?.filePath;
 
+<<<<<<< HEAD
   const onEditorChange = useCallback<OnEditorChange>(
     (update) => {
       // This is called debounced, so it's not fair to use it to update
@@ -94,6 +95,23 @@ export const Workbench = memo(({ chatStarted, isStreaming, terminalInitializatio
         return;
       }
 
+=======
+  const currentDocumentPath = currentDocument?.filePath;
+
+  const onEditorChange = useCallback<OnEditorChange>(
+    (update) => {
+      // This is called debounced, so it's not fair to use it to update
+      // the current doc: we don't actually know which files it's for!
+
+      const updateAbsPath = getAbsolutePath(update.filePath);
+      if (currentDocumentPath !== updateAbsPath) {
+        console.log(
+          `onEditorChange fired for what is no longer the current document: ${updateAbsPath} ${currentDocumentPath}`,
+        );
+        return;
+      }
+
+>>>>>>> 1baa0eb (Update auth template with automatic log in, also add a README on download)
       workbenchStore.setCurrentDocumentContent(update.content);
     },
     [currentDocumentPath],
@@ -183,7 +201,11 @@ export const Workbench = memo(({ chatStarted, isStreaming, terminalInitializatio
                       <PanelHeaderButton
                         className="mr-1 text-sm"
                         onClick={() => {
+<<<<<<< HEAD
                           const convexProject = convexProjectStore.get();
+=======
+                          const convexProject = convexStore.get();
+>>>>>>> 1baa0eb (Update auth template with automatic log in, also add a README on download)
                           workbenchStore.downloadZip({
                             convexDeploymentName: convexProject?.deploymentName ?? null,
                           });
