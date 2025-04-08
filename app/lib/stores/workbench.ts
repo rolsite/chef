@@ -25,6 +25,7 @@ import { buildSnapshot, compressSnapshot } from '~/lib/snapshot';
 import { sessionIdStore } from './convex';
 import { withResolvers } from '~/utils/promises';
 import type { Artifacts, PartId } from './Artifacts';
+import { cachedLargeDownload } from '~/utils/indexeddb';
 
 const BACKUP_DEBOUNCE_MS = 100;
 
@@ -94,11 +95,11 @@ export class WorkbenchStore {
     this._lastChangedFile = Date.now();
   }
 
-  async snapshotUrl(id?: string) {
+  async snapshotUrl(id?: string): Promise<{ url: string; cacheKey?: string }> {
     const SNAPSHOT_URL = 'https://static.convex.dev/chef/snapshot.bin';
     if (!id) {
       console.log('No chat id yet, downloading from Convex');
-      return SNAPSHOT_URL;
+      return { url: SNAPSHOT_URL, cacheKey: 'viteSnapshot' };
     }
     const sessionId = sessionIdStore.get();
     if (!sessionId) {
@@ -107,20 +108,15 @@ export class WorkbenchStore {
     const maybeSnapshotUrl = await this.#convexClient.query(api.snapshot.getSnapshotUrl, { chatId: id, sessionId });
     if (!maybeSnapshotUrl) {
       console.log('No snapshot URL found, downloading from Convex');
-      return SNAPSHOT_URL;
+      return { url: SNAPSHOT_URL };
     }
     console.log('Snapshot URL found, downloading from Convex');
-    return maybeSnapshotUrl;
+    return { url: maybeSnapshotUrl };
   }
 
   async downloadSnapshot(id?: string) {
-    const snapshotUrl = await this.snapshotUrl(id);
-    // Download the snapshot from Convex
-    const resp = await fetch(snapshotUrl);
-    if (!resp.ok) {
-      throw new Error(`Failed to download snapshot (${resp.statusText}): ${resp.statusText}`);
-    }
-    return await resp.arrayBuffer();
+    const { url, cacheKey } = await this.snapshotUrl(id);
+    return await cachedLargeDownload(url, cacheKey);
   }
 
   async startBackup() {
