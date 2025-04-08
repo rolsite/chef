@@ -7,14 +7,20 @@ import { useQuery } from "convex/react";
  * This component automatically logs in the user via anonymous auth if they are not already logged in.
  * This is useful for development, but feel free to remove it for production.
  */
-export function AutoLoginWrapper({ children }: { children: React.ReactNode }) {
+export function AutoLoginWrapper({ children, enabled }: { children: React.ReactNode; enabled: boolean }) {
   const user = useQuery(api.auth.loggedInUser);
   const { signIn } = useAuthActions();
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
     if (user === null) {
       void signIn("anonymous");
     }
-  }, [signIn, user]);
+  }, [signIn, user, enabled]);
+  if (!enabled) {
+    return <>{children}</>;
+  }
   if (user === null) {
     return (
       <div className="flex flex-col justify-center items-center h-screen">

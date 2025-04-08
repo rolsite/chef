@@ -4,17 +4,21 @@ import { SignInForm } from "./SignInForm";
 import { SignOutButton } from "./SignOutButton";
 import { Toaster } from "./components/ui/toaster";
 import { AutoLoginWrapper } from "./AutoLoginWrapper";
-
+import { useState } from "react";
 export default function App() {
+  const [enableAutoLogin, setEnableAutoLogin] = useState(true);
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm p-4 flex justify-between items-center border-b">
         <h2 className="text-xl font-semibold accent-text">Chef</h2>
+        <button onClick={() => setEnableAutoLogin(!enableAutoLogin)}>
+          {enableAutoLogin ? "Disable auto login" : "Enable auto login"}
+        </button>
         <SignOutButton />
       </header>
       <main className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md mx-auto">
-          <AutoLoginWrapper>
+          <AutoLoginWrapper enabled={enableAutoLogin}>
             <Content />
           </AutoLoginWrapper>
         </div>
