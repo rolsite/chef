@@ -24,7 +24,7 @@ import type { Id } from '@convex/_generated/dataModel';
 import { buildUncompressedSnapshot, compressSnapshot } from '~/lib/snapshot';
 import { sessionIdStore } from './convex';
 import { withResolvers } from '~/utils/promises';
-import type { Artifacts, PartId } from './artifacts';
+import type { Artifacts, PartId } from './Artifacts';
 
 const BACKUP_DEBOUNCE_MS = 100;
 
