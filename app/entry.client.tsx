@@ -24,5 +24,5 @@ Sentry.init({
 });
 
 startTransition(() => {
-  hydrateRoot(document.getElementById('root')!, <RemixBrowser />);
+  hydrateRoot(document, <RemixBrowser />);
 });
