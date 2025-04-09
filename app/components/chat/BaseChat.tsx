@@ -20,7 +20,8 @@ import StreamingIndicator from './StreamingIndicator';
 import type { ToolStatus } from '~/lib/common/types';
 import { TeamSelector } from '~/components/convex/TeamSelector';
 import type { TerminalInitializationOptions } from '~/types/terminal';
-import { SnapshotSaveStatusIndicator } from '../SnapshotSaveStatusIndicator';
+import { SnapshotSaveStatusIndicator } from '~/components/SnapshotSaveStatusIndicator';
+
 const TEXTAREA_MIN_HEIGHT = 76;
 
 interface BaseChatProps {
