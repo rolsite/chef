@@ -28,6 +28,7 @@ import { FlexAuthWrapper } from './FlexAuthWrapper';
 import {
   convexStore,
   selectedTeamSlugStore,
+  setSelectedTeamSlug,
   useConvexSessionId,
   useConvexSessionIdOrNullOrLoading,
 } from '~/lib/stores/convex';
@@ -70,6 +71,7 @@ export function Chat() {
         projectSlug: projectInfo.projectSlug,
         teamSlug: projectInfo.teamSlug,
       });
+      setSelectedTeamSlug(projectInfo.teamSlug);
     }
   }, [projectInfo]);
 
