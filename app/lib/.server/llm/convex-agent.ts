@@ -228,7 +228,7 @@ function anthropicInjectCacheControl(options?: RequestInit) {
 }
 
 function cleanupAssistantMessages(messages: Messages) {
-  const processedMessages = messages.map((message) => {
+  let processedMessages = messages.map((message) => {
     if (message.role == 'assistant') {
       let content = message.content;
       content = content.replace(/<div class=\\"__boltThought__\\">.*?<\/div>/s, '');
@@ -238,6 +238,8 @@ function cleanupAssistantMessages(messages: Messages) {
       return message;
     }
   });
+  // Remove empty messages because they cause the Vercel AI call to fail
+  processedMessages = processedMessages.filter((message) => message.content !== '');
   return convertToCoreMessages(processedMessages);
 }
 
