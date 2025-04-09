@@ -14,6 +14,7 @@ interface FileBreadcrumbProps {
   files?: FileMap;
   pathSegments?: string[];
   onFileSelect?: (filePath: string) => void;
+  children?: React.ReactNode;
 }
 
 const contextMenuVariants = {
@@ -35,7 +36,7 @@ const contextMenuVariants = {
   },
 } satisfies Variants;
 
-export const FileBreadcrumb = memo<FileBreadcrumbProps>(({ files, pathSegments = [], onFileSelect }) => {
+export const FileBreadcrumb = memo<FileBreadcrumbProps>(({ files, pathSegments = [], onFileSelect, children }) => {
   renderLogger.trace('FileBreadcrumb');
 
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -70,81 +71,84 @@ export const FileBreadcrumb = memo<FileBreadcrumbProps>(({ files, pathSegments =
   }
 
   return (
-    <div className="flex">
-      {pathSegments.map((segment, index) => {
-        const isLast = index === pathSegments.length - 1;
+    <div className="flex gap-2">
+      <div className="flex items-center border-r border-bolt-elements-borderColor">
+        {pathSegments.map((segment, index) => {
+          const isLast = index === pathSegments.length - 1;
 
-        const path = pathSegments.slice(0, index).join('/');
+          const path = pathSegments.slice(0, index).join('/');
 
-        if (!WORK_DIR_REGEX.test(path)) {
-          return null;
-        }
+          if (!WORK_DIR_REGEX.test(path)) {
+            return null;
+          }
 
-        const isActive = activeIndex === index;
+          const isActive = activeIndex === index;
 
-        return (
-          <div key={index} className="relative flex items-center">
-            <DropdownMenu.Root open={isActive} modal={false}>
-              <DropdownMenu.Trigger asChild>
-                <span
-                  ref={(ref) => {
-                    segmentRefs.current[index] = ref;
-                  }}
-                  className={classNames('flex items-center gap-1.5 cursor-pointer shrink-0', {
-                    'text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary': !isActive,
-                    'text-bolt-elements-textPrimary underline': isActive,
-                    'pr-4': isLast,
-                  })}
-                  onClick={() => handleSegmentClick(index)}
-                >
-                  {isLast && <div className="i-ph:file-duotone" />}
-                  {segment}
-                </span>
-              </DropdownMenu.Trigger>
-              {index > 0 && !isLast && <span className="i-ph:caret-right inline-block mx-1" />}
-              <AnimatePresence>
-                {isActive && (
-                  <DropdownMenu.Portal>
-                    <DropdownMenu.Content
-                      className="z-file-tree-breadcrumb"
-                      asChild
-                      align="start"
-                      side="bottom"
-                      avoidCollisions={false}
-                    >
-                      <motion.div
-                        ref={contextMenuRef}
-                        initial="close"
-                        animate="open"
-                        exit="close"
-                        variants={contextMenuVariants}
+          return (
+            <div key={index} className="relative flex items-center">
+              <DropdownMenu.Root open={isActive} modal={false}>
+                <DropdownMenu.Trigger asChild>
+                  <span
+                    ref={(ref) => {
+                      segmentRefs.current[index] = ref;
+                    }}
+                    className={classNames('flex items-center gap-1.5 cursor-pointer shrink-0', {
+                      'text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary': !isActive,
+                      'text-bolt-elements-textPrimary underline': isActive,
+                      'pr-4': isLast,
+                    })}
+                    onClick={() => handleSegmentClick(index)}
+                  >
+                    {isLast && <div className="i-ph:file-duotone" />}
+                    {segment}
+                  </span>
+                </DropdownMenu.Trigger>
+                {index > 0 && !isLast && <span className="i-ph:caret-right inline-block mx-1" />}
+                <AnimatePresence>
+                  {isActive && (
+                    <DropdownMenu.Portal>
+                      <DropdownMenu.Content
+                        className="z-file-tree-breadcrumb"
+                        asChild
+                        align="start"
+                        side="bottom"
+                        avoidCollisions={false}
                       >
-                        <div className="rounded-lg overflow-hidden">
-                          <div className="max-h-[50vh] min-w-[300px] overflow-scroll bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor shadow-sm rounded-lg">
-                            <FileTree
-                              files={files}
-                              hideRoot
-                              rootFolder={path}
-                              collapsed
-                              allowFolderSelection
-                              selectedFile={`${path}/${segment}`}
-                              onFileSelect={(filePath) => {
-                                setActiveIndex(null);
-                                onFileSelect?.(filePath);
-                              }}
-                            />
+                        <motion.div
+                          ref={contextMenuRef}
+                          initial="close"
+                          animate="open"
+                          exit="close"
+                          variants={contextMenuVariants}
+                        >
+                          <div className="rounded-lg overflow-hidden">
+                            <div className="max-h-[50vh] min-w-[300px] overflow-scroll bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor shadow-sm rounded-lg">
+                              <FileTree
+                                files={files}
+                                hideRoot
+                                rootFolder={path}
+                                collapsed
+                                allowFolderSelection
+                                selectedFile={`${path}/${segment}`}
+                                onFileSelect={(filePath) => {
+                                  setActiveIndex(null);
+                                  onFileSelect?.(filePath);
+                                }}
+                              />
+                            </div>
                           </div>
-                        </div>
-                        <DropdownMenu.Arrow className="fill-bolt-elements-borderColor" />
-                      </motion.div>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Portal>
-                )}
-              </AnimatePresence>
-            </DropdownMenu.Root>
-          </div>
-        );
-      })}
+                          <DropdownMenu.Arrow className="fill-bolt-elements-borderColor" />
+                        </motion.div>
+                      </DropdownMenu.Content>
+                    </DropdownMenu.Portal>
+                  )}
+                </AnimatePresence>
+              </DropdownMenu.Root>
+            </div>
+          );
+        })}
+      </div>
+      {children}
     </div>
   );
 });

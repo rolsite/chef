@@ -19,7 +19,6 @@ import { Preview } from './Preview';
 import useViewport from '~/lib/hooks';
 import { Dashboard } from './Dashboard';
 import { convexProjectStore } from '~/lib/stores/convexProject';
-import { SaveStatusIndicator } from '~/components/SaveStatusIndicator';
 import type { TerminalInitializationOptions } from '~/types/terminal';
 import { getAbsolutePath } from '~/lib/stores/files';
 
@@ -173,10 +172,9 @@ export const Workbench = memo(({ chatStarted, isStreaming, terminalInitializatio
                   <div className="ml-auto" />
                   {selectedView === 'code' && (
                     <div className="flex overflow-y-auto">
-                      <SaveStatusIndicator />
                       <div className="w-4" />
                       <PanelHeaderButton
-                        className="mr-1 text-sm"
+                        className="mr-1 text-sm text-bolt-elements-textPrimary"
                         onClick={() => {
                           workbenchStore.downloadZip();
                         }}
@@ -185,7 +183,7 @@ export const Workbench = memo(({ chatStarted, isStreaming, terminalInitializatio
                         Download Code
                       </PanelHeaderButton>
                       <PanelHeaderButton
-                        className="mr-1 text-sm"
+                        className="mr-1 text-sm text-bolt-elements-textPrimary"
                         onClick={() => {
                           workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
                         }}

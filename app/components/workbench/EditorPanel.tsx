@@ -101,19 +101,20 @@ export const EditorPanel = memo(
               <PanelHeader className="overflow-x-auto">
                 {activeFileSegments?.length && (
                   <div className="flex items-center flex-1 text-sm">
-                    <FileBreadcrumb pathSegments={activeFileSegments} files={files} onFileSelect={onFileSelect} />
-                    {activeFileUnsaved && (
-                      <div className="flex gap-1 ml-auto -mr-1.5">
-                        <PanelHeaderButton onClick={onFileSave}>
-                          <div className="i-ph:floppy-disk-duotone" />
-                          Save
-                        </PanelHeaderButton>
-                        <PanelHeaderButton onClick={onFileReset}>
-                          <div className="i-ph:clock-counter-clockwise-duotone" />
-                          Reset
-                        </PanelHeaderButton>
-                      </div>
-                    )}
+                    <FileBreadcrumb pathSegments={activeFileSegments} files={files} onFileSelect={onFileSelect}>
+                      {activeFileUnsaved && (
+                        <div className="flex gap-1 ml-auto -mr-1.5 bg-[var(--cvx-background-warning)] text-[var(--cvx-content-warning)] rounded-md">
+                          <PanelHeaderButton onClick={onFileSave}>
+                            <div className="i-ph:floppy-disk-duotone" />
+                            Save
+                          </PanelHeaderButton>
+                          <PanelHeaderButton onClick={onFileReset}>
+                            <div className="i-ph:clock-counter-clockwise-duotone" />
+                            Reset
+                          </PanelHeaderButton>
+                        </div>
+                      )}
+                    </FileBreadcrumb>
                   </div>
                 )}
               </PanelHeader>

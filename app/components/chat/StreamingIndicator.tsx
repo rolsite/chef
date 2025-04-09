@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import type { ToolStatus } from '~/lib/common/types';
 import { classNames } from '~/utils/classNames';
+import { SnapshotSaveStatusIndicator } from '../SnapshotSaveStatusIndicator';
 
 interface StreamingIndicatorProps {
   streamStatus: 'streaming' | 'submitted' | 'ready' | 'error';

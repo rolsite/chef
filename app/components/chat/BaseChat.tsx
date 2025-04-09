@@ -20,6 +20,7 @@ import StreamingIndicator from './StreamingIndicator';
 import type { ToolStatus } from '~/lib/common/types';
 import { TeamSelector } from '~/components/convex/TeamSelector';
 import type { TerminalInitializationOptions } from '~/types/terminal';
+import { SnapshotSaveStatusIndicator } from '../SnapshotSaveStatusIndicator';
 const TEXTAREA_MIN_HEIGHT = 76;
 
 interface BaseChatProps {
@@ -253,18 +254,21 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         }
                       }}
                     />
-                    <div className="flex justify-end gap-4 items-center text-sm p-4 pt-2">
-                      {input.length > 3 ? (
-                        <div className="text-xs text-bolt-elements-textTertiary">
-                          <KeyboardShortcut
-                            value={['Shift', 'Return']}
-                            className="font-bold text-bolt-elements-textSecondary mr-0.5"
-                          />{' '}
-                          for new line
-                        </div>
-                      ) : null}
-                      {chatStarted && flexAuthMode === 'ConvexOAuth' && <ConvexConnection />}
-                      {!chatStarted && flexAuthMode === 'ConvexOAuth' && <TeamSelector />}
+                    <div className="flex justify-between gap-4 items-center text-sm p-4 pt-2">
+                      <SnapshotSaveStatusIndicator />
+                      <div className="flex items-center gap-2">
+                        {input.length > 3 ? (
+                          <div className="text-xs text-bolt-elements-textTertiary">
+                            <KeyboardShortcut
+                              value={['Shift', 'Return']}
+                              className="font-bold text-bolt-elements-textSecondary mr-0.5"
+                            />{' '}
+                            for new line
+                          </div>
+                        ) : null}
+                        {chatStarted && flexAuthMode === 'ConvexOAuth' && <ConvexConnection />}
+                        {!chatStarted && flexAuthMode === 'ConvexOAuth' && <TeamSelector />}
+                      </div>
                     </div>
                   </div>
                 </div>
