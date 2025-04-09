@@ -39,6 +39,7 @@ const tools: ConvexToolSet = {
   edit: editTool,
 };
 
+
 export type ModelProvider = 'Anthropic' | 'Bedrock' | 'OpenAI';
 
 const ALLOWED_AWS_REGIONS = ['us-east-1', 'us-east-2', 'us-west-2'];
