@@ -1,12 +1,11 @@
 import { classNames } from '~/utils/classNames';
 import { useStore } from '@nanostores/react';
-import { useConvexSessionId } from '~/lib/stores/sessionId';
-import { useSelectedTeamSlug } from '~/lib/stores/convexTeams';
+import { getConvexAuthToken, useConvexSessionId } from '~/lib/stores/sessionId';
+import { setSelectedTeamSlug, useSelectedTeamSlug } from '~/lib/stores/convexTeams';
 import { convexProjectStore } from '~/lib/stores/convexProject';
 import { useConvex, useQuery } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { useChatId } from '~/lib/stores/chatId';
-import { useAuth0 } from '@auth0/auth0-react';
 import { TeamSelector } from './TeamSelector';
 
 export function ConvexConnectButton() {
@@ -17,7 +16,6 @@ export function ConvexConnectButton() {
     sessionId,
     chatId,
   });
-  const { getAccessTokenSilently } = useAuth0();
   const selectedTeamSlug = useSelectedTeamSlug();
 
   const handleClick = async () => {
@@ -25,7 +23,11 @@ export function ConvexConnectButton() {
       console.error('No team selected');
       return;
     }
-    const tokenResponse = await getAccessTokenSilently({ detailedResponse: true });
+    const auth0AccessToken = getConvexAuthToken(convexClient);
+    if (!auth0AccessToken) {
+      console.error('No auth0 access token');
+      return;
+    }
     await convexClient.mutation(api.convexProjects.disconnectConvexProject, {
       sessionId,
       chatId,
@@ -36,7 +38,7 @@ export function ConvexConnectButton() {
       chatId,
       projectInitParams: {
         teamSlug: selectedTeamSlug,
-        auth0AccessToken: tokenResponse.id_token,
+        auth0AccessToken,
       },
     });
   };
@@ -47,7 +49,11 @@ export function ConvexConnectButton() {
     <div className="flex flex-col gap-2">
       <p className="text-sm">Select a Convex team to connect your Chef app to.</p>
       <div className="flex gap-2">
-        <TeamSelector />
+        <TeamSelector
+          selectedTeamSlug={selectedTeamSlug}
+          setSelectedTeamSlug={setSelectedTeamSlug}
+          description="Your project will be created in this Convex team"
+        />
         <button
           onClick={handleClick}
           disabled={isLoading || !selectedTeamSlug}

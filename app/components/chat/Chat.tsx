@@ -6,7 +6,7 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useMessageParser, useShortcuts, useSnapScroll, type PartCache } from '~/lib/hooks';
 import { description } from '~/lib/stores/description';
 import { chatStore } from '~/lib/stores/chatId';
-import { workbenchStore } from '~/lib/stores/workbench';
+import { workbenchStore } from '~/lib/stores/workbench.client';
 import { PROMPT_COOKIE_KEY } from '~/utils/constants';
 import { cubicEasingFn } from '~/utils/easings';
 import { createScopedLogger } from '~/utils/logger';
@@ -121,8 +121,7 @@ export const Chat = memo(
         console.error('No team slug');
         throw new Error('No team slug');
       }
-      const convexAny = convex as any;
-      const token = convexAny?.sync?.state?.auth?.value;
+      const token = getConvexAuthToken(convex);
       if (!token) {
         console.error('No token');
         throw new Error('No token');

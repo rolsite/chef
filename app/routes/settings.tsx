@@ -5,7 +5,7 @@ import { useConvex, useQuery } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { useEffect, useState } from 'react';
 import { getTokenUsage } from '~/lib/convexUsage';
-import { selectedTeamSlugStore } from '~/lib/stores/convexTeams';
+import { convexTeamsStore, useSelectedTeamSlug } from '~/lib/stores/convexTeams';
 import { toast } from 'sonner';
 import { useAuth0 } from '@auth0/auth0-react';
 import { TooltipProvider } from '@radix-ui/react-tooltip';
@@ -16,6 +16,7 @@ import { ChefAuthProvider } from '~/components/chat/ChefAuthWrapper';
 import { json } from '@vercel/remix';
 import type { LoaderFunctionArgs, MetaFunction } from '@vercel/remix';
 import { VITE_PROVISION_HOST } from '~/components/chat/Chat';
+import { getConvexAuthToken } from '~/lib/stores/sessionId';
 
 export const meta: MetaFunction = () => {
   return [{ title: 'Settings | Chef' }];
@@ -54,21 +55,28 @@ export function SettingsContent() {
   const [isDirty, setIsDirty] = useState(false);
   const [alwaysUseKey, setAlwaysUseKey] = useState(false);
   const [showKey, setShowKey] = useState(false);
-  const teamSlug = useStore(selectedTeamSlugStore);
   const apiKey = useQuery(api.apiKeys.apiKeyForCurrentMember);
-  const { getAccessTokenSilently, logout } = useAuth0();
+  const { logout } = useAuth0();
+
+  const teams = useStore(convexTeamsStore);
+
+  useEffect(() => {
+    if (teams && !selectedTeamSlug) {
+      setSelectedTeamSlug(teams[0]?.slug);
+    }
+  }, [teams]);
+  const [selectedTeamSlug, setSelectedTeamSlug] = useState(useSelectedTeamSlug() ?? teams?.[0]?.slug ?? null);
 
   useEffect(() => {
     async function fetchTokenUsage() {
-      if (!teamSlug) {
+      if (!selectedTeamSlug) {
         return;
       }
       setIsLoadingUsage(true);
       try {
-        const token = await getAccessTokenSilently({ detailedResponse: true });
-        console.log('token', token);
+        const token = getConvexAuthToken(convex);
         if (token) {
-          const usage = await getTokenUsage(VITE_PROVISION_HOST, token.id_token, teamSlug);
+          const usage = await getTokenUsage(VITE_PROVISION_HOST, token, selectedTeamSlug);
           if (usage.status === 'success') {
             setTokenUsage(usage);
           } else {
@@ -82,7 +90,7 @@ export function SettingsContent() {
       }
     }
     void fetchTokenUsage();
-  }, [teamSlug, convex]);
+  }, [selectedTeamSlug, convex]);
 
   useEffect(() => {
     if (apiKey) {
@@ -149,7 +157,7 @@ export function SettingsContent() {
             <div className="p-6">
               <h2 className="text-xl font-semibold text-bolt-elements-textPrimary mb-4">Profile</h2>
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700">
+                <div className="min-w-[5rem] w-20 h-20 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-700">
                   {profile?.avatar ? (
                     <img
                       src={profile.avatar}
@@ -172,14 +180,14 @@ export function SettingsContent() {
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
                     >
-                      <div className="i-ph:arrow-square-out" />
+                      <div className="i-ph:arrow-square-out min-w-[1rem]" />
                       Manage your profile on the Convex Dashboard
                     </a>
                     <button
                       onClick={handleLogout}
                       className="flex items-center gap-1 text-sm text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 bg-transparent"
                     >
-                      <div className="i-ph:sign-out" />
+                      <div className="i-ph:sign-out min-w--[1rem]" />
                       Log out
                     </button>
                   </div>
@@ -194,7 +202,7 @@ export function SettingsContent() {
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-bolt-elements-textPrimary">Chef Usage</h2>
                 <div className="ml-auto">
-                  <TeamSelector />
+                  <TeamSelector selectedTeamSlug={selectedTeamSlug} setSelectedTeamSlug={setSelectedTeamSlug} />
                 </div>
               </div>
               <p className="text-sm text-bolt-elements-textSecondary mb-1">
@@ -218,7 +226,7 @@ export function SettingsContent() {
                         className="bg-blue-500 h-4 rounded-full transition-all duration-300"
                         style={{ width: tokenUsage.tokensQuota ? `${Math.min(100, usagePercentage)}%` : '0%' }}
                       />
-                      <div className="absolute inset-0 flex items-center justify-center text-[11px] font-medium text-white">
+                      <div className="absolute inset-0 flex items-center justify-center text-[11px] font-medium text-bolt-elements-textPrimary">
                         {Math.round(usagePercentage)}%
                       </div>
                     </div>
