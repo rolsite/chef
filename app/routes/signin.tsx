@@ -8,8 +8,12 @@ import { Header } from '~/components/header/Header';
 
 export const meta: MetaFunction = () => {
   return [
-    { title: 'Chef - Sign In' },
+    { title: 'Sign In | Chef' },
     { name: 'description', content: 'Sign in to Chef, the full-stack AI coding agent from Convex' },
+    {
+      property: 'og:image',
+      content: '/social_preview_index.jpg',
+    },
   ];
 };
 
@@ -36,7 +40,7 @@ export const loader = async (args: LoaderFunctionArgs) => {
 export default function Index() {
   return (
     <div className="flex flex-col h-full w-full bg-bolt-elements-background-depth-1">
-      <Header />
+      <Header hideSidebarIcon />
       <ClientOnly>
         {() => (
           <>
