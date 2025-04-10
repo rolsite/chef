@@ -21,6 +21,7 @@ import { npmInstallToolParameters } from '~/lib/runtime/npmInstallTool';
 import { loggingSafeParse } from '~/lib/zodUtil';
 import { deployToolParameters } from '~/lib/runtime/deployTool';
 import type { ZodError } from 'zod';
+import { getRelativePath } from '~/lib/stores/files';
 
 export const ToolCall = memo((props: { partId: PartId; toolCallId: string }) => {
   const { partId, toolCallId } = props;
@@ -382,7 +383,7 @@ function toolTitle(invocation: ConvexToolInvocation): React.ReactNode {
         extra = ` (lines ${start} - ${endName})`;
       }
       if (args.success) {
-        renderedPath = args.data.path || '/home/project';
+        renderedPath = getRelativePath(args.data.path) || '/home/project';
       }
       return (
         <div className="flex items-center gap-2">
@@ -418,9 +419,9 @@ function toolTitle(invocation: ConvexToolInvocation): React.ReactNode {
       } else if (invocation.result?.startsWith('Error:')) {
         if (
           // This is a hack, but `npx convex dev` prints this out when the typecheck fails
-          invocation.result.includes('To ignore failing typecheck') ||
+          invocation.result.includes('[ConvexTypecheck]') ||
           // this is a bigger hack! TypeScript fails with error codes like TS
-          invocation.result.includes('Error TS')
+          invocation.result.includes('[FrontendTypecheck]')
         ) {
           return (
             <div className="flex items-center gap-2">

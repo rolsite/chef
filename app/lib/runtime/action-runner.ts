@@ -372,31 +372,80 @@ export class ActionRunner {
         case 'deploy': {
           const container = await this.#webcontainer;
           await waitForContainerBootState(ContainerBootState.READY);
-          const convexProc = await container.spawn('sh', [
-            '-c',
-            'convex dev --once && tsc --noEmit -p tsconfig.app.json',
-          ]);
-          action.abortSignal.addEventListener('abort', () => {
-            convexProc.kill();
-          });
+          result = '';
 
-          const { output, exitCode } = await streamOutput(convexProc, {
+          const convexTypecheckProc = await container.spawn('npx', ['tsc', '-p', 'convex']);
+          let abortListener: () => void = () => {
+            convexTypecheckProc.kill();
+          };
+          action.abortSignal.addEventListener('abort', abortListener);
+
+          const { output: convexTypecheckOutput, exitCode: convexTypecheckExitCode } = await streamOutput(
+            convexTypecheckProc,
+            {
+              onOutput: (output) => {
+                this.terminalOutput.set(output);
+              },
+              debounceMs: 50,
+            },
+          );
+          const cleanedTypecheckOutput = cleanConvexOutput(convexTypecheckOutput);
+          if (convexTypecheckExitCode !== 0) {
+            throw new Error(
+              `[ConvexTypecheck] Failed with exit code ${convexTypecheckExitCode}: ${cleanedTypecheckOutput}`,
+            );
+          }
+          result += cleanedTypecheckOutput + '\n\n';
+          action.abortSignal.removeEventListener('abort', abortListener);
+
+          const convexDevProc = await container.spawn('npx', ['convex', 'dev', '--once', '--typecheck', 'disable']);
+          abortListener = () => {
+            convexDevProc.kill();
+          };
+          action.abortSignal.addEventListener('abort', abortListener);
+
+          const { output: convexDevOutput, exitCode: convexDevExitCode } = await streamOutput(convexDevProc, {
             onOutput: (output) => {
-              this.terminalOutput.set(output);
+              this.terminalOutput.set(result + output);
             },
             debounceMs: 50,
           });
-          const cleanedOutput = cleanConvexOutput(output);
-          if (exitCode !== 0) {
-            throw new Error(`Convex failed with exit code ${exitCode}: ${cleanedOutput}`);
+          const cleanedDevOutput = cleanConvexOutput(convexDevOutput);
+          if (convexDevExitCode !== 0) {
+            throw new Error(`[ConvexDev] Failed with exit code ${convexDevExitCode}: ${cleanedDevOutput}`);
           }
-          result = cleanedOutput;
+          result += cleanedDevOutput + '\n\n';
+          action.abortSignal.removeEventListener('abort', abortListener);
+
+          const frontendTypecheckProc = await container.spawn('npx', ['tsc', '--noEmit', '-p', 'tsconfig.app.json']);
+          abortListener = () => {
+            frontendTypecheckProc.kill();
+          };
+          action.abortSignal.addEventListener('abort', abortListener);
+
+          const { output: frontendTypecheckOutput, exitCode: frontendTypecheckExitCode } = await streamOutput(
+            frontendTypecheckProc,
+            {
+              onOutput: (output) => {
+                this.terminalOutput.set(result + output);
+              },
+              debounceMs: 50,
+            },
+          );
+          const cleanedFrontendTypecheckOutput = cleanConvexOutput(frontendTypecheckOutput);
+          if (frontendTypecheckExitCode !== 0) {
+            throw new Error(
+              `[FrontendTypecheck] Failed with exit code ${frontendTypecheckExitCode}: ${cleanedFrontendTypecheckOutput}`,
+            );
+          }
+          result += cleanedFrontendTypecheckOutput + '\n\n';
+          action.abortSignal.removeEventListener('abort', abortListener);
 
           // Start the default preview if it’s not already running
           if (!workbenchStore.isDefaultPreviewRunning()) {
             const shell = this.#shellTerminal();
             await shell.startCommand('npx vite --open');
-            result += '\n\nDev server started successfully!';
+            result += 'Dev server started successfully!';
           }
 
           break;
