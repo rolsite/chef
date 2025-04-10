@@ -3,8 +3,8 @@ import type { Message as AIMessage } from 'ai';
 import { ConvexError, v } from 'convex/values';
 import type { VAny } from 'convex/values';
 import { isValidSession } from './sessions';
-import { api } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
+import { startProvisionConvexProjectHelper } from './convexProjects';
 export type SerializedMessage = Omit<AIMessage, 'createdAt'> & {
   createdAt: number | undefined;
 };
@@ -24,8 +24,6 @@ export const initializeChat = mutation({
   handler: async (ctx, args) => {
     const { id, sessionId, projectInitParams } = args;
     let existing = await getChatByIdOrUrlIdEnsuringAccess(ctx, { id: args.id, sessionId: args.sessionId });
-
-    console.log('Existing chat:', existing);
 
     if (!existing) {
       await createNewChatFromMessages(ctx, {
@@ -53,6 +51,8 @@ export const addMessages = mutation({
   },
   returns: v.object({
     id: v.string(),
+    initialId: v.optional(v.string()),
+    urlId: v.optional(v.string()),
     description: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
@@ -92,48 +92,6 @@ export const setDescription = mutation({
     await ctx.db.patch(existing._id, {
       description,
     });
-  },
-});
-
-export const duplicate = mutation({
-  args: {
-    sessionId: v.id('sessions'),
-    id: v.string(),
-  },
-  returns: v.object({
-    id: v.string(),
-    description: v.optional(v.string()),
-  }),
-  handler: async (ctx, args) => {
-    const { id } = args;
-    const existing = await getChatByIdOrUrlIdEnsuringAccess(ctx, { id, sessionId: args.sessionId });
-
-    if (!existing) {
-      throw new ConvexError({ code: 'NotFound', message: 'Chat not found' });
-    }
-
-    const messages = await ctx.db
-      .query('chatMessages')
-      .withIndex('byChatId', (q) => q.eq('chatId', existing._id))
-      .collect();
-
-    const chatId = await createNewChatFromMessages(ctx, {
-      id: crypto.randomUUID(),
-      sessionId: args.sessionId,
-      description: `${existing.description || 'Chat'} (copy)`,
-      snapshotId: existing.snapshotId,
-    });
-    const chat = await ctx.db.get(chatId);
-    await _appendMessages(ctx, {
-      sessionId: args.sessionId,
-      chat: chat!,
-      messages: messages.map((m) => m.content),
-    });
-
-    return {
-      id: chatId,
-      description: `${existing.description || 'Chat'} (copy)`,
-    };
   },
 });
 
@@ -454,6 +412,8 @@ async function _appendMessages(
 
   return {
     id: updatedId,
+    initialId: chat.initialId,
+    urlId: chat.urlId,
     description: updatedDescription,
   };
 }
@@ -531,7 +491,7 @@ export async function createNewChatFromMessages(
     snapshotId,
   });
 
-  await ctx.scheduler.runAfter(0, api.convexProjects.startProvisionConvexProject, {
+  await startProvisionConvexProjectHelper(ctx, {
     sessionId,
     chatId: id,
     projectInitParams,

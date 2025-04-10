@@ -2,6 +2,11 @@ import { defineSchema, defineTable } from 'convex/server';
 import { v, type VAny } from 'convex/values';
 import type { SerializedMessage } from './messages';
 
+export const apiKeyValidator = v.object({
+  preference: v.union(v.literal('always'), v.literal('quotaExhausted')),
+  value: v.string(),
+});
+
 export default defineSchema({
   /*
    * We create a session (if it does not exist) and store the ID in local storage.
@@ -17,6 +22,7 @@ export default defineSchema({
 
   convexMembers: defineTable({
     tokenIdentifier: v.string(),
+    apiKey: v.optional(apiKeyValidator),
   }).index('byTokenIdentifier', ['tokenIdentifier']),
 
   /*
@@ -44,9 +50,15 @@ export default defineSchema({
           // for this member's dev deployment
           deploymentUrl: v.string(),
           deploymentName: v.string(),
+          warningMessage: v.optional(v.string()),
         }),
         v.object({
           kind: v.literal('connecting'),
+          checkConnectionJobId: v.optional(v.id('_scheduled_functions')),
+        }),
+        v.object({
+          kind: v.literal('failed'),
+          errorMessage: v.string(),
         }),
       ),
     ),
@@ -76,4 +88,17 @@ export default defineSchema({
   })
     .index('byCode', ['code'])
     .index('bySessionId', ['sessionId']),
+
+  shares: defineTable({
+    chatId: v.id('chats'),
+    snapshotId: v.optional(v.id('_storage')),
+    code: v.string(),
+
+    // Shares are created at one point in time, so this makes sure
+    // people using the link don’t see newer messages.
+    lastMessageRank: v.number(),
+
+    // The description of the chat at the time the share was created.
+    description: v.optional(v.string()),
+  }).index('byCode', ['code']),
 });

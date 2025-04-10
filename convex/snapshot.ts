@@ -1,18 +1,9 @@
-import { mutation, query } from './_generated/server';
+import { internalMutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { getChat, getChatByIdOrUrlIdEnsuringAccess } from './messages';
 
-// Generate a URL for uploading a snapshot file
-export const generateUploadUrl = mutation({
-  args: {},
-  returns: v.string(),
-  handler: async (ctx) => {
-    return await ctx.storage.generateUploadUrl();
-  },
-});
-
 // Save the snapshot information after successful upload
-export const saveSnapshot = mutation({
+export const saveSnapshot = internalMutation({
   args: {
     sessionId: v.id('sessions'),
     chatId: v.string(),

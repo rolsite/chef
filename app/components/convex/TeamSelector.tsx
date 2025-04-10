@@ -1,52 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import * as Select from '@radix-ui/react-select';
 import { classNames } from '~/utils/classNames';
-import {
-  initializeSelectedTeamSlug,
-  setSelectedTeamSlug,
-  teamsStore,
-  useSelectedTeamSlug,
-  type ConvexTeam,
-} from '~/lib/stores/convex';
-import { useAuth0 } from '@auth0/auth0-react';
+import { setSelectedTeamSlug, useSelectedTeamSlug } from '~/lib/stores/convexTeams';
+import { convexTeamsStore } from '~/lib/stores/convexTeams';
 import { useStore } from '@nanostores/react';
-
-const VITE_PROVISION_HOST = import.meta.env.VITE_PROVISION_HOST || 'https://api.convex.dev';
 
 export function TeamSelector() {
   const [open, setOpen] = useState(false);
-  const { getAccessTokenSilently } = useAuth0();
-  const teams = useStore(teamsStore);
+  const teams = useStore(convexTeamsStore);
   const selectedTeamSlug = useSelectedTeamSlug();
-
-  useEffect(() => {
-    async function fetchTeams() {
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        const tokenResponse = await getAccessTokenSilently({
-          detailedResponse: true,
-        });
-        const response = await fetch(`${VITE_PROVISION_HOST}/api/dashboard/teams`, {
-          headers: {
-            Authorization: `Bearer ${tokenResponse.id_token}`,
-          },
-        });
-        if (!response.ok) {
-          const body = await response.text();
-          throw new Error(`Failed to fetch teams: ${response.statusText}: ${body}`);
-        }
-        const teamsData = await response.json();
-        teamsStore.set(teamsData as ConvexTeam[]);
-        initializeSelectedTeamSlug(teamsData as ConvexTeam[]);
-      } catch (error) {
-        console.error('Error fetching teams:', error);
-      }
-    }
-
-    if (!teams) {
-      fetchTeams();
-    }
-  }, [getAccessTokenSilently, teams]);
 
   if (!teams) {
     return (
@@ -59,12 +21,12 @@ export function TeamSelector() {
     );
   }
 
-  const selectedTeam = teams.find((t) => t.slug === selectedTeamSlug) || teams[0];
+  const selectedTeam = teams.find((t) => t.slug === selectedTeamSlug) ?? null;
 
   return (
     <div className="flex border border-bolt-elements-borderColor rounded-md overflow-hidden text-sm">
       <Select.Root
-        value={selectedTeam.slug}
+        value={selectedTeam?.slug ?? 'Select a team...'}
         onValueChange={(value: string) => {
           setSelectedTeamSlug(value);
         }}
@@ -80,7 +42,7 @@ export function TeamSelector() {
           aria-label="Select team"
         >
           <img className="w-4 h-4" height="16" width="16" src="/icons/Convex.svg" alt="Convex" />
-          <Select.Value placeholder="Select a team...">{selectedTeam.name}</Select.Value>
+          <Select.Value placeholder="Select a team...">{selectedTeam?.name ?? 'Select a team...'}</Select.Value>
           <Select.Icon className="ml-auto">
             <div className={classNames('i-ph:caret-down-bold transition-all', open ? 'rotate-180' : '')}></div>
           </Select.Icon>

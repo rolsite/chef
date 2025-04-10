@@ -370,10 +370,12 @@ export class ActionRunner {
           break;
         }
         case 'deploy': {
-          const shell = this.#shellTerminal();
           const container = await this.#webcontainer;
           await waitForContainerBootState(ContainerBootState.READY);
-          const convexProc = await container.spawn('npx', ['convex', 'dev', '--once']);
+          const convexProc = await container.spawn('sh', [
+            '-c',
+            'convex dev --once && tsc --noEmit -p tsconfig.app.json',
+          ]);
           action.abortSignal.addEventListener('abort', () => {
             convexProc.kill();
           });
@@ -390,8 +392,13 @@ export class ActionRunner {
           }
           result = cleanedOutput;
 
-          await shell.startCommand(this.runnerId.get(), 'npx vite --open');
-          result += '\n\nDev server started successfully!';
+          // Start the default preview if it’s not already running
+          if (!workbenchStore.isDefaultPreviewRunning()) {
+            const shell = this.#shellTerminal();
+            await shell.startCommand('npx vite --open');
+            result += '\n\nDev server started successfully!';
+          }
+
           break;
         }
         default: {

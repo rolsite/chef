@@ -1,10 +1,11 @@
 import { type ActionFunctionArgs } from '@vercel/remix';
 import { createScopedLogger } from '~/utils/logger';
-import { convexAgent, getEnv } from '~/lib/.server/llm/convex-agent';
+import { convexAgent, getEnv, type ModelProvider } from '~/lib/.server/llm/convex-agent';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { BatchSpanProcessor, WebTracerProvider } from '@opentelemetry/sdk-trace-web';
 import type { LanguageModelUsage, Message } from 'ai';
 import { checkTokenUsage, recordUsage } from '~/lib/.server/usage';
+import { disabledText, noTokensText } from '~/lib/convexUsage';
 
 type Messages = Message[];
 
@@ -18,10 +19,6 @@ export async function chatAction({ request }: ActionFunctionArgs) {
   const AXIOM_API_URL = getEnv(env, 'AXIOM_API_URL');
   const AXIOM_DATASET_NAME = getEnv(env, 'AXIOM_DATASET_NAME');
   const PROVISION_HOST = getEnv(env, 'PROVISION_HOST') || 'https://api.convex.dev';
-  // TODO(nipunn) - enable rate limiting before launch
-  // keeping it off for now to avoid ratelimiting our early adopter testers
-  // until we have full entitlements grants in place.
-  const enableRateLimiting = getEnv(env, 'ENABLE_RATE_LIMITING');
 
   let tracer: Tracer | null = null;
   if (AXIOM_API_TOKEN && AXIOM_API_URL && AXIOM_DATASET_NAME) {
@@ -60,18 +57,43 @@ export async function chatAction({ request }: ActionFunctionArgs) {
     token: string;
     teamSlug: string;
     deploymentName: string | undefined;
+    modelProvider: ModelProvider;
+    userApiKey: { preference: 'always' | 'quotaExhausted'; value: string } | undefined;
   };
   const { messages, firstUserMessage, chatId, deploymentName, token, teamSlug } = body;
 
-  if (enableRateLimiting) {
+  let userApiKey = body.userApiKey?.preference === 'always' ? body.userApiKey.value : undefined;
+
+  if (!userApiKey) {
     const resp = await checkTokenUsage(PROVISION_HOST, token, teamSlug, deploymentName);
-    if (resp) {
-      return resp;
+    if (resp.status === 'error') {
+      return new Response(JSON.stringify({ error: 'Failed to check for tokens' }), {
+        status: resp.httpStatus,
+      });
+    }
+    if (resp.isTeamDisabled) {
+      return new Response(JSON.stringify({ error: disabledText }), {
+        status: 402,
+      });
+    }
+    if (resp.tokensQuota === 50000000) {
+      // TODO(nipunn) Hack for launch day
+      resp.tokensQuota = resp.tokensQuota * 100;
+    }
+    if (resp.tokensUsed >= resp.tokensQuota) {
+      if (body.userApiKey?.preference === 'quotaExhausted') {
+        userApiKey = body.userApiKey.value;
+      } else {
+        logger.error(`No tokens available for ${deploymentName}: ${resp.tokensUsed} of ${resp.tokensQuota}`);
+        return new Response(JSON.stringify({ error: noTokensText(resp.tokensUsed, resp.tokensQuota) }), {
+          status: 402,
+        });
+      }
     }
   }
 
   const recordUsageCb = async (usage: LanguageModelUsage) => {
-    if (enableRateLimiting) {
+    if (!userApiKey) {
       await recordUsage(PROVISION_HOST, token, teamSlug, deploymentName, usage);
     }
   };
@@ -79,7 +101,16 @@ export async function chatAction({ request }: ActionFunctionArgs) {
   try {
     const totalMessageContent = messages.reduce((acc, message) => acc + message.content, '');
     logger.debug(`Total message length: ${totalMessageContent.split(' ').length}, words`);
-    const dataStream = await convexAgent(chatId, env, firstUserMessage, messages, tracer, recordUsageCb);
+    const dataStream = await convexAgent(
+      chatId,
+      env,
+      firstUserMessage,
+      messages,
+      tracer,
+      userApiKey ? 'Anthropic' : body.modelProvider,
+      userApiKey,
+      recordUsageCb,
+    );
 
     return new Response(dataStream, {
       status: 200,

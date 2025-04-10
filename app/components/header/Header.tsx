@@ -1,12 +1,13 @@
 import { useStore } from '@nanostores/react';
 import { ClientOnly } from 'remix-utils/client-only';
-import { chatStore } from '~/lib/stores/chat';
+import { chatStore } from '~/lib/stores/chatId';
 import { classNames } from '~/utils/classNames';
 import { HeaderActionButtons } from './HeaderActionButtons.client';
-import { ChatDescription } from '~/lib/persistence/ChatDescription.client';
-import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/convex';
+import { ChatDescription } from '~/components/header/ChatDescription.client';
+import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
 import { DeployButton } from './DeployButton';
 import { FeedbackButton } from './FeedbackButton';
+import { ShareButton } from './ShareButton';
 
 export function Header() {
   const chat = useStore(chatStore);
@@ -41,7 +42,9 @@ export function Header() {
                 fill="#EB2E29"
               />
             </svg>
-            chef
+            <span className="flex items-baseline gap-2">
+              chef <span className="text-sm align-baseline font-medium">by convex</span>
+            </span>
           </div>
         </a>
       </div>
@@ -54,6 +57,7 @@ export function Header() {
             {() => (
               <div className="flex items-center gap-2 flex-wrap">
                 <FeedbackButton />
+                <ShareButton />
                 <DeployButton />
                 <div className="mr-1">
                   <HeaderActionButtons />

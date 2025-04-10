@@ -1,7 +1,6 @@
 import type { WebContainer, WebContainerProcess } from '@webcontainer/api';
 import type { ITerminal } from '~/types/terminal';
 import { withResolvers } from './promises';
-import { atom } from 'nanostores';
 import { ContainerBootState, waitForContainerBootState } from '~/lib/stores/containerBootState';
 
 export async function newShellProcess(webcontainer: WebContainer, terminal: ITerminal) {
@@ -56,7 +55,7 @@ export async function newShellProcess(webcontainer: WebContainer, terminal: ITer
   return process;
 }
 
-type ExecutionResult = { output: string; exitCode: number } | undefined;
+type ExecutionResult = { output: string; exitCode: number };
 
 export class BoltShell {
   #initialized: (() => void) | undefined;
@@ -64,9 +63,6 @@ export class BoltShell {
   #webcontainer: WebContainer | undefined;
   #terminal: ITerminal | undefined;
   #process: WebContainerProcess | undefined;
-  executionState = atom<
-    { sessionId: string; active: boolean; executionPrms?: Promise<any>; abort?: () => void } | undefined
-  >();
   #outputStream: ReadableStreamDefaultReader<string> | undefined;
   #shellInputStream: WritableStreamDefaultWriter<string> | undefined;
 
@@ -99,60 +95,38 @@ export class BoltShell {
     return this.#process;
   }
 
-  async startCommand(sessionId: string, command: string) {
+  async startCommand(command: string) {
     if (!this.process || !this.terminal) {
-      return;
+      throw new Error('Terminal not initialized');
     }
-    const state = this.executionState.get();
-    if (state?.active && state.abort) {
-      state.abort();
+
+    // For terminals that might be readonly, use write method directly for sending commands
+    const shellInput = this.#shellInputStream;
+    if (!shellInput) {
+      throw new Error('Shell input stream not initialized');
     }
-    this.terminal.input('\x03');
+
+    // Interrupt the current execution with Ctrl+C
+    shellInput.write('\x03');
     await this.waitTillOscCode('prompt');
-    this.terminal.input(command.trim() + '\n');
+
+    shellInput.write(command.trim() + '\n');
   }
 
-  async executeCommand(sessionId: string, command: string, abort?: () => void): Promise<ExecutionResult> {
-    if (!this.process || !this.terminal) {
-      return undefined;
+  async executeCommand(command: string): Promise<ExecutionResult> {
+    await this.startCommand(command);
+
+    // Wait for the execution to finish
+    const { output, exitCode } = await this.waitTillOscCode('exit');
+
+    let cleanedOutput = output;
+    try {
+      cleanedOutput = cleanTerminalOutput(output);
+    } catch (error) {
+      console.log('failed to format terminal output', error);
     }
 
-    const state = this.executionState.get();
-
-    if (state?.active && state.abort) {
-      state.abort();
-    }
-
-    /*
-     * interrupt the current execution
-     *  this.#shellInputStream?.write('\x03');
-     */
-    this.terminal.input('\x03');
-    await this.waitTillOscCode('prompt');
-
-    if (state && state.executionPrms) {
-      await state.executionPrms;
-    }
-
-    //start a new execution
-    this.terminal.input(command.trim() + '\n');
-
-    //wait for the execution to finish
-    const executionPromise = this.getCurrentExecutionResult();
-    this.executionState.set({ sessionId, active: true, executionPrms: executionPromise, abort });
-
-    const resp = await executionPromise;
-    this.executionState.set({ sessionId, active: false });
-
-    if (resp) {
-      try {
-        resp.output = cleanTerminalOutput(resp.output);
-      } catch (error) {
-        console.log('failed to format terminal output', error);
-      }
-    }
-
-    return resp;
+    return { output: cleanedOutput, exitCode };
   }
 
   async newBoltShellProcess(webcontainer: WebContainer, terminal: ITerminal) {
@@ -207,11 +181,6 @@ export class BoltShell {
     await jshReady.promise;
 
     return { process, output: internalOutput };
-  }
-
-  async getCurrentExecutionResult(): Promise<ExecutionResult> {
-    const { output, exitCode } = await this.waitTillOscCode('exit');
-    return { output, exitCode };
   }
 
   async waitTillOscCode(waitCode: string) {

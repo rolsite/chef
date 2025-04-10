@@ -3,9 +3,9 @@ import type { Message } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useAnimate } from 'framer-motion';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { useMessageParser, useShortcuts, useSnapScroll } from '~/lib/hooks';
-import { chatIdStore, description } from '~/lib/persistence';
-import { chatStore, useChatIdOrNull } from '~/lib/stores/chat';
+import { useMessageParser, useShortcuts, useSnapScroll, type PartCache } from '~/lib/hooks';
+import { description } from '~/lib/stores/description';
+import { chatStore } from '~/lib/stores/chatId';
 import { workbenchStore } from '~/lib/stores/workbench';
 import { PROMPT_COOKIE_KEY } from '~/utils/constants';
 import { cubicEasingFn } from '~/utils/easings';
@@ -18,22 +18,26 @@ import { createSampler } from '~/utils/sampler';
 import { filesToArtifacts } from '~/utils/fileUtils';
 import { ChatContextManager } from '~/lib/ChatContextManager';
 import { webcontainer } from '~/lib/webcontainer';
-import {
-  ContainerBootState,
-  takeContainerBootError,
-  useContainerBootState,
-  waitForBootStepCompleted,
-} from '~/lib/stores/containerBootState';
-import { convexStore, selectedTeamSlugStore, useConvexSessionId } from '~/lib/stores/convex';
+import { ContainerBootState, waitForBootStepCompleted } from '~/lib/stores/containerBootState';
+import { selectedTeamSlugStore } from '~/lib/stores/convexTeams';
+import { convexProjectStore } from '~/lib/stores/convexProject';
 import { toast } from 'sonner';
 import type { PartId } from '~/lib/stores/artifacts';
 import { captureException } from '@sentry/remix';
-import { setExtra, setUser } from '@sentry/remix';
-import { useAuth0 } from '@auth0/auth0-react';
-import { setProfile } from '~/lib/stores/profile';
 import type { ActionStatus } from '~/lib/runtime/action-runner';
+import { chatIdStore } from '~/lib/stores/chatId';
+import type { ModelProvider } from '~/lib/.server/llm/convex-agent';
+import { useConvex, useQuery } from 'convex/react';
+import type { ConvexReactClient } from 'convex/react';
+import { api } from '@convex/_generated/api';
+import { disabledText, getTokenUsage, noTokensText } from '~/lib/convexUsage';
 
 const logger = createScopedLogger('Chat');
+
+const MAX_RETRIES = 3;
+
+const CHEF_TOO_BUSY_ERROR = 'Chef is too busy cooking right now. Please try again in a moment.';
+export const VITE_PROVISION_HOST = import.meta.env.VITE_PROVISION_HOST || 'https://api.convex.dev';
 
 const processSampledMessages = createSampler(
   (options: {
@@ -55,197 +59,332 @@ const processSampledMessages = createSampler(
 
 interface ChatProps {
   initialMessages: Message[];
+  partCache: PartCache;
   storeMessageHistory: (messages: Message[]) => Promise<void>;
-  initializeChat: (teamSlug: string | null) => Promise<void>;
+  initializeChat: () => Promise<void>;
   description?: string;
+
+  isReload: boolean;
+  hadSuccessfulDeploy: boolean;
 }
 
-export const Chat = memo(({ initialMessages, storeMessageHistory, initializeChat }: ChatProps) => {
-  useShortcuts();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [imageDataList, setImageDataList] = useState<string[]>([]);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const actionAlert = useStore(workbenchStore.alert);
+export const Chat = memo(
+  ({ initialMessages, partCache, storeMessageHistory, initializeChat, isReload, hadSuccessfulDeploy }: ChatProps) => {
+    useShortcuts();
+    const convex = useConvex();
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
+    const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    const [imageDataList, setImageDataList] = useState<string[]>([]);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const actionAlert = useStore(workbenchStore.alert);
 
-  const title = useStore(description);
+    const title = useStore(description);
 
-  const { showChat } = useStore(chatStore);
+    const { showChat } = useStore(chatStore);
 
-  const [animationScope, animate] = useAnimate();
+    const [animationScope, animate] = useAnimate();
 
-  const chatContextManager = useRef(new ChatContextManager());
-  const { getAccessTokenSilently } = useAuth0();
-  const [token, setToken] = useState<string | null>(null);
+    const apiKey = useQuery(api.apiKeys.apiKeyForCurrentMember);
 
-  useEffect(() => {
-    // Fetch and store the access token
-    getAccessTokenSilently({ detailedResponse: true })
-      .then((response) => {
-        setToken(response.id_token);
-      })
-      .catch((error) => {
-        console.error('Failed to get access token:', error);
-      });
-  }, [getAccessTokenSilently]);
+    const [retries, setRetries] = useState<{ numFailures: number; nextRetry: number }>({
+      numFailures: 0,
+      nextRetry: Date.now(),
+    });
 
-  const { messages, status, input, handleInputChange, setInput, stop, append, setMessages, reload, error } = useChat({
-    initialMessages,
-    initialInput: Cookies.get(PROMPT_COOKIE_KEY) || '',
-    api: '/api/chat',
-    sendExtraMessageFields: true,
-    experimental_prepareRequestBody: ({ messages }) => {
-      const chatId = chatIdStore.get() ?? '';
-      const convex = convexStore.get();
+    // Reset retries counter every 10 minutes
+    useEffect(() => {
+      const resetInterval = setInterval(
+        () => {
+          setRetries({ numFailures: 0, nextRetry: Date.now() });
+        },
+        10 * 60 * 1000,
+      );
+
+      return () => clearInterval(resetInterval);
+    }, []);
+
+    let USE_ANTHROPIC_FRACTION = 1.0;
+    if (import.meta.env.VITE_USE_ANTHROPIC_FRACTION) {
+      USE_ANTHROPIC_FRACTION = Number(import.meta.env.VITE_USE_ANTHROPIC_FRACTION);
+    }
+
+    const modelProviders: ModelProvider[] = USE_ANTHROPIC_FRACTION === 1.0 ? ['Anthropic'] : ['Anthropic', 'Bedrock'];
+
+    const chatContextManager = useRef(new ChatContextManager());
+    const [disableChatMessage, setDisableChatMessage] = useState<string | null>(null);
+
+    async function checkTokenUsage() {
       const teamSlug = selectedTeamSlugStore.get();
-      if (!token) {
-        throw new Error('No token');
-      }
       if (!teamSlug) {
+        console.error('No team slug');
         throw new Error('No team slug');
       }
-
-      return {
-        messages: chatContextManager.current.prepareContext(messages),
-        firstUserMessage: messages.filter((message) => message.role == 'user').length == 1,
-        chatId,
-        token,
-        teamSlug,
-        deploymentName: convex?.deploymentName,
-      };
-    },
-    maxSteps: 64,
-    async onToolCall({ toolCall }) {
-      console.log('Starting tool call', toolCall);
-      const result = await workbenchStore.waitOnToolCall(toolCall.toolCallId);
-      console.log('Tool call finished', result);
-      return result;
-    },
-    onError: (e) => {
-      captureException('Failed to process chat request: ' + e.message, {
-        level: 'error',
-        extra: {
-          error: e,
-        },
-      });
-      console.log('Error', e);
-      logger.error('Request failed\n\n', e, error);
-      toast.error(
-        'There was an error processing your request: ' + (e.message ? e.message : 'No details were returned'),
-      );
-    },
-    onFinish: (message, response) => {
-      const usage = response.usage;
-      if (usage) {
-        console.log('Token usage:', usage);
+      const convexAny = convex as any;
+      const token = convexAny?.sync?.state?.auth?.value;
+      if (!token) {
+        console.error('No token');
+        throw new Error('No token');
       }
-      logger.debug('Finished streaming');
-    },
-  });
 
-  const containerBootState = useContainerBootState();
-  useEffect(() => {
-    if (containerBootState.state === ContainerBootState.ERROR && containerBootState.errorToLog) {
-      captureException(containerBootState.errorToLog);
-      toast.error('Failed to initialize the Chef environment. Please reload the page.');
-      takeContainerBootError();
+      const tokenUsage = await getTokenUsage(VITE_PROVISION_HOST, token, teamSlug);
+      if (tokenUsage.status === 'error') {
+        console.error('Failed to check for token usage', tokenUsage.httpStatus, tokenUsage.httpBody);
+      } else {
+        if (tokenUsage.tokensQuota === 50000000) {
+          // TODO(nipunn) Hack for launch day
+          tokenUsage.tokensQuota = tokenUsage.tokensQuota * 100;
+        }
+        const { tokensUsed, tokensQuota, isTeamDisabled } = tokenUsage;
+        if (tokensUsed !== undefined && tokensQuota !== undefined) {
+          console.log(`Convex tokens used/quota: ${tokensUsed} / ${tokensQuota}`);
+          if (isTeamDisabled) {
+            setDisableChatMessage(disabledText);
+          } else if (tokensUsed > tokensQuota) {
+            setDisableChatMessage(noTokensText(tokensUsed, tokensQuota));
+          } else {
+            setDisableChatMessage(null);
+          }
+        }
+      }
     }
-  }, [containerBootState]);
 
-  useEffect(() => {
-    // an empty string code is confusing, consider it no code
-    const prompt = searchParams.get('prompt') || null;
-
-    if (!prompt) {
-      return;
-    }
-
-    setSearchParams({});
-    runAnimation();
-
-    // Wait for the WebContainer to fully finish booting before sending a message.
-    webcontainer.then(() => {
-      append({ role: 'user', content: prompt });
-    });
-  }, [searchParams]);
-
-  const { parsedMessages, parseMessages } = useMessageParser();
-
-  const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
-
-  useEffect(() => {
-    chatStore.setKey('started', initialMessages.length > 0);
-  }, []);
-
-  useEffect(() => {
-    processSampledMessages({
-      messages,
+    const { messages, status, input, handleInputChange, setInput, stop, append, setMessages, reload, error } = useChat({
       initialMessages,
-      isLoading: status === 'streaming' || status === 'submitted',
-      parseMessages,
-      storeMessageHistory,
+      initialInput: Cookies.get(PROMPT_COOKIE_KEY) || '',
+      api: '/api/chat',
+      sendExtraMessageFields: true,
+      experimental_prepareRequestBody: ({ messages }) => {
+        const chatId = chatIdStore.get();
+        const deploymentName = convexProjectStore.get()?.deploymentName;
+        const teamSlug = selectedTeamSlugStore.get();
+        const token = getConvexAuthToken(convex);
+        if (!token) {
+          throw new Error('No token');
+        }
+        if (!teamSlug) {
+          throw new Error('No team slug');
+        }
+
+        let modelProvider = Math.random() < USE_ANTHROPIC_FRACTION ? 'Anthropic' : 'Bedrock';
+        if (retries.numFailures > 0) {
+          modelProvider = modelProviders[retries.numFailures % modelProviders.length];
+        }
+
+        return {
+          messages: chatContextManager.current.prepareContext(messages),
+          firstUserMessage: messages.filter((message) => message.role == 'user').length == 1,
+          chatId,
+          token,
+          teamSlug,
+          deploymentName,
+          modelProvider,
+          userApiKey: apiKey,
+        };
+      },
+      maxSteps: 64,
+      async onToolCall({ toolCall }) {
+        console.log('Starting tool call', toolCall);
+        const result = await workbenchStore.waitOnToolCall(toolCall.toolCallId);
+        console.log('Tool call finished', result);
+        return result;
+      },
+      onError: async (e: Error) => {
+        // Clean up the last message if it's an assistant message
+        setMessages((prevMessages) => {
+          const updatedMessages = [...prevMessages];
+          const lastMessage = updatedMessages[updatedMessages.length - 1];
+
+          if (lastMessage?.role === 'assistant' && Array.isArray(lastMessage.parts)) {
+            const updatedParts = [...lastMessage.parts.slice(0, -1)];
+            if (updatedParts.length > 0) {
+              updatedMessages[updatedMessages.length - 1] = {
+                ...lastMessage,
+                parts: updatedParts,
+              };
+            } else {
+              updatedMessages.pop();
+            }
+          }
+
+          return updatedMessages;
+        });
+        captureException('Failed to process chat request: ' + e.message, {
+          level: 'error',
+          extra: {
+            error: e,
+          },
+        });
+        logger.error('Request failed\n\n', e, error);
+        setRetries((prevRetries) => {
+          const newRetries = prevRetries.numFailures + 1;
+          const retryTime = error?.message.includes('Too Many Requests')
+            ? Date.now() + exponentialBackoff(newRetries)
+            : Date.now();
+          return { numFailures: newRetries, nextRetry: retryTime };
+        });
+        if (error?.message.includes('Too Many Requests')) {
+          toast.error(CHEF_TOO_BUSY_ERROR);
+        }
+
+        await checkTokenUsage();
+      },
+      onFinish: async (message, response) => {
+        const usage = response.usage;
+        if (usage) {
+          console.log('Token usage in response:', usage);
+        }
+        if (response.finishReason == 'stop') {
+          setRetries({ numFailures: 0, nextRetry: Date.now() });
+        }
+        logger.debug('Finished streaming');
+
+        await checkTokenUsage();
+      },
     });
-  }, [messages, status, parseMessages]);
 
-  const abort = () => {
-    stop();
-    chatStore.setKey('aborted', true);
-    workbenchStore.abortAllActions();
-  };
+    useEffect(() => {
+      const prompt = searchParams.get('prompt');
 
-  useEffect(() => {
-    const textarea = textareaRef.current;
+      if (!prompt || prompt.trim() === '') {
+        return;
+      }
 
-    if (textarea) {
-      textarea.style.height = 'auto';
+      setSearchParams({});
+      runAnimation();
 
-      const scrollHeight = textarea.scrollHeight;
+      // Wait for the WebContainer to fully finish booting before sending a message.
+      webcontainer.then(() => {
+        append({ role: 'user', content: prompt });
+      });
+    }, [searchParams]);
 
-      textarea.style.height = `${Math.min(scrollHeight, TEXTAREA_MAX_HEIGHT)}px`;
-      textarea.style.overflowY = scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
-    }
-  }, [input, textareaRef]);
+    const { parsedMessages, parseMessages } = useMessageParser(partCache);
 
-  const toolStatus = useCurrentToolStatus();
+    const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
 
-  const runAnimation = async () => {
-    if (chatStarted) {
-      return;
-    }
+    useEffect(() => {
+      chatStore.setKey('started', initialMessages.length > 0);
+    }, []);
 
-    await Promise.all([
-      animate('#suggestions', { opacity: 0, display: 'none' }, { duration: 0.1 }),
-      animate('#intro', { opacity: 0, flex: 1 }, { duration: 0.2, ease: cubicEasingFn }),
-    ]);
+    useEffect(() => {
+      processSampledMessages({
+        messages,
+        initialMessages,
+        isLoading: status === 'streaming' || status === 'submitted',
+        parseMessages,
+        storeMessageHistory,
+      });
+    }, [messages, status, parseMessages]);
 
-    chatStore.setKey('started', true);
+    const abort = () => {
+      stop();
+      chatStore.setKey('aborted', true);
+      workbenchStore.abortAllActions();
+    };
 
-    setChatStarted(true);
-  };
+    useEffect(() => {
+      const textarea = textareaRef.current;
 
-  const sendMessage = async (_event: React.UIEvent, teamSlug: string | null, messageInput?: string) => {
-    const messageContent = messageInput || input;
+      if (textarea) {
+        textarea.style.height = 'auto';
 
-    if (!messageContent?.trim()) {
-      return;
-    }
+        const scrollHeight = textarea.scrollHeight;
 
-    if (status === 'streaming' || status === 'submitted') {
-      abort();
-      return;
-    }
-    await initializeChat(teamSlug);
+        textarea.style.height = `${Math.min(scrollHeight, TEXTAREA_MAX_HEIGHT)}px`;
+        textarea.style.overflowY = scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
+      }
+    }, [input, textareaRef]);
 
-    runAnimation();
+    const toolStatus = useCurrentToolStatus();
 
-    // Wait for the WebContainer to have its snapshot loaded before sending a message.
-    await waitForBootStepCompleted(ContainerBootState.LOADING_SNAPSHOT);
+    const runAnimation = async () => {
+      if (chatStarted) {
+        return;
+      }
 
-    if (!chatStarted) {
-      setMessages([
-        {
-          id: `${new Date().getTime()}`,
+      await Promise.all([
+        animate('#suggestions', { opacity: 0, display: 'none' }, { duration: 0.1 }),
+        animate('#intro', { opacity: 0, flex: 1 }, { duration: 0.2, ease: cubicEasingFn }),
+      ]);
+
+      chatStore.setKey('started', true);
+
+      setChatStarted(true);
+    };
+
+    const sendMessage = async (_event: React.UIEvent, messageInput?: string) => {
+      if (retries.numFailures >= MAX_RETRIES || Date.now() < retries.nextRetry) {
+        toast.error(CHEF_TOO_BUSY_ERROR);
+        return;
+      }
+
+      const messageContent = messageInput || input;
+
+      if (!messageContent?.trim()) {
+        return;
+      }
+
+      if (status === 'streaming' || status === 'submitted') {
+        abort();
+        return;
+      }
+      await initializeChat();
+
+      runAnimation();
+
+      // Wait for the WebContainer to have its snapshot loaded before sending a message.
+      await waitForBootStepCompleted(ContainerBootState.LOADING_SNAPSHOT);
+
+      if (!chatStarted) {
+        setMessages([
+          {
+            id: `${new Date().getTime()}`,
+            role: 'user',
+            content: messageContent,
+            parts: [
+              {
+                type: 'text',
+                text: messageContent,
+              },
+              ...imageDataList.map((imageData) => ({
+                type: 'file' as const,
+                mimeType: 'image/png',
+                data: imageData,
+              })),
+            ],
+          },
+        ]);
+        reload();
+
+        return;
+      }
+
+      const modifiedFiles = workbenchStore.getModifiedFiles();
+
+      chatStore.setKey('aborted', false);
+
+      if (modifiedFiles !== undefined) {
+        const userUpdateArtifact = filesToArtifacts(modifiedFiles, `${Date.now()}`);
+        append({
+          role: 'user',
+          content: messageContent,
+          parts: [
+            {
+              type: 'text',
+              text: `${userUpdateArtifact}${messageContent}`,
+            },
+            ...imageDataList.map((imageData) => ({
+              type: 'file' as const,
+              mimeType: 'image/png',
+              data: imageData,
+            })),
+          ],
+        });
+
+        workbenchStore.resetAllFileModifications();
+      } else {
+        append({
           role: 'user',
           content: messageContent,
           parts: [
@@ -259,132 +398,84 @@ export const Chat = memo(({ initialMessages, storeMessageHistory, initializeChat
               data: imageData,
             })),
           ],
-        },
-      ]);
-      reload();
+        });
+      }
 
-      return;
-    }
+      setInput('');
+      Cookies.remove(PROMPT_COOKIE_KEY);
 
-    const modifiedFiles = workbenchStore.getModifiedFiles();
+      setUploadedFiles([]);
+      setImageDataList([]);
 
-    chatStore.setKey('aborted', false);
+      textareaRef.current?.blur();
+    };
 
-    if (modifiedFiles !== undefined) {
-      const userUpdateArtifact = filesToArtifacts(modifiedFiles, `${Date.now()}`);
-      append({
-        role: 'user',
-        content: messageContent,
-        parts: [
-          {
-            type: 'text',
-            text: `${userUpdateArtifact}${messageContent}`,
-          },
-          ...imageDataList.map((imageData) => ({
-            type: 'file' as const,
-            mimeType: 'image/png',
-            data: imageData,
-          })),
-        ],
-      });
+    /**
+     * Handles the change event for the textarea and updates the input state.
+     * @param event - The change event from the textarea.
+     */
+    const onTextareaChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+      handleInputChange(event);
+    };
 
-      workbenchStore.resetAllFileModifications();
-    } else {
-      append({
-        role: 'user',
-        content: messageContent,
-        parts: [
-          {
-            type: 'text',
-            text: messageContent,
-          },
-          ...imageDataList.map((imageData) => ({
-            type: 'file' as const,
-            mimeType: 'image/png',
-            data: imageData,
-          })),
-        ],
-      });
-    }
+    /**
+     * Debounced function to cache the prompt in cookies.
+     * Caches the trimmed value of the textarea input after a delay to optimize performance.
+     */
+    const debouncedCachePrompt = useCallback(
+      debounce((event: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const trimmedValue = event.target.value.trim();
+        Cookies.set(PROMPT_COOKIE_KEY, trimmedValue, { expires: 30 });
+      }, 1000),
+      [],
+    );
 
-    setInput('');
-    Cookies.remove(PROMPT_COOKIE_KEY);
+    const [messageRef, scrollRef] = useSnapScroll();
 
-    setUploadedFiles([]);
-    setImageDataList([]);
-
-    textareaRef.current?.blur();
-  };
-
-  /**
-   * Handles the change event for the textarea and updates the input state.
-   * @param event - The change event from the textarea.
-   */
-  const onTextareaChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    handleInputChange(event);
-  };
-
-  /**
-   * Debounced function to cache the prompt in cookies.
-   * Caches the trimmed value of the textarea input after a delay to optimize performance.
-   */
-  const debouncedCachePrompt = useCallback(
-    debounce((event: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const trimmedValue = event.target.value.trim();
-      Cookies.set(PROMPT_COOKIE_KEY, trimmedValue, { expires: 30 });
-    }, 1000),
-    [],
-  );
-
-  const [messageRef, scrollRef] = useSnapScroll();
-  const shouldDeployConvexFunctions = messages.some(
-    (message) =>
-      message.role === 'assistant' &&
-      message.parts?.some((part) => part.type === 'tool-invocation' && part.toolInvocation.toolName === 'deploy'),
-  );
-
-  return (
-    <BaseChat
-      ref={animationScope}
-      messageRef={messageRef}
-      textareaRef={textareaRef}
-      scrollRef={scrollRef}
-      showChat={showChat}
-      chatStarted={chatStarted}
-      description={title}
-      input={input}
-      uploadedFiles={uploadedFiles}
-      setUploadedFiles={setUploadedFiles}
-      imageDataList={imageDataList}
-      setImageDataList={setImageDataList}
-      handleInputChange={(e) => {
-        onTextareaChange(e);
-        debouncedCachePrompt(e);
-      }}
-      handleStop={abort}
-      sendMessage={sendMessage}
-      streamStatus={status}
-      currentError={error}
-      toolStatus={toolStatus}
-      messages={messages.map((message, i) => {
-        if (message.role === 'user') {
-          return message;
-        }
-        return {
-          ...message,
-          content: parsedMessages[i]?.content || '',
-          parts: parsedMessages[i]?.parts || [],
-        };
-      })}
-      actionAlert={actionAlert}
-      clearAlert={() => workbenchStore.clearAlert()}
-      terminalInitializationOptions={{
-        isReload: initialMessages.length > 0,
-        shouldDeployConvexFunctions,
-      }}
-    />
-  );
-});
+    return (
+      <BaseChat
+        ref={animationScope}
+        messageRef={messageRef}
+        textareaRef={textareaRef}
+        scrollRef={scrollRef}
+        showChat={showChat}
+        chatStarted={chatStarted}
+        description={title}
+        input={input}
+        uploadedFiles={uploadedFiles}
+        setUploadedFiles={setUploadedFiles}
+        imageDataList={imageDataList}
+        setImageDataList={setImageDataList}
+        handleInputChange={(e) => {
+          onTextareaChange(e);
+          debouncedCachePrompt(e);
+        }}
+        handleStop={abort}
+        sendMessage={sendMessage}
+        streamStatus={status}
+        currentError={error}
+        toolStatus={toolStatus}
+        messages={messages.map((message, i) => {
+          if (message.role === 'user') {
+            return message;
+          }
+          return {
+            ...message,
+            content: parsedMessages[i]?.content || '',
+            parts: parsedMessages[i]?.parts || [],
+          };
+        })}
+        actionAlert={actionAlert}
+        clearAlert={() => workbenchStore.clearAlert()}
+        terminalInitializationOptions={{
+          isReload,
+          shouldDeployConvexFunctions: hadSuccessfulDeploy,
+        }}
+        disableChatMessage={disableChatMessage}
+      />
+    );
+  },
+);
 Chat.displayName = 'Chat';
 
 function useCurrentToolStatus() {
@@ -429,32 +520,24 @@ function useCurrentToolStatus() {
   return toolStatus;
 }
 
-export function SentryUserProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth0();
-  const sessionId = useConvexSessionId();
-  const chatId = useChatIdOrNull();
+function exponentialBackoff(numFailures: number) {
+  const jitter = Math.random() + 0.5;
+  const delay = 1000 * Math.pow(2, numFailures) * jitter;
+  return delay;
+}
 
-  useEffect(() => {
-    setExtra('sessionId', sessionId);
-  }, [sessionId]);
-
-  useEffect(() => {
-    setExtra('chatId', chatId);
-  }, [chatId]);
-
-  useEffect(() => {
-    if (user) {
-      setUser({
-        id: user.sub ?? undefined,
-        username: user.name ?? user.nickname ?? undefined,
-        email: user.email ?? undefined,
-      });
-    }
-    setProfile({
-      username: user?.name ?? user?.nickname ?? '',
-      avatar: user?.picture ?? '',
-    });
-  }, [user]);
-
-  return children;
+/**
+ * We send the auth token in big brain requests. The Convex client already makes
+ * sure it has an up-to-date auth token, so we just need to extract it.
+ *
+ * This is especially convenient in functions that are not async.
+ *
+ * Since there's not a public API for this, we internally type cast.
+ */
+function getConvexAuthToken(convex: ConvexReactClient): string | null {
+  const token = (convex as any)?.sync?.state?.auth?.value;
+  if (!token) {
+    return null;
+  }
+  return token;
 }

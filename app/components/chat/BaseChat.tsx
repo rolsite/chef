@@ -12,13 +12,15 @@ import { ScreenshotStateManager } from './ScreenshotStateManager';
 import type { ActionAlert } from '~/types/actions';
 import ChatAlert from './ChatAlert';
 import { ConvexConnection } from '~/components/convex/ConvexConnection';
-import { useFlexAuthMode, useSelectedTeamSlug } from '~/lib/stores/convex';
 import { SuggestionButtons } from './SuggestionButtons';
 import { KeyboardShortcut } from '~/components/ui/KeyboardShortcut';
 import StreamingIndicator from './StreamingIndicator';
 import type { ToolStatus } from '~/lib/common/types';
 import { TeamSelector } from '~/components/convex/TeamSelector';
 import type { TerminalInitializationOptions } from '~/types/terminal';
+import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
+import { useChefAuth } from './ChefAuthWrapper';
+
 const TEXTAREA_MIN_HEIGHT = 76;
 
 interface BaseChatProps {
@@ -42,7 +44,7 @@ interface BaseChatProps {
   // Chat user interactions
   handleInputChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
   handleStop: () => void;
-  sendMessage: (event: React.UIEvent, teamSlug: string | null, messageInput?: string) => void;
+  sendMessage: (event: React.UIEvent, messageInput?: string) => Promise<void>;
 
   // Current chat history props
   streamStatus: 'streaming' | 'submitted' | 'ready' | 'error';
@@ -50,6 +52,7 @@ interface BaseChatProps {
   toolStatus: ToolStatus;
   messages: Message[];
   terminalInitializationOptions: TerminalInitializationOptions | undefined;
+  disableChatMessage: string | null;
 
   // Alert related props
   actionAlert: ActionAlert | undefined;
@@ -66,6 +69,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       chatStarted = false,
       streamStatus = 'ready',
       input = '',
+      currentError,
       handleInputChange,
       sendMessage,
       handleStop,
@@ -78,21 +82,23 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       clearAlert,
       toolStatus,
       terminalInitializationOptions,
+      disableChatMessage,
     },
     ref,
   ) => {
-    const flexAuthMode = useFlexAuthMode();
     const TEXTAREA_MAX_HEIGHT = chatStarted ? 400 : 200;
-    const selectedTeamSlug = useSelectedTeamSlug();
 
     const isStreaming = streamStatus === 'streaming' || streamStatus === 'submitted';
 
     const handleSendMessage = (event: React.UIEvent, messageInput?: string) => {
-      const canSendMessage = flexAuthMode !== 'ConvexOAuth' || selectedTeamSlug !== null;
-      if (sendMessage && canSendMessage) {
-        sendMessage(event, selectedTeamSlug, messageInput);
+      if (sendMessage) {
+        sendMessage(event, messageInput).then(() => {
+          handleInputChange?.({ target: { value: '' } } as React.ChangeEvent<HTMLTextAreaElement>);
+        });
       }
     };
+    const sessionId = useConvexSessionIdOrNullOrLoading();
+    const chefAuthState = useChefAuth();
 
     const baseChat = (
       <div
@@ -149,6 +155,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     streamStatus={streamStatus}
                     numMessages={messages?.length ?? 0}
                     toolStatus={toolStatus}
+                    currentError={currentError}
                   />
                 }
                 <div className="bg-bolt-elements-background-depth-2 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt">
@@ -173,7 +180,9 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         'w-full pl-4 pt-4 pr-16 outline-none resize-none text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent text-sm',
                         'transition-all duration-200',
                         'hover:border-bolt-elements-focus',
+                        'disabled:opacity-50 disabled:cursor-not-allowed',
                       )}
+                      disabled={disableChatMessage !== null}
                       onDragEnter={(e) => {
                         e.preventDefault();
                         e.currentTarget.style.border = '2px solid #1488fc';
@@ -234,14 +243,18 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         maxHeight: TEXTAREA_MAX_HEIGHT,
                       }}
                       placeholder={
-                        chatStarted ? 'Request changes by sending another message...' : 'What app do you want to serve?'
+                        disableChatMessage
+                          ? disableChatMessage
+                          : chatStarted
+                            ? 'Request changes by sending another message...'
+                            : 'What app do you want to serve?'
                       }
                       translate="no"
                     />
                     <SendButton
                       show={input.length > 0 || isStreaming || uploadedFiles.length > 0}
                       isStreaming={isStreaming}
-                      disabled={!selectedTeamSlug}
+                      disabled={chefAuthState.kind === 'loading'}
                       onClick={(event) => {
                         if (isStreaming) {
                           handleStop?.();
@@ -262,14 +275,15 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                           for new line
                         </div>
                       ) : null}
-                      {chatStarted && flexAuthMode === 'ConvexOAuth' && <ConvexConnection />}
-                      {!chatStarted && flexAuthMode === 'ConvexOAuth' && <TeamSelector />}
+                      {chatStarted && <ConvexConnection />}
+                      {!chatStarted && sessionId && <TeamSelector />}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             <SuggestionButtons
+              disabled={disableChatMessage !== null}
               chatStarted={chatStarted}
               onSuggestionClick={(suggestion) => {
                 handleInputChange?.({ target: { value: suggestion } } as React.ChangeEvent<HTMLTextAreaElement>);

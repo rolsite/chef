@@ -1,9 +1,11 @@
 import { motion, type Variants } from 'framer-motion';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { useStore } from '@nanostores/react';
 import { Dialog, DialogButton, DialogDescription, DialogRoot, DialogTitle } from '~/components/ui/Dialog';
 import { ThemeSwitch } from '~/components/ui/ThemeSwitch';
-import { chatIdStore, type ChatHistoryItem } from '~/lib/persistence';
+import { type ChatHistoryItem } from '~/types/ChatHistoryItem';
 import { cubicEasingFn } from '~/utils/easings';
 import { logger } from '~/utils/logger';
 import { HistoryItem } from './HistoryItem';
@@ -12,7 +14,11 @@ import { useSearchFilter } from '~/lib/hooks/useSearchFilter';
 import { classNames } from '~/utils/classNames';
 import { useConvex, useQuery } from 'convex/react';
 import { api } from '@convex/_generated/api';
-import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/convex';
+import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
+import { getKnownInitialId } from '~/lib/stores/chatId';
+import { profileStore } from '~/lib/stores/profile';
+import { useAuth0 } from '@auth0/auth0-react';
+import { useNavigate } from '@remix-run/react';
 
 const menuVariants = {
   closed: {
@@ -41,9 +47,12 @@ export const Menu = memo(() => {
   const menuRef = useRef<HTMLDivElement>(null);
   const sessionId = useConvexSessionIdOrNullOrLoading();
   const convex = useConvex();
+  const navigate = useNavigate();
   const list = useQuery(api.messages.getAll, sessionId ? { sessionId } : 'skip') ?? [];
   const [open, setOpen] = useState(false);
   const [dialogContent, setDialogContent] = useState<DialogContent>(null);
+  const profile = useStore(profileStore);
+  const { logout } = useAuth0();
 
   const { filteredItems: filteredList, handleSearchChange } = useSearchFilter({
     items: list,
@@ -52,21 +61,21 @@ export const Menu = memo(() => {
 
   const deleteItem = useCallback((event: React.UIEvent, item: ChatHistoryItem) => {
     event.preventDefault();
-
-    if (sessionId) {
-      convex
-        .mutation(api.messages.remove, { id: item.id, sessionId })
-        .then(() => {
-          if (chatIdStore.get() === item.id) {
-            // hard page navigation to clear the stores
-            window.location.pathname = '/';
-          }
-        })
-        .catch((error) => {
-          toast.error('Failed to delete conversation');
-          logger.error(error);
-        });
+    if (!sessionId) {
+      return;
     }
+    convex
+      .mutation(api.messages.remove, { id: item.id, sessionId })
+      .then(() => {
+        if (getKnownInitialId() === item.initialId) {
+          // hard page navigation to clear the stores
+          window.location.pathname = '/';
+        }
+      })
+      .catch((error) => {
+        toast.error('Failed to delete conversation');
+        logger.error(error);
+      });
   }, []);
 
   const closeDialog = () => {
@@ -98,6 +107,18 @@ export const Menu = memo(() => {
     event.preventDefault();
     setDialogContent({ type: 'delete', item });
   }, []);
+
+  const handleLogout = () => {
+    logout({
+      logoutParams: {
+        returnTo: window.location.origin,
+      },
+    });
+  };
+
+  const handleSettingsClick = () => {
+    navigate('/settings');
+  };
 
   return (
     <>
@@ -190,6 +211,47 @@ export const Menu = memo(() => {
           </div>
           <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 px-4 py-3">
             <ThemeSwitch />
+            {open && (
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <button className="flex items-center justify-center w-[40px] h-[40px] overflow-hidden bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-500 rounded-full shrink-0 hover:ring-2 hover:ring-gray-200 dark:hover:ring-gray-700 transition-all">
+                    {profile?.avatar ? (
+                      <img
+                        src={profile.avatar}
+                        alt={profile?.username || 'User'}
+                        className="w-full h-full object-cover"
+                        loading="eager"
+                        decoding="sync"
+                      />
+                    ) : (
+                      <div className="i-ph:user-fill text-2xl" />
+                    )}
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    className="z-menu min-w-[180px] bg-bolt-elements-background-depth-1 rounded-lg p-1 shadow-lg border border-bolt-elements-borderColor"
+                    sideOffset={5}
+                    align="end"
+                  >
+                    <DropdownMenu.Item
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-bolt-elements-textPrimary hover:bg-bolt-elements-item-backgroundActive hover:text-bolt-elements-item-contentActive rounded-md cursor-pointer outline-none"
+                      onSelect={handleSettingsClick}
+                    >
+                      <div className="i-ph:gear-six" />
+                      Settings
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-md cursor-pointer outline-none"
+                      onSelect={handleLogout}
+                    >
+                      <div className="i-ph:sign-out" />
+                      Log out
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            )}
           </div>
         </div>
       </motion.div>
