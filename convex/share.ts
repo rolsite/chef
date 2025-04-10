@@ -1,10 +1,35 @@
 import { ConvexError, v } from 'convex/values';
-import { mutation, type DatabaseReader } from './_generated/server';
+import { action, internalMutation, internalQuery, mutation, type DatabaseReader } from './_generated/server';
 import { getChatByIdOrUrlIdEnsuringAccess } from './messages';
-import type { Id } from './_generated/dataModel';
-import { startProvisionConvexProjectHelper } from './convexProjects';
 
-export const create = mutation({
+import { startProvisionConvexProjectHelper } from './convexProjects';
+import { internal } from './_generated/api';
+
+export const createLink = action({
+  args: {
+    sessionId: v.id('sessions'),
+    id: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const result = await ctx.runQuery(internal.share.getChatDetailsForSharing, args);
+
+    // Clone the file
+    const blob = await ctx.storage.get(result.snapshotId);
+    if (!blob) {
+      throw new Error('Snapshot not found');
+    }
+
+    const clonedSnapshotId = await ctx.storage.store(blob);
+
+    const { code } = await ctx.runMutation(internal.share.doCreate, {
+      clonedSnapshotId,
+    });
+
+    return { code };
+  },
+});
+
+export const getChatDetailsForSharing = internalQuery({
   args: {
     sessionId: v.id('sessions'),
     id: v.string(),
@@ -24,20 +49,32 @@ export const create = mutation({
       .withIndex('byChatId', (q) => q.eq('chatId', chat._id))
       .order('desc')
       .first();
+    const lastMessageRank = lastMessage ? lastMessage.rank : 0;
 
+    return {
+      snapshotId: chat.snapshotId,
+      description: chat.description,
+      lastMessageRank,
+    };
+  },
+});
+
+export const doCreate = internalMutation({
+  args: {
+    chatId: v.id('chats'),
+    lastMessageRank: v.number(),
+    clonedSnapshotId: v.id('_storage'),
+    description: v.string(),
+  },
+  handler: async (ctx, { chatId, lastMessageRank, clonedSnapshotId, description }) => {
     const code = await generateUniqueCode(ctx.db);
 
     await ctx.db.insert('shares', {
-      chatId: chat._id,
-
-      // It is safe to use the snapshotId from the chat because the user’s
-      // snapshot excludes .env.local.
-      snapshotId: chat.snapshotId,
-
+      chatId,
+      snapshotId: clonedSnapshotId,
       code,
-      lastMessageRank: lastMessage ? lastMessage.rank : 0,
-
-      description: chat.description,
+      lastMessageRank,
+      description,
     });
 
     return { code };
