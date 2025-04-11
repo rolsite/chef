@@ -6,10 +6,8 @@ import type { SerializedMessage } from '@convex/messages';
 import { waitForConvexSessionId } from '~/lib/stores/sessionId';
 import { setKnownUrlId, setKnownInitialId } from '~/lib/stores/chatId';
 import { description } from '~/lib/stores/description';
-import { getInitialMessageState, parse, parseStrippingFileActions } from '~/lib/runtime/message-parser';
-import { makePartId, type PartId } from '../artifacts';
-import type { ActionType, BoltAction } from '~/types/actions';
-import type { BoltArtifactData } from '~/types/artifact';
+import { parseStrippingFileActions } from '~/lib/runtime/message-parser';
+import { makePartId } from '~/lib/stores/artifacts';
 
 export function useStoreMessageHistory(chatId: string, initialMessages: SerializedMessage[] | undefined) {
   const convex = useConvex();

@@ -31,12 +31,12 @@ These callbacks can be used for both side-effects, like starting an action,
 and formatting output.
 */
 interface ParserCallbacks {
-  onArtifactOpen: ArtifactCallback;
-  onArtifactClose: ArtifactCallback;
-  onActionOpen: ActionCallback;
-  onActionStream: ActionCallback;
-  onActionClose: ActionCallback;
-  onPlainText: (content: string) => void;
+  onArtifactOpen?: ArtifactCallback;
+  onArtifactClose?: ArtifactCallback;
+  onActionOpen?: ActionCallback;
+  onActionStream?: ActionCallback;
+  onActionClose?: ActionCallback;
+  onPlainText?: (content: string) => void;
 }
 
 interface ElementFactoryProps {
@@ -431,7 +431,7 @@ export function parseStrippingFileActions(args: { partId: PartId; input: string 
       onArtifactOpen: (data) => {
         output += `<boltArtifact id="${data.id}" title="${data.title}"${data.type ? ` type="${data.type}"` : ''}>`;
       },
-      onArtifactClose: (data) => {
+      onArtifactClose: (_data) => {
         output += `</boltArtifact>`;
       },
       onActionOpen: () => {
