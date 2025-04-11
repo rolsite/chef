@@ -4,6 +4,7 @@ import { serializeMessageForConvex } from './useStoreMessageHistory';
 
 describe('serializeMessageForConvex', () => {
   test('removes file content from bolt actions while preserving tags', () => {
+    debugger;
     const message: Message = {
       id: 'test',
       role: 'user',
@@ -11,7 +12,7 @@ describe('serializeMessageForConvex', () => {
       parts: [
         {
           type: 'text',
-          text: 'Here is a file:\n<boltAction type="file" filePath="test.ts">\nconst x = 1;\n</boltAction>\nAnd some more text',
+          text: 'Here is a file:\n<boltArtifact id="some-app" title="Some App"><boltAction type="file" filePath="test.ts">\nconst x = 1;\n</boltAction></boltArtifact>\nAnd some more text',
         },
       ],
       createdAt: new Date(),
@@ -21,29 +22,7 @@ describe('serializeMessageForConvex', () => {
 
     expect(serialized.parts?.[0]).toEqual({
       type: 'text',
-      text: 'Here is a file:\n<boltAction type="file" filePath="test.ts"></boltAction>\nAnd some more text',
-    });
-  });
-
-  test('preserves non-file bolt actions', () => {
-    const message: Message = {
-      id: 'test',
-      role: 'user',
-      content: '',
-      parts: [
-        {
-          type: 'text',
-          text: '<boltAction type="other">content</boltAction>',
-        },
-      ],
-      createdAt: new Date(),
-    };
-
-    const serialized = serializeMessageForConvex(message);
-
-    expect(serialized.parts?.[0]).toEqual({
-      type: 'text',
-      text: '<boltAction type="other">content</boltAction>',
+      text: 'Here is a file:\n<boltArtifact id="some-app" title="Some App"><boltAction type="file" filePath="test.ts"></boltAction></boltArtifact>\nAnd some more text',
     });
   });
 

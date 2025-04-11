@@ -6,6 +6,10 @@ import type { SerializedMessage } from '@convex/messages';
 import { waitForConvexSessionId } from '~/lib/stores/sessionId';
 import { setKnownUrlId, setKnownInitialId } from '~/lib/stores/chatId';
 import { description } from '~/lib/stores/description';
+import { getInitialMessageState, parse } from '~/lib/runtime/message-parser';
+import { makePartId, type PartId } from '../artifacts';
+import type { ActionType, BoltAction } from '~/types/actions';
+import type { BoltArtifactData } from '~/types/artifact';
 
 export function useStoreMessageHistory(chatId: string, initialMessages: SerializedMessage[] | undefined) {
   const convex = useConvex();
@@ -124,14 +128,39 @@ export function serializeMessageForConvex(message: Message) {
   // Process parts to remove file content from bolt actions
   const processedParts = message.parts?.map((part) => {
     if (part.type === 'text') {
+      const parsedText = parse({
+        partId: makePartId(message.id, 0),
+        state: getInitialMessageState(),
+        input: part.text,
+        renderCallbacks: {
+          renderActionContent: (boltAction: BoltAction) => {
+            switch (boltAction.type) {
+              case 'file':
+                return `<boltAction type="file" filePath="${boltAction.filePath}"></boltAction>`;
+              case 'toolUse':
+                return '';
+              default: {
+                const _typeCheck: never = boltAction;
+                console.error('Unknown action type', (_typeCheck as any).type);
+                return '';
+              }
+            }
+          },
+          renderArtifactStart: (_partId: PartId, data: BoltArtifactData) => {
+            return `<boltArtifact id="${data.id}" title="${data.title}"${data.type ? ` type="${data.type}"` : ''}>`;
+          },
+          renderArtifactEnd: () => {
+            return '</boltArtifact>';
+          },
+          renderPlainText: (content: string) => {
+            return content;
+          },
+        },
+      });
       // Remove content between <boltAction type="file"> tags while preserving the tags
       return {
         ...part,
-        text: part.text.replace(/<boltAction type="file"[^>]*>[\s\S]*?<\/boltAction>/g, (match) => {
-          // Extract the opening tag and return it with an empty content
-          const openingTag = match.match(/<boltAction[^>]*>/)?.[0] ?? '';
-          return `${openingTag}</boltAction>`;
-        }),
+        text: parsedText,
       };
     }
     return part;
