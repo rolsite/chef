@@ -1,9 +1,9 @@
-import { Anonymous } from "@convex-dev/auth/providers/Anonymous";
+import { Anonymous as AnonymousProvider } from '@convex-dev/auth/providers/Anonymous';
 
-export const AnonymousProviderWithName = Anonymous({
+export const Anonymous = AnonymousProvider({
   profile: (params) => {
     return {
-      name: typeof params.name === "string" ? params.name : getRandomName(),
+      name: typeof params.name === 'string' ? params.name : getRandomName(),
       isAnonymous: true,
     };
   },

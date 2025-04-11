@@ -27,17 +27,12 @@ import type { Id } from '@convex/_generated/dataModel';
 import { buildUncompressedSnapshot, compressSnapshot } from '~/lib/snapshot.client';
 import { waitForConvexSessionId } from './sessionId';
 import { withResolvers } from '~/utils/promises';
-<<<<<<< HEAD:app/lib/stores/workbench.client.ts
 import type { Artifacts, PartId } from './artifacts';
 import { backoffTime, WORK_DIR } from '~/utils/constants';
 import { chatIdStore } from '~/lib/stores/chatId';
 import { getFileUpdateCounter, waitForFileUpdateCounterChanged } from './fileUpdateCounter';
 import { generateReadmeContent } from '~/lib/readmeContent';
 import { getConvexSiteUrl } from '~/lib/convexSiteUrl';
-=======
-import type { Artifacts, PartId } from './Artifacts';
-import { generateReadmeContent } from '../readmeContent';
->>>>>>> 1baa0eb (Update auth template with automatic log in, also add a README on download):app/lib/stores/workbench.ts
 
 const BACKUP_DEBOUNCE_MS = 1000;
 
@@ -116,7 +111,6 @@ export class WorkbenchStore {
   setLastChangedFile(): void {
     this._lastChangedFile = Date.now();
   }
-
 
   async startBackup() {
     // This is a bit racy, but we need to flush the current file events before
@@ -569,10 +563,6 @@ export class WorkbenchStore {
     const readmePath = hasReadme ? `CHEF_README_${timestampHash}.md` : 'README.md';
     zip.file(readmePath, readmeContent);
 
-    // Add a README.md file specific to Chef here, but don't clobber an existing one
-    const readmeContent = generateReadmeContent(description.value ?? 'project', args.convexDeploymentName);
-    const readmePath = hasReadme ? `CHEF_README_${timestampHash}.md` : 'README.md';
-    zip.file(readmePath, readmeContent);
     // Generate the zip file and save it
     const content = await zip.generateAsync({ type: 'blob' });
     saveAs(content, `${uniqueProjectName}.zip`);

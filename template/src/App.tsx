@@ -1,10 +1,11 @@
-import { Authenticated, Unauthenticated, useQuery } from "convex/react";
-import { api } from "../convex/_generated/api";
-import { SignInForm } from "./SignInForm";
-import { SignOutButton } from "./SignOutButton";
-import { Toaster } from "./components/ui/toaster";
-import { AutoLoginWrapper } from "./AutoLoginWrapper";
-import { useState } from "react";
+import { Authenticated, Unauthenticated, useQuery } from 'convex/react';
+import { api } from '../convex/_generated/api';
+import { SignInForm } from './SignInForm';
+import { SignOutButton } from './SignOutButton';
+import { Toaster } from './components/ui/toaster';
+import { useState } from 'react';
+import { useAutoLogin } from './hooks/useAutoLogin';
+
 export default function App() {
   const [enableAutoLogin, setEnableAutoLogin] = useState(true);
   return (
@@ -16,16 +17,14 @@ export default function App() {
             className="px-4 py-2 rounded-lg transition-colors border border-blue-500 text-black"
             onClick={() => setEnableAutoLogin(!enableAutoLogin)}
           >
-            {enableAutoLogin ? "Disable auto login" : "Enable auto login"}
+            {enableAutoLogin ? 'Disable auto login' : 'Enable auto login'}
           </button>
           <SignOutButton />
         </div>
       </header>
       <main className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md mx-auto">
-          <AutoLoginWrapper enabled={enableAutoLogin}>
-            <Content />
-          </AutoLoginWrapper>
+          <Content enableAutoLogin={enableAutoLogin} />
         </div>
       </main>
       <Toaster />
@@ -33,8 +32,9 @@ export default function App() {
   );
 }
 
-function Content() {
+function Content({ enableAutoLogin }: { enableAutoLogin: boolean }) {
   const loggedInUser = useQuery(api.auth.loggedInUser);
+  useAutoLogin(enableAutoLogin);
 
   if (loggedInUser === undefined) {
     return (
@@ -50,7 +50,7 @@ function Content() {
         <h1 className="text-5xl font-bold accent-text mb-4">Cook with Chef</h1>
         <Authenticated>
           <p className="text-xl text-slate-600">
-            Welcome back, {loggedInUser?.name ?? loggedInUser?.email ?? "friend"}!
+            Welcome back, {loggedInUser?.name ?? loggedInUser?.email ?? 'friend'}!
           </p>
         </Authenticated>
         <Unauthenticated>
