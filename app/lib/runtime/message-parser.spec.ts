@@ -50,8 +50,7 @@ describe('StreamingMessageParser', () => {
   });
 
   describe('valid artifacts without actions', () => {
-    // TODO(ENG-9010): Fix failing tests
-    it.skip.each<[string | string[], ExpectedResult | string]>([
+    it.each<[string | string[], ExpectedResult | string]>([
       [
         'Some text before <boltArtifact title="Some title" id="artifact_1">foo bar</boltArtifact> Some more text',
         {
@@ -138,17 +137,16 @@ describe('StreamingMessageParser', () => {
   });
 
   describe('valid artifacts with actions', () => {
-    // TODO(ENG-9010): Fix failing tests
-    it.skip.each<[string | string[], ExpectedResult | string]>([
+    it.each<[string | string[], ExpectedResult | string]>([
       [
-        'Before <boltArtifact title="Some title" id="artifact_1"><boltAction type="shell">npm install</boltAction></boltArtifact> After',
+        'Before <boltArtifact title="Some title" id="artifact_1"><boltAction type="file" filePath="foo.ts">something</boltAction></boltArtifact> After',
         {
           output: 'Before  After',
           callbacks: { onArtifactOpen: 1, onArtifactClose: 1, onActionOpen: 1, onActionClose: 1 },
         },
       ],
       [
-        'Before <boltArtifact title="Some title" id="artifact_1"><boltAction type="shell">npm install</boltAction><boltAction type="file" filePath="index.js">some content</boltAction></boltArtifact> After',
+        'Before <boltArtifact title="Some title" id="artifact_1"><boltAction type="file" filePath="foo.ts">something</boltAction><boltAction type="file" filePath="index.js">some content</boltAction></boltArtifact> After',
         {
           output: 'Before  After',
           callbacks: { onArtifactOpen: 1, onArtifactClose: 1, onActionOpen: 2, onActionClose: 2 },
@@ -181,6 +179,12 @@ function runTest(input: string | string[], outputOrExpectedResult: string | Expe
     }),
     onActionClose: vi.fn<ActionCallback>((data) => {
       expect(data).toMatchSnapshot('onActionClose');
+    }),
+    onActionStream: vi.fn<ActionCallback>((data) => {
+      expect(data).toMatchSnapshot('onActionStream');
+    }),
+    onPlainText: vi.fn((content) => {
+      expect(content).toMatchSnapshot('onPlainText');
     }),
   };
 

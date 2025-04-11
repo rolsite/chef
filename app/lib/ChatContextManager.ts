@@ -4,7 +4,7 @@ import { getAbsolutePath, type AbsolutePath, type Dirent } from './stores/files'
 import { PREWARM_PATHS, WORK_DIR } from '~/utils/constants';
 import { workbenchStore } from './stores/workbench.client';
 import { makePartId, type PartId } from './stores/artifacts';
-import { StreamingMessageParser, parse, getInitialMessageState } from './runtime/message-parser';
+import { StreamingMessageParser, parseStrippingArtifacts } from './runtime/message-parser';
 import { path } from '~/utils/path';
 import { loggingSafeParse } from '~/lib/zodUtil';
 import { npmInstallToolParameters } from './runtime/npmInstallTool';
@@ -166,25 +166,9 @@ export class ChatContextManager {
         }
         const remainingMessage = {
           ...message,
-          content: parse({
+          content: parseStrippingArtifacts({
             partId: makePartId(message.id, 0),
-            state: getInitialMessageState(),
             input: message.content,
-            // Strip out all artifacts (and thus also the actions that they contain)
-            renderCallbacks: {
-              renderActionContent: () => {
-                return '';
-              },
-              renderArtifactStart: () => {
-                return '';
-              },
-              renderArtifactEnd: () => {
-                return '';
-              },
-              renderPlainText: (content: string) => {
-                return content;
-              },
-            },
           }),
           parts: filteredParts,
         };
@@ -308,25 +292,9 @@ export class ChatContextManager {
 
 function summarizePart(message: UIMessage, part: UIMessagePart): string | null {
   if (part.type === 'text') {
-    return `${message.role}: ${parse({
+    return `${message.role}: ${parseStrippingArtifacts({
       partId: makePartId(message.id, 0),
-      state: getInitialMessageState(),
       input: part.text,
-      // Strip out all artifacts (and thus also the actions that they contain)
-      renderCallbacks: {
-        renderActionContent: () => {
-          return '';
-        },
-        renderArtifactStart: (_partId: PartId) => {
-          return '';
-        },
-        renderArtifactEnd: () => {
-          return '';
-        },
-        renderPlainText: (content: string) => {
-          return content;
-        },
-      },
     })}`;
   }
   if (part.type === 'tool-invocation' && part.toolInvocation.state === 'result') {

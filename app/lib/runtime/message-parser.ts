@@ -26,12 +26,17 @@ export interface ActionCallbackData {
 export type ArtifactCallback = (data: ArtifactCallbackData) => void;
 export type ActionCallback = (data: ActionCallbackData) => void;
 
+/*
+These callbacks can be used for both side-effects, like starting an action,
+and formatting output.
+*/
 interface ParserCallbacks {
-  onArtifactOpen?: ArtifactCallback;
-  onArtifactClose?: ArtifactCallback;
-  onActionOpen?: ActionCallback;
-  onActionStream?: ActionCallback;
-  onActionClose?: ActionCallback;
+  onArtifactOpen: ArtifactCallback;
+  onArtifactClose: ArtifactCallback;
+  onActionOpen: ActionCallback;
+  onActionStream: ActionCallback;
+  onActionClose: ActionCallback;
+  onPlainText: (content: string) => void;
 }
 
 interface ElementFactoryProps {
@@ -83,23 +88,30 @@ export class StreamingMessageParser {
 
       this.#messages.set(partId, state);
     }
-    const output = parse({
+    let output = '';
+    parse({
       partId,
       state,
       input,
-      callbacks: this._options.callbacks,
-      renderCallbacks: {
-        renderActionContent: () => {
-          return '';
+      callbacks: {
+        onPlainText: (content) => {
+          output += content;
         },
-        renderArtifactStart: (partId: PartId) => {
-          return createArtifactElement({ partId });
+        onArtifactOpen: (data) => {
+          output += this._options.artifactElement ? this._options.artifactElement(data) : createArtifactElement(data);
+          this._options.callbacks?.onArtifactOpen?.(data);
         },
-        renderArtifactEnd: () => {
-          return '';
+        onArtifactClose: (data) => {
+          this._options.callbacks?.onArtifactClose?.(data);
         },
-        renderPlainText: (content: string) => {
-          return content;
+        onActionOpen: (data) => {
+          this._options.callbacks?.onActionOpen?.(data);
+        },
+        onActionStream: (data) => {
+          this._options.callbacks?.onActionStream?.(data);
+        },
+        onActionClose: (data) => {
+          this._options.callbacks?.onActionClose?.(data);
         },
       },
     });
@@ -109,6 +121,19 @@ export class StreamingMessageParser {
 
   reset() {
     this.#messages.clear();
+  }
+}
+
+function outputForAction(action: BoltAction, includeFileContent = false) {
+  switch (action.type) {
+    case 'file':
+      return `<boltAction type="file" filePath="${action.filePath}">${includeFileContent ? action.content : ''}</boltAction>`;
+    case 'toolUse':
+      return `<boltAction type="toolUse" toolName="${action.toolName}">${action.content}</boltAction>`;
+    default: {
+      const _typecheck: never = action;
+      return '';
+    }
   }
 }
 
@@ -172,21 +197,9 @@ export function getInitialMessageState(): MessageState {
  *
  * Mutates `state`
  */
-export function parse(args: {
-  partId: PartId;
-  state: MessageState;
-  input: string;
-  callbacks?: ParserCallbacks;
-  renderCallbacks: {
-    renderActionContent: (boltAction: BoltAction) => void;
-    renderArtifactStart: (partId: PartId, data: BoltArtifactData) => void;
-    renderArtifactEnd: () => void;
-    renderPlainText: (content: string) => void;
-  };
-}) {
-  const { partId, state, input, callbacks, renderCallbacks } = args;
+function parse(args: { partId: PartId; state: MessageState; input: string; callbacks: ParserCallbacks }) {
+  const { partId, state, input, callbacks } = args;
 
-  let output = '';
   let i = state.position;
   let earlyBreak = false;
 
@@ -234,8 +247,6 @@ export function parse(args: {
 
             action: currentAction as BoltAction,
           });
-
-          output += renderCallbacks.renderActionContent(currentAction as BoltAction);
 
           state.insideAction = false;
           state.currentAction = { content: '' };
@@ -297,8 +308,6 @@ export function parse(args: {
           state.currentArtifact = undefined;
 
           i = artifactCloseIndex + ARTIFACT_TAG_CLOSE.length;
-
-          output += renderCallbacks.renderArtifactEnd();
         } else {
           break;
         }
@@ -315,7 +324,8 @@ export function parse(args: {
           const nextChar = input[j + 1];
 
           if (nextChar && nextChar !== '>' && nextChar !== ' ') {
-            output += input.slice(i, j + 1);
+            // This seems like a malformed artifact tag, so we'll just emit it as plain text
+            callbacks?.onPlainText?.(input.slice(i, j + 1));
             i = j + 1;
             break;
           }
@@ -349,8 +359,6 @@ export function parse(args: {
 
             callbacks?.onArtifactOpen?.({ partId, ...currentArtifact });
 
-            output += renderCallbacks.renderArtifactStart(partId, currentArtifact);
-
             i = openTagEnd + 1;
           } else {
             // break out of the outer loop
@@ -359,7 +367,8 @@ export function parse(args: {
 
           break;
         } else if (!ARTIFACT_TAG_OPEN.startsWith(potentialTag)) {
-          output += input.slice(i, j + 1);
+          // This seems like a different tag, so treat it as plain text
+          callbacks?.onPlainText?.(input.slice(i, j + 1));
           i = j + 1;
           break;
         }
@@ -371,8 +380,7 @@ export function parse(args: {
         break;
       }
     } else {
-      // We're outside of an artifact, so just add the character to the output
-      output += renderCallbacks.renderPlainText(input[i]);
+      callbacks?.onPlainText?.(input[i]);
       i++;
     }
 
@@ -382,6 +390,64 @@ export function parse(args: {
   }
 
   state.position = i;
+}
+
+export function parseStrippingArtifacts(args: { partId: PartId; input: string }) {
+  let output = '';
+  parse({
+    ...args,
+    state: getInitialMessageState(),
+    callbacks: {
+      onArtifactOpen: () => {
+        // Do nothing
+      },
+      onArtifactClose: () => {
+        // Do nothing
+      },
+      onActionOpen: () => {
+        // Do nothing
+      },
+      onActionStream: () => {
+        // Do nothing
+      },
+      onActionClose: () => {
+        // Do nothing
+      },
+      onPlainText: (content) => {
+        output += content;
+      },
+    },
+  });
+
+  return output;
+}
+
+export function parseStrippingFileActions(args: { partId: PartId; input: string }) {
+  let output = '';
+  parse({
+    ...args,
+    state: getInitialMessageState(),
+    callbacks: {
+      onArtifactOpen: (data) => {
+        output += `<boltArtifact id="${data.id}" title="${data.title}"${data.type ? ` type="${data.type}"` : ''}>`;
+      },
+      onArtifactClose: (data) => {
+        output += `</boltArtifact>`;
+      },
+      onActionOpen: () => {
+        // Do nothing
+      },
+      onActionStream: () => {
+        // Do nothing
+      },
+      onActionClose: (data) => {
+        output += outputForAction(data.action, /* includeFileContent */ false);
+      },
+      onPlainText: (content) => {
+        output += content;
+      },
+    },
+  });
 
   return output;
 }

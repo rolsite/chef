@@ -3,12 +3,14 @@
 exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionClose 1`] = `
 {
   "action": {
-    "content": "npm install",
-    "type": "shell",
+    "content": "something
+",
+    "filePath": "foo.ts",
+    "type": "file",
   },
   "actionId": "0",
   "artifactId": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
 }
 `;
 
@@ -16,18 +18,292 @@ exports[`StreamingMessageParser > valid artifacts with actions > should correctl
 {
   "action": {
     "content": "",
-    "type": "shell",
+    "filePath": "foo.ts",
+    "type": "file",
   },
   "actionId": "0",
   "artifactId": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 1`] = `
+{
+  "action": {
+    "content": "s",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 2`] = `
+{
+  "action": {
+    "content": "so",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 3`] = `
+{
+  "action": {
+    "content": "som",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 4`] = `
+{
+  "action": {
+    "content": "some",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 5`] = `
+{
+  "action": {
+    "content": "somet",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 6`] = `
+{
+  "action": {
+    "content": "someth",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 7`] = `
+{
+  "action": {
+    "content": "somethi",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 8`] = `
+{
+  "action": {
+    "content": "somethin",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 9`] = `
+{
+  "action": {
+    "content": "something",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 10`] = `
+{
+  "action": {
+    "content": "something<",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 11`] = `
+{
+  "action": {
+    "content": "something</",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 12`] = `
+{
+  "action": {
+    "content": "something</b",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 13`] = `
+{
+  "action": {
+    "content": "something</bo",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 14`] = `
+{
+  "action": {
+    "content": "something</bol",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 15`] = `
+{
+  "action": {
+    "content": "something</bolt",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 16`] = `
+{
+  "action": {
+    "content": "something</boltA",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 17`] = `
+{
+  "action": {
+    "content": "something</boltAc",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 18`] = `
+{
+  "action": {
+    "content": "something</boltAct",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 19`] = `
+{
+  "action": {
+    "content": "something</boltActi",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 20`] = `
+{
+  "action": {
+    "content": "something</boltActio",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onActionStream 21`] = `
+{
+  "action": {
+    "content": "something</boltAction",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
 }
 `;
 
 exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onArtifactClose 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -36,7 +312,7 @@ exports[`StreamingMessageParser > valid artifacts with actions > should correctl
 exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (0) > onArtifactOpen 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -45,12 +321,14 @@ exports[`StreamingMessageParser > valid artifacts with actions > should correctl
 exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionClose 1`] = `
 {
   "action": {
-    "content": "npm install",
-    "type": "shell",
+    "content": "something
+",
+    "filePath": "foo.ts",
+    "type": "file",
   },
   "actionId": "0",
   "artifactId": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
 }
 `;
 
@@ -64,7 +342,7 @@ exports[`StreamingMessageParser > valid artifacts with actions > should correctl
   },
   "actionId": "1",
   "artifactId": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
 }
 `;
 
@@ -72,11 +350,12 @@ exports[`StreamingMessageParser > valid artifacts with actions > should correctl
 {
   "action": {
     "content": "",
-    "type": "shell",
+    "filePath": "foo.ts",
+    "type": "file",
   },
   "actionId": "0",
   "artifactId": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
 }
 `;
 
@@ -89,14 +368,599 @@ exports[`StreamingMessageParser > valid artifacts with actions > should correctl
   },
   "actionId": "1",
   "artifactId": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 1`] = `
+{
+  "action": {
+    "content": "s",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 2`] = `
+{
+  "action": {
+    "content": "so",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 3`] = `
+{
+  "action": {
+    "content": "som",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 4`] = `
+{
+  "action": {
+    "content": "some",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 5`] = `
+{
+  "action": {
+    "content": "somet",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 6`] = `
+{
+  "action": {
+    "content": "someth",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 7`] = `
+{
+  "action": {
+    "content": "somethi",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 8`] = `
+{
+  "action": {
+    "content": "somethin",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 9`] = `
+{
+  "action": {
+    "content": "something",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 10`] = `
+{
+  "action": {
+    "content": "something<",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 11`] = `
+{
+  "action": {
+    "content": "something</",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 12`] = `
+{
+  "action": {
+    "content": "something</b",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 13`] = `
+{
+  "action": {
+    "content": "something</bo",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 14`] = `
+{
+  "action": {
+    "content": "something</bol",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 15`] = `
+{
+  "action": {
+    "content": "something</bolt",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 16`] = `
+{
+  "action": {
+    "content": "something</boltA",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 17`] = `
+{
+  "action": {
+    "content": "something</boltAc",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 18`] = `
+{
+  "action": {
+    "content": "something</boltAct",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 19`] = `
+{
+  "action": {
+    "content": "something</boltActi",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 20`] = `
+{
+  "action": {
+    "content": "something</boltActio",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 21`] = `
+{
+  "action": {
+    "content": "something</boltAction",
+    "filePath": "foo.ts",
+    "type": "file",
+  },
+  "actionId": "0",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 22`] = `
+{
+  "action": {
+    "content": "s",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 23`] = `
+{
+  "action": {
+    "content": "so",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 24`] = `
+{
+  "action": {
+    "content": "som",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 25`] = `
+{
+  "action": {
+    "content": "some",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 26`] = `
+{
+  "action": {
+    "content": "some ",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 27`] = `
+{
+  "action": {
+    "content": "some c",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 28`] = `
+{
+  "action": {
+    "content": "some co",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 29`] = `
+{
+  "action": {
+    "content": "some con",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 30`] = `
+{
+  "action": {
+    "content": "some cont",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 31`] = `
+{
+  "action": {
+    "content": "some conte",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 32`] = `
+{
+  "action": {
+    "content": "some conten",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 33`] = `
+{
+  "action": {
+    "content": "some content",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 34`] = `
+{
+  "action": {
+    "content": "some content<",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 35`] = `
+{
+  "action": {
+    "content": "some content</",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 36`] = `
+{
+  "action": {
+    "content": "some content</b",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 37`] = `
+{
+  "action": {
+    "content": "some content</bo",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 38`] = `
+{
+  "action": {
+    "content": "some content</bol",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 39`] = `
+{
+  "action": {
+    "content": "some content</bolt",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 40`] = `
+{
+  "action": {
+    "content": "some content</boltA",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 41`] = `
+{
+  "action": {
+    "content": "some content</boltAc",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 42`] = `
+{
+  "action": {
+    "content": "some content</boltAct",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 43`] = `
+{
+  "action": {
+    "content": "some content</boltActi",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 44`] = `
+{
+  "action": {
+    "content": "some content</boltActio",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
+}
+`;
+
+exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onActionStream 45`] = `
+{
+  "action": {
+    "content": "some content</boltAction",
+    "filePath": "index.js",
+    "type": "file",
+  },
+  "actionId": "1",
+  "artifactId": "artifact_1",
+  "partId": "message_1-0",
 }
 `;
 
 exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onArtifactClose 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -105,7 +969,7 @@ exports[`StreamingMessageParser > valid artifacts with actions > should correctl
 exports[`StreamingMessageParser > valid artifacts with actions > should correctly parse chunks and strip out bolt artifacts (1) > onArtifactOpen 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -114,7 +978,7 @@ exports[`StreamingMessageParser > valid artifacts with actions > should correctl
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (0) > onArtifactClose 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -123,7 +987,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (0) > onArtifactOpen 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -132,7 +996,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (1) > onArtifactClose 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": "bundled",
 }
@@ -141,7 +1005,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (1) > onArtifactOpen 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": "bundled",
 }
@@ -150,7 +1014,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (2) > onArtifactClose 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -159,7 +1023,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (2) > onArtifactOpen 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -168,7 +1032,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (3) > onArtifactClose 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -177,7 +1041,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (3) > onArtifactOpen 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -186,7 +1050,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (4) > onArtifactClose 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -195,7 +1059,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (4) > onArtifactOpen 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -204,7 +1068,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (5) > onArtifactClose 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -213,7 +1077,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (5) > onArtifactOpen 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -222,7 +1086,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (6) > onArtifactClose 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
@@ -231,7 +1095,7 @@ exports[`StreamingMessageParser > valid artifacts without actions > should corre
 exports[`StreamingMessageParser > valid artifacts without actions > should correctly parse chunks and strip out bolt artifacts (6) > onArtifactOpen 1`] = `
 {
   "id": "artifact_1",
-  "messageId": "message_1",
+  "partId": "message_1-0",
   "title": "Some title",
   "type": undefined,
 }
