@@ -1,4 +1,4 @@
-# Chef
+# Chef!
 
 This is fork of the `stable` branch of [bolt.diy](https://github.com/stackblitz-labs/bolt.diy).
 
