@@ -1,7 +1,7 @@
-'use client';
-import { useAuthActions } from '@convex-dev/auth/react';
-import { useState } from 'react';
-import { toast } from './hooks/use-toast';
+"use client";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useState } from "react";
+import { toast } from "./hooks/use-toast";
 
 export function SignInForm() {
   const { signIn } = useAuthActions();
@@ -12,15 +12,15 @@ export function SignInForm() {
     setSubmitting(true);
     const formData = new FormData(e.target as HTMLFormElement);
     try {
-      formData.set('flow', 'signIn');
-      await signIn('password', formData);
+      formData.set("flow", "signIn");
+      await signIn("password", formData);
     } catch (_error) {
       try {
-        formData.set('flow', 'signUp');
-        await signIn('password', formData);
+        formData.set("flow", "signUp");
+        await signIn("password", formData);
       } catch (_error) {
-        const toastTitle = 'Could not sign in';
-        toast({ title: toastTitle, variant: 'destructive' });
+        const toastTitle = "Could not sign in";
+        toast({ title: toastTitle, variant: "destructive" });
       }
     } finally {
       setSubmitting(false);
@@ -31,14 +31,26 @@ export function SignInForm() {
     <div className="w-full">
       <form
         className="flex flex-col gap-4"
-        onSubmit={(e) => {
+        onSubmit={e => {
           void handleSignInOrSignUp(e);
         }}
       >
-        <input className="input-field" type="text" name="username" placeholder="Username" required />
-        <input className="input-field" type="password" name="password" placeholder="Password" required />
+        <input
+          className="input-field"
+          type="text"
+          name="username"
+          placeholder="Username"
+          required
+        />
+        <input
+          className="input-field"
+          type="password"
+          name="password"
+          placeholder="Password"
+          required
+        />
         <button className="auth-button" type="submit" disabled={submitting}>
-          {'Sign in'}
+          {"Sign in"}
         </button>
       </form>
       <div className="flex items-center justify-center my-3">
@@ -49,7 +61,7 @@ export function SignInForm() {
       <button
         className="auth-button"
         onClick={() => {
-          void signIn('anonymous');
+          void signIn("anonymous");
         }}
       >
         Sign in anonymously

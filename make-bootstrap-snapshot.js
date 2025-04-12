@@ -33,6 +33,10 @@ async function main() {
   console.log(`Update the path in \`TEMPLATE_URL\` in \`useContainerSetup.ts\` to "/${filename}" to use this`);
 }
 
+// We want these to be tracked in git so our template is formatted consistently,
+// but they're not important for the snapshot.
+const FILES_TO_EXCLUDE = ['.prettierrc', '.prettierignore'];
+
 async function getSnapshotFiles(dir) {
   try {
     const { stdout } = await exec('git ls-files', {
@@ -45,7 +49,7 @@ async function getSnapshotFiles(dir) {
     const unignoredFiles = stdout
       .trim()
       .split('\n')
-      .filter((file) => file.length > 0);
+      .filter((file) => file.length > 0 && !FILES_TO_EXCLUDE.includes(file));
     const packageLockFile = 'package-lock.json';
     if (!existsSync(path.join(dir, packageLockFile))) {
       throw new Error('package-lock.json not found');

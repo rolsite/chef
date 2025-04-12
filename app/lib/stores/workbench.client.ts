@@ -112,6 +112,10 @@ export class WorkbenchStore {
     this._lastChangedFile = Date.now();
   }
 
+  // Start the backup worker, assuming that the current filesystem state is
+  // fully saved. Therefore, this method must be called early in initialization
+  // after the snapshot has been loaded but before any subsequent changes are
+  // made.
   async startBackup() {
     // This is a bit racy, but we need to flush the current file events before
     // deciding that we're synced up to the current update counter. Sleep for

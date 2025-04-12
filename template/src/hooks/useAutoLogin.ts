@@ -1,7 +1,7 @@
-import { useAuthActions } from '@convex-dev/auth/react';
-import { useEffect } from 'react';
-import { api } from '../../convex/_generated/api';
-import { useQuery } from 'convex/react';
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useEffect } from "react";
+import { api } from "../../convex/_generated/api";
+import { useQuery } from "convex/react";
 
 /**
  * This component automatically logs in the user via anonymous auth if they are not already logged in.
@@ -15,7 +15,7 @@ export const useAutoLogin = (enabled: boolean = true) => {
       return;
     }
     if (user === null) {
-      void signIn('anonymous');
+      void signIn("anonymous");
     }
   }, [signIn, user, enabled]);
 };

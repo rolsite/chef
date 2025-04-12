@@ -31,7 +31,7 @@ and sharing it more broadly.
 * They use [Convex Auth](https://auth.convex.dev/) with Anonymous auth for easy sign in
 * Apps automatically sign in the user anonymously
 
-## Developing and deploying your appgit 
+## Developing and deploying your app
 
 Check out the [Convex docs](https://docs.convex.dev/) for more information on how to develop with Convex.
 

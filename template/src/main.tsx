@@ -9,8 +9,8 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ConvexAuthProvider client={convex} storage={window.sessionStorage}>
+    <ConvexAuthProvider client={convex}>
       <App />
     </ConvexAuthProvider>
-  </StrictMode>,
+  </StrictMode>
 );
