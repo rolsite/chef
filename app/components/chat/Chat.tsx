@@ -317,8 +317,6 @@ export const Chat = memo(
         return;
       }
 
-      setChatStarted(true);
-
       await Promise.all([
         animate('#suggestions', { opacity: 0, display: 'none' }, { duration: 0.1 }),
         animate('#intro', { opacity: 0, flex: 1 }, { duration: 0.2, ease: cubicEasingFn }),
@@ -326,6 +324,8 @@ export const Chat = memo(
       ]);
 
       chatStore.setKey('started', true);
+
+      setChatStarted(true);
     };
 
     const sendMessage = async (messageInput?: string) => {
