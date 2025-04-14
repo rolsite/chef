@@ -124,249 +124,257 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         data-chat-visible={showChat}
       >
         <Menu />
-        <div ref={scrollRef} className="flex flex-col lg:flex-row overflow-y-auto w-full h-full">
-          <div className={classNames(styles.Chat, 'flex flex-col flex-grow lg:min-w-[var(--chat-min-width)] h-full')}>
-            {!chatStarted && (
-              <div id="intro" className="mt-[16vh] max-w-chat mx-auto text-center px-4 lg:px-0">
-                <h1 className="text-4xl lg:text-6xl font-black text-bolt-elements-textPrimary mb-4 animate-fadeIn font-display tracking-tight">
-                  Now you&rsquo;re cooking
-                </h1>
-                <p className="text-xl lg:text-2xl text-balance mb-8 text-bolt-elements-textSecondary animate-fadeIn [animation-delay:200ms] font-medium font-display">
-                  Generate and launch realtime full‑stack apps you never thought possible
-                </p>
-              </div>
-            )}
-            <div
-              className={classNames('pt-6 px-2 sm:px-6', {
-                'h-full flex flex-col': chatStarted,
-              })}
-              ref={scrollRef}
-            >
-              {chatStarted ? (
-                <Messages
-                  ref={messageRef}
-                  className="flex flex-col w-full flex-1 max-w-chat pb-6 mx-auto z-[1]"
-                  messages={messages}
-                  isStreaming={isStreaming}
-                />
-              ) : null}
-              <div
-                className={classNames('flex flex-col gap-4 w-full max-w-chat mx-auto z-prompt mb-6', {
-                  'sticky bottom-2': chatStarted,
-                })}
-              >
-                <div className="bg-bolt-elements-background-depth-2">
-                  {actionAlert && (
-                    <ChatAlert
-                      alert={actionAlert}
-                      clearAlert={() => clearAlert?.()}
-                      postMessage={(message) => {
-                        handleSendMessage?.(message);
-                        clearAlert?.();
-                      }}
-                    />
-                  )}
+        <div ref={scrollRef} className="flex flex-col overflow-y-auto w-full h-full">
+          <div className="flex flex-col lg:flex-row grow w-full">
+            <div className={classNames(styles.Chat, 'flex flex-col flex-grow lg:min-w-[var(--chat-min-width)] h-full')}>
+              {!chatStarted && (
+                <div id="intro" className="mt-[16vh] max-w-chat mx-auto text-center px-4 lg:px-0">
+                  <h1 className="text-4xl lg:text-6xl font-black text-bolt-elements-textPrimary mb-4 animate-fadeIn font-display tracking-tight">
+                    Now you&rsquo;re cooking
+                  </h1>
+                  <p className="text-xl lg:text-2xl text-balance mb-8 text-bolt-elements-textSecondary animate-fadeIn [animation-delay:200ms] font-medium font-display">
+                    Generate and launch realtime full‑stack apps you never thought possible
+                  </p>
                 </div>
-                {
-                  <StreamingIndicator
-                    streamStatus={streamStatus}
-                    numMessages={messages?.length ?? 0}
-                    toolStatus={toolStatus}
-                    currentError={currentError}
-                    resendMessage={() => {
-                      const lastUserMessage = messages.toReversed().find((message) => message.role === 'user');
-                      if (lastUserMessage) {
-                        handleSendMessage?.(lastUserMessage.content);
-                      }
-                    }}
+              )}
+              <div
+                className={classNames('pt-6 px-2 sm:px-6', {
+                  'h-full flex flex-col': chatStarted,
+                })}
+                ref={scrollRef}
+              >
+                {chatStarted ? (
+                  <Messages
+                    ref={messageRef}
+                    className="flex flex-col w-full flex-1 max-w-chat pb-6 mx-auto z-[1]"
+                    messages={messages}
+                    isStreaming={isStreaming}
                   />
-                }
-                <div className="bg-bolt-elements-background-depth-2 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt">
-                  <FilePreview
-                    files={uploadedFiles}
-                    imageDataList={imageDataList}
-                    onRemove={(index) => {
-                      setUploadedFiles?.(uploadedFiles.filter((_, i) => i !== index));
-                      setImageDataList?.(imageDataList.filter((_, i) => i !== index));
-                    }}
-                  />
-                  <ScreenshotStateManager
-                    setUploadedFiles={setUploadedFiles}
-                    setImageDataList={setImageDataList}
-                    uploadedFiles={uploadedFiles}
-                    imageDataList={imageDataList}
-                  />
-                  <div>
-                    <textarea
-                      ref={textareaRef}
-                      className={classNames(
-                        'w-full pl-4 pt-4 pr-16 outline-none resize-none text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent text-sm',
-                        'transition-all duration-200',
-                        'hover:border-bolt-elements-focus',
-                        'disabled:opacity-50 disabled:cursor-not-allowed',
-                      )}
-                      disabled={disableChatMessage !== null || maintenanceMode}
-                      onDragEnter={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.style.border = '2px solid #1488fc';
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.style.border = '2px solid #1488fc';
-                      }}
-                      onDragLeave={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.style.border = '1px solid var(--bolt-elements-borderColor)';
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.style.border = '1px solid var(--bolt-elements-borderColor)';
-
-                        const files = Array.from(e.dataTransfer.files);
-                        files.forEach((file) => {
-                          if (file.type.startsWith('image/')) {
-                            const reader = new FileReader();
-
-                            reader.onload = (e) => {
-                              const base64Image = e.target?.result as string;
-                              setUploadedFiles?.([...uploadedFiles, file]);
-                              setImageDataList?.([...imageDataList, base64Image]);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        });
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' && selectedTeamSlug) {
-                          if (event.shiftKey) {
-                            return;
-                          }
-
-                          event.preventDefault();
-
-                          if (isStreaming) {
-                            handleStop?.();
-                            return;
-                          }
-
-                          // ignore if using input method engine
-                          if (event.nativeEvent.isComposing) {
-                            return;
-                          }
-
-                          handleSendMessage();
+                ) : null}
+                <div
+                  className={classNames('flex flex-col gap-4 w-full max-w-chat mx-auto z-prompt mb-6', {
+                    'sticky bottom-2': chatStarted,
+                  })}
+                >
+                  <div className="bg-bolt-elements-background-depth-2">
+                    {actionAlert && (
+                      <ChatAlert
+                        alert={actionAlert}
+                        clearAlert={() => clearAlert?.()}
+                        postMessage={(message) => {
+                          handleSendMessage?.(message);
+                          clearAlert?.();
+                        }}
+                      />
+                    )}
+                  </div>
+                  {
+                    <StreamingIndicator
+                      streamStatus={streamStatus}
+                      numMessages={messages?.length ?? 0}
+                      toolStatus={toolStatus}
+                      currentError={currentError}
+                      resendMessage={() => {
+                        const lastUserMessage = messages.toReversed().find((message) => message.role === 'user');
+                        if (lastUserMessage) {
+                          handleSendMessage?.(lastUserMessage.content);
                         }
                       }}
-                      value={input}
-                      onChange={(event) => {
-                        handleInputChange?.(event);
-                      }}
-                      style={{
-                        minHeight: TEXTAREA_MIN_HEIGHT,
-                        maxHeight: TEXTAREA_MAX_HEIGHT,
-                      }}
-                      placeholder={
-                        disableChatMessage
-                          ? disableChatMessage
-                          : chatStarted
-                            ? 'Request changes by sending another message...'
-                            : 'What app do you want to serve?'
-                      }
-                      translate="no"
                     />
-                    <Tooltip.Root>
-                      <Tooltip.Trigger asChild>
-                        <div>
-                          <SendButton
-                            show={input.length > 0 || isStreaming || uploadedFiles.length > 0 || sendMessageInProgress}
-                            isStreaming={isStreaming}
-                            disabled={
-                              !selectedTeamSlug ||
-                              chefAuthState.kind === 'loading' ||
-                              sendMessageInProgress ||
-                              maintenanceMode
+                  }
+                  <div className="bg-bolt-elements-background-depth-2 rounded-lg border border-bolt-elements-borderColor relative w-full max-w-chat mx-auto z-prompt">
+                    <FilePreview
+                      files={uploadedFiles}
+                      imageDataList={imageDataList}
+                      onRemove={(index) => {
+                        setUploadedFiles?.(uploadedFiles.filter((_, i) => i !== index));
+                        setImageDataList?.(imageDataList.filter((_, i) => i !== index));
+                      }}
+                    />
+                    <ScreenshotStateManager
+                      setUploadedFiles={setUploadedFiles}
+                      setImageDataList={setImageDataList}
+                      uploadedFiles={uploadedFiles}
+                      imageDataList={imageDataList}
+                    />
+                    <div>
+                      <textarea
+                        ref={textareaRef}
+                        className={classNames(
+                          'w-full pl-4 pt-4 pr-16 outline-none resize-none text-bolt-elements-textPrimary placeholder-bolt-elements-textTertiary bg-transparent text-sm',
+                          'transition-all duration-200',
+                          'hover:border-bolt-elements-focus',
+                          'disabled:opacity-50 disabled:cursor-not-allowed',
+                        )}
+                        disabled={disableChatMessage !== null || maintenanceMode}
+                        onDragEnter={(e) => {
+                          e.preventDefault();
+                          e.currentTarget.style.border = '2px solid #1488fc';
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.currentTarget.style.border = '2px solid #1488fc';
+                        }}
+                        onDragLeave={(e) => {
+                          e.preventDefault();
+                          e.currentTarget.style.border = '1px solid var(--bolt-elements-borderColor)';
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.currentTarget.style.border = '1px solid var(--bolt-elements-borderColor)';
+
+                          const files = Array.from(e.dataTransfer.files);
+                          files.forEach((file) => {
+                            if (file.type.startsWith('image/')) {
+                              const reader = new FileReader();
+
+                              reader.onload = (e) => {
+                                const base64Image = e.target?.result as string;
+                                setUploadedFiles?.([...uploadedFiles, file]);
+                                setImageDataList?.([...imageDataList, base64Image]);
+                              };
+                              reader.readAsDataURL(file);
                             }
-                            onClick={() => {
-                              if (isStreaming) {
-                                handleStop?.();
-                                return;
+                          });
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' && selectedTeamSlug) {
+                            if (event.shiftKey) {
+                              return;
+                            }
+
+                            event.preventDefault();
+
+                            if (isStreaming) {
+                              handleStop?.();
+                              return;
+                            }
+
+                            // ignore if using input method engine
+                            if (event.nativeEvent.isComposing) {
+                              return;
+                            }
+
+                            handleSendMessage();
+                          }
+                        }}
+                        value={input}
+                        onChange={(event) => {
+                          handleInputChange?.(event);
+                        }}
+                        style={{
+                          minHeight: TEXTAREA_MIN_HEIGHT,
+                          maxHeight: TEXTAREA_MAX_HEIGHT,
+                        }}
+                        placeholder={
+                          disableChatMessage
+                            ? disableChatMessage
+                            : chatStarted
+                              ? 'Request changes by sending another message...'
+                              : 'What app do you want to serve?'
+                        }
+                        translate="no"
+                      />
+                      <Tooltip.Root>
+                        <Tooltip.Trigger asChild>
+                          <div>
+                            <SendButton
+                              show={
+                                input.length > 0 || isStreaming || uploadedFiles.length > 0 || sendMessageInProgress
                               }
-                              if (input.length > 0 || uploadedFiles.length > 0) {
-                                handleSendMessage?.();
+                              isStreaming={isStreaming}
+                              disabled={
+                                !selectedTeamSlug ||
+                                chefAuthState.kind === 'loading' ||
+                                sendMessageInProgress ||
+                                maintenanceMode
                               }
-                            }}
-                          />
-                        </div>
-                      </Tooltip.Trigger>
-                      {(chefAuthState.kind === 'unauthenticated' || !selectedTeamSlug) && (
-                        <Tooltip.Portal>
-                          <Tooltip.Content
-                            className="z-50 px-3 py-1.5 text-sm bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor rounded-md shadow-lg animate-fadeIn"
-                            sideOffset={5}
-                            side="right"
-                          >
-                            {chefAuthState.kind === 'unauthenticated'
-                              ? 'Please sign in to continue'
-                              : 'Please select a team to continue'}
-                            <Tooltip.Arrow className="fill-bolt-elements-borderColor" />
-                          </Tooltip.Content>
-                        </Tooltip.Portal>
-                      )}
-                    </Tooltip.Root>
-                    <div className="flex justify-end gap-4 items-center text-sm p-4 pt-2">
-                      <div className="text-xs text-bolt-elements-textTertiary">
-                        <ModelSelector modelSelection={modelSelection} setModelSelection={setModelSelection} />
-                      </div>
-                      <div className="flex-grow" />
-                      {input.length > 3 ? (
+                              onClick={() => {
+                                if (isStreaming) {
+                                  handleStop?.();
+                                  return;
+                                }
+                                if (input.length > 0 || uploadedFiles.length > 0) {
+                                  handleSendMessage?.();
+                                }
+                              }}
+                            />
+                          </div>
+                        </Tooltip.Trigger>
+                        {(chefAuthState.kind === 'unauthenticated' || !selectedTeamSlug) && (
+                          <Tooltip.Portal>
+                            <Tooltip.Content
+                              className="z-50 px-3 py-1.5 text-sm bg-bolt-elements-background-depth-1 border border-bolt-elements-borderColor rounded-md shadow-lg animate-fadeIn"
+                              sideOffset={5}
+                              side="right"
+                            >
+                              {chefAuthState.kind === 'unauthenticated'
+                                ? 'Please sign in to continue'
+                                : 'Please select a team to continue'}
+                              <Tooltip.Arrow className="fill-bolt-elements-borderColor" />
+                            </Tooltip.Content>
+                          </Tooltip.Portal>
+                        )}
+                      </Tooltip.Root>
+                      <div className="flex justify-end gap-4 items-center text-sm p-4 pt-2">
                         <div className="text-xs text-bolt-elements-textTertiary">
-                          <KeyboardShortcut
-                            value={['Shift', 'Return']}
-                            className="font-bold text-bolt-elements-textSecondary mr-0.5"
-                          />{' '}
-                          for new line
+                          <ModelSelector modelSelection={modelSelection} setModelSelection={setModelSelection} />
                         </div>
-                      ) : null}
-                      {chatStarted && <ConvexConnection />}
-                      {chefAuthState.kind === 'unauthenticated' && <SignInButton />}
-                      {!chatStarted && sessionId && (
-                        <TeamSelector
-                          description="Your project will be created in this Convex team"
-                          selectedTeamSlug={selectedTeamSlug}
-                          setSelectedTeamSlug={setSelectedTeamSlug}
-                        />
-                      )}
+                        <div className="flex-grow" />
+                        {input.length > 3 ? (
+                          <div className="text-xs text-bolt-elements-textTertiary">
+                            <KeyboardShortcut
+                              value={['Shift', 'Return']}
+                              className="font-bold text-bolt-elements-textSecondary mr-0.5"
+                            />{' '}
+                            for new line
+                          </div>
+                        ) : null}
+                        {chatStarted && <ConvexConnection />}
+                        {chefAuthState.kind === 'unauthenticated' && <SignInButton />}
+                        {!chatStarted && sessionId && (
+                          <TeamSelector
+                            description="Your project will be created in this Convex team"
+                            selectedTeamSlug={selectedTeamSlug}
+                            setSelectedTeamSlug={setSelectedTeamSlug}
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-            {maintenanceMode && (
-              <div className="max-w-chat mx-auto mb-4">
-                <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-200 px-4 py-3 rounded relative">
-                  <p className="font-bold">Chef is temporarily unavailable</p>
-                  <p className="text-sm">
-                    We're experiencing high load and will be back soon. Thank you for your patience.
-                  </p>
+              {maintenanceMode && (
+                <div className="max-w-chat mx-auto mb-4">
+                  <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-200 px-4 py-3 rounded relative">
+                    <p className="font-bold">Chef is temporarily unavailable</p>
+                    <p className="text-sm">
+                      We're experiencing high load and will be back soon. Thank you for your patience.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
-            <SuggestionButtons
-              disabled={disableChatMessage !== null}
+              )}
+              <SuggestionButtons
+                disabled={disableChatMessage !== null}
+                chatStarted={chatStarted}
+                onSuggestionClick={(suggestion) => {
+                  handleInputChange?.({ target: { value: suggestion } } as React.ChangeEvent<HTMLTextAreaElement>);
+                }}
+              />
+            </div>
+            <Workbench
               chatStarted={chatStarted}
-              onSuggestionClick={(suggestion) => {
-                handleInputChange?.({ target: { value: suggestion } } as React.ChangeEvent<HTMLTextAreaElement>);
-              }}
+              isStreaming={isStreaming}
+              terminalInitializationOptions={terminalInitializationOptions}
             />
           </div>
-          <Workbench
-            chatStarted={chatStarted}
-            isStreaming={isStreaming}
-            terminalInitializationOptions={terminalInitializationOptions}
-          />
-        </div>
-        {!chatStarted && (
-          <div className="fixed inset-x-0 bottom-4 flex flex-col sm:flex-row justify-between w-full px-4 gap-2">
+
+          <footer
+            className={classNames(
+              'flex flex-col sm:flex-row justify-between w-full px-6 py-4 gap-2 transition-opacity',
+              chatStarted ? 'opacity-0 fixed bottom-0 inset-x-0 select-none pointer-events-none' : '',
+            )}
+          >
             <div className="text-sm font-display font-medium text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary transition-colors flex items-end">
               <p>
                 <a href="https://www.convex.dev/ai-platforms">
@@ -447,8 +455,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 </a>
               </p>
             </div>
-          </div>
-        )}
+          </footer>
+        </div>
       </div>
     );
 
