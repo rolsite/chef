@@ -366,8 +366,8 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
           />
         </div>
         {!chatStarted && (
-          <div className="fixed inset-x-0 bottom-4 flex flex-col sm:flex-row justify-between w-full px-4">
-            <div className="text-sm font-display font-medium text-bolt-elements-textTertiary flex items-end">
+          <div className="fixed inset-x-0 bottom-4 flex flex-col sm:flex-row justify-between w-full px-4 gap-2">
+            <div className="text-sm font-display font-medium text-bolt-elements-textTertiary hover:text-bolt-elements-textPrimary transition-colors flex items-end">
               <p>
                 <a href="https://www.convex.dev/ai-platforms">
                   <span>Building your own prompt-to-app platform? Use Convex.</span>
