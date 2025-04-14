@@ -34,6 +34,8 @@ export const Preview = memo(({ showClose, onClose }: { showClose: boolean; onClo
       const { proxyUrl, proxyPort: _proxyPort } = await workbenchStore.startProxy(activePreview.port);
       proxyPort = _proxyPort;
       setProxyUrl(proxyUrl);
+      //console.log('setting proxy URL to', proxyUrl, 'instead of source URL', activePreview.baseUrl);
+      //setProxyUrl(activePreview.baseUrl);
 
       // Treat the case where startProxy resolves after useEffect unmounts
       if (hasUnmounted) {

@@ -11,35 +11,9 @@ export interface PreviewInfo {
 
 const PROXY_PORT_RANGE_START = 0xc4ef;
 
-const PROXY_SERVER_SOURCE = `
-const http = require('http');
+import proxyScriptString from '../../../proxy/proxy.bundled.cjs?raw';
 
-const sourcePort = Number(process.argv[1]);
-const targetPort = Number(process.argv[2]);
-
-console.log(\`Starting proxy server: proxying \${targetPort} → \${sourcePort}\`);
-
-http.createServer((req, res) => {
-  const proxyReq = http.request({
-    hostname: 'localhost',
-    port: sourcePort,
-    path: req.url,
-    method: req.method,
-    headers: req.headers
-  }, (proxyRes) => {
-    res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
-    proxyRes.pipe(res);
-  });
-  
-  proxyReq.on('error', (error) => {
-    console.error('Proxy error:', error);
-    res.writeHead(502);
-    res.end('Bad Gateway');
-  });
-  
-  req.pipe(proxyReq);
-}).listen(targetPort);
-`;
+const PROXY_SERVER_SOURCE = proxyScriptString;
 
 type ProxyState = { sourcePort: number; start: (arg: { proxyUrl: string }) => void; stop: () => void };
 
@@ -66,7 +40,16 @@ export class PreviewsStore {
 
     // Listen for port events
     webcontainer.on('port', (port, type, url) => {
+      console.log('port event:', port, type, url);
+
+      // This is our hardcoded HMR server port
+      //if (port === 8173) {
+      //  // Don't touch it! Let clients contact us on this port.
+      //  return;
+      //}
+
       if (this.#proxies.has(port)) {
+        console.log('proxies has port', port);
         if (type === 'open') {
           this.#proxies.get(port)?.start({ proxyUrl: url });
         }
@@ -74,6 +57,7 @@ export class PreviewsStore {
       }
 
       let previewInfo = this.#availablePreviews.get(port);
+      console.log('preview info for port', port, previewInfo);
 
       if (type === 'close' && previewInfo) {
         this.#availablePreviews.delete(port);
@@ -84,6 +68,7 @@ export class PreviewsStore {
       const previews = this.previews.get();
 
       if (!previewInfo) {
+        console.log("no preview info! Let's add it to previews");
         previewInfo = { port, ready: type === 'open', baseUrl: url };
         this.#availablePreviews.set(port, previewInfo);
         previews.push(previewInfo);
@@ -123,9 +108,10 @@ export class PreviewsStore {
 
     // Start the proxy
     const webcontainer = await this.#webcontainer;
+    const proxyScriptLocation = '.previewProxy.cjs';
+    await webcontainer.fs.writeFile(proxyScriptLocation, PROXY_SERVER_SOURCE);
     const proxyProcess = await webcontainer.spawn('node', [
-      '-e',
-      PROXY_SERVER_SOURCE,
+      proxyScriptLocation,
       sourcePort.toString(),
       targetPort.toString(),
     ]);

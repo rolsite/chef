@@ -158,6 +158,7 @@ export class WorkbenchStore {
   }
 
   async startProxy(sourcePort: number) {
+    console.log('startProxy for port', sourcePort);
     return this.#previewsStore.startProxy(sourcePort);
   }
 

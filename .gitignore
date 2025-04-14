@@ -53,3 +53,5 @@ template/pnpm-lock.yaml
 
 .vercel
 .env*.local
+
+proxy/proxy.bundled.cjs
