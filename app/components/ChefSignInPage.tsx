@@ -137,6 +137,13 @@ function OptInsScreen() {
     [convex],
   );
 
+  const isLoginSuccessful = optIns.kind === 'loaded' && optIns.optIns.length === 0;
+  useEffect(() => {
+    if (isLoginSuccessful) {
+      window.close();
+    }
+  }, [isLoginSuccessful]);
+
   if (optIns.kind === 'loading') {
     return <Loading />;
   }
@@ -160,7 +167,7 @@ function OptInsScreen() {
     );
   }
 
-  if (optIns.kind === 'loaded' && optIns.optIns.length === 0) {
+  if (isLoginSuccessful) {
     return (
       <div className="flex size-full flex-col items-center justify-center">
         <div className="text-2xl font-bold">Done logging in!</div>
