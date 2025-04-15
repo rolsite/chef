@@ -7,6 +7,9 @@ import { VITE_PROVISION_HOST } from '~/components/chat/Chat';
 import { getConvexAuthToken } from '~/lib/stores/sessionId';
 import { getTokenUsage, renderTokenCount } from '~/lib/convexUsage';
 import { TeamSelector } from '~/components/convex/TeamSelector';
+import { Sheet } from '@ui/Sheet';
+import { ProgressBar } from '@ui/ProgressBar';
+import { Loading } from '@ui/Loading';
 
 export function UsageCard() {
   const convex = useConvex();
@@ -46,58 +49,40 @@ export function UsageCard() {
     void fetchTokenUsage();
   }, [selectedTeamSlug, convex]);
 
-  const usagePercentage = tokenUsage.tokensQuota ? ((tokenUsage.tokensUsed || 0) / tokenUsage.tokensQuota) * 100 : 0;
-
   return (
-    <div className="rounded-lg border border-bolt-elements-borderColor bg-bolt-elements-background-depth-1 shadow-sm">
-      <div className="p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-content-primary">Chef Usage</h2>
-          <div className="ml-auto">
-            <TeamSelector selectedTeamSlug={selectedTeamSlug} setSelectedTeamSlug={setSelectedTeamSlug} />
-          </div>
-        </div>
-        <p className="mb-1 text-sm text-content-secondary">Your Convex team comes with tokens included for Chef.</p>
-        <p className="mb-1 text-sm text-content-secondary">
-          On paid Convex subscriptions, additional usage will be subject to metered billing.
-        </p>
-        <p className="mb-4 text-sm text-content-secondary">
-          On free plans, Chef will not be usable once you hit the limit for the current billing period.
-        </p>
-        <div className="space-y-4">
-          <div className="relative h-4 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-            {isLoadingUsage ? (
-              <div className="relative size-full overflow-hidden bg-gray-200 dark:bg-gray-700">
-                <div className="animate-shimmer absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-              </div>
-            ) : (
-              <div>
-                <div
-                  className="h-4 rounded-full bg-blue-500 transition-all duration-300"
-                  style={{ width: tokenUsage.tokensQuota ? `${Math.min(100, usagePercentage)}%` : '0%' }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center text-[11px] font-medium text-content-primary">
-                  {Math.round(usagePercentage)}%
-                </div>
-              </div>
-            )}
-          </div>
-          <p className="text-sm text-content-secondary">
-            {isLoadingUsage ? (
-              <span className="inline-flex gap-1">
-                <span className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-                {' / '}
-                <span className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-                {' included tokens used this billing period.'}
-              </span>
-            ) : (
-              <span>
-                {`${renderTokenCount(tokenUsage.tokensUsed || 0)} / ${renderTokenCount(tokenUsage.tokensQuota || 0)} included tokens used this billing period.`}
-              </span>
-            )}
-          </p>
+    <Sheet>
+      <div className="mb-4 flex items-center justify-between">
+        <h2>Chef Usage</h2>
+        <div className="ml-auto">
+          <TeamSelector selectedTeamSlug={selectedTeamSlug} setSelectedTeamSlug={setSelectedTeamSlug} />
         </div>
       </div>
-    </div>
+      <p className="mb-1 text-sm text-content-secondary">Your Convex team comes with tokens included for Chef.</p>
+      <p className="mb-1 text-sm text-content-secondary">
+        On paid Convex subscriptions, additional usage will be subject to metered billing.
+      </p>
+      <p className="mb-4 text-sm text-content-secondary">
+        On free plans, Chef will not be usable once you hit the limit for the current billing period.
+      </p>
+      <div className="space-y-4">
+        <div className="relative h-4 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+          <ProgressBar
+            className="transition-all duration-300"
+            fraction={tokenUsage.tokensQuota ? (tokenUsage.tokensUsed || 0) / tokenUsage.tokensQuota : 0}
+            ariaLabel="Chef Usage"
+            variant="solid"
+          />
+        </div>
+        <p className="text-sm text-content-secondary">
+          {isLoadingUsage ? (
+            <Loading className="h-5 w-64" />
+          ) : (
+            <span>
+              {`${renderTokenCount(tokenUsage.tokensUsed || 0)} / ${renderTokenCount(tokenUsage.tokensQuota || 0)} included tokens used this billing period.`}
+            </span>
+          )}
+        </p>
+      </div>
+    </Sheet>
   );
 }
