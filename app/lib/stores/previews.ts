@@ -42,14 +42,7 @@ export class PreviewsStore {
     webcontainer.on('port', (port, type, url) => {
       console.log('port event:', port, type, url);
 
-      // This is our hardcoded HMR server port
-      //if (port === 8173) {
-      //  // Don't touch it! Let clients contact us on this port.
-      //  return;
-      //}
-
       if (this.#proxies.has(port)) {
-        console.log('proxies has port', port);
         if (type === 'open') {
           this.#proxies.get(port)?.start({ proxyUrl: url });
         }
@@ -57,7 +50,6 @@ export class PreviewsStore {
       }
 
       let previewInfo = this.#availablePreviews.get(port);
-      console.log('preview info for port', port, previewInfo);
 
       if (type === 'close' && previewInfo) {
         this.#availablePreviews.delete(port);
@@ -68,7 +60,6 @@ export class PreviewsStore {
       const previews = this.previews.get();
 
       if (!previewInfo) {
-        console.log("no preview info! Let's add it to previews");
         previewInfo = { port, ready: type === 'open', baseUrl: url };
         this.#availablePreviews.set(port, previewInfo);
         previews.push(previewInfo);
