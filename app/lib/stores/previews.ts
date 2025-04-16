@@ -19,26 +19,61 @@ const targetPort = Number(process.argv[2]);
 
 console.log(\`Starting proxy server: proxying \${targetPort} → \${sourcePort}\`);
 
-http.createServer((req, res) => {
-  const proxyReq = http.request({
-    hostname: 'localhost',
-    port: sourcePort,
-    path: req.url,
-    method: req.method,
-    headers: req.headers
-  }, (proxyRes) => {
-    res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
-    proxyRes.pipe(res);
-  });
-  
-  proxyReq.on('error', (error) => {
-    console.error('Proxy error:', error);
+const server = http.createServer((req, res) => {
+  const proxyReq = http.request(
+    {
+      hostname: "localhost",
+      port: sourcePort,
+      path: req.url,
+      method: req.method,
+      headers: req.headers,
+    },
+    (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+      proxyRes.pipe(res);
+    }
+  );
+
+  proxyReq.on("error", (error) => {
+    console.error("Proxy error:", error);
     res.writeHead(502);
-    res.end('Bad Gateway');
+    res.end("Bad Gateway");
   });
-  
+
   req.pipe(proxyReq);
-}).listen(targetPort);
+});
+
+// Handle WebSocket connections
+server.on("upgrade", (req, socket, head) => {
+  // Create a socket connection to the target server
+  const proxySocket = net.connect(sourcePort, "localhost", () => {
+    // Write the HTTP upgrade header to the target
+    proxySocket.write(
+      \`\${req.method} \${req.url} HTTP/\${req.httpVersion}\r\n\` +
+      Object.keys(req.headers).map(key => \`\${key}: \${req.headers[key]}\`).join("\r\n") +
+      "\r\n\r\n"
+    );
+    
+    // If there's a head buffer, write it to the target socket
+    if (head && head.length) proxySocket.write(head);
+    
+    // Connect the client and target sockets
+    socket.pipe(proxySocket);
+    proxySocket.pipe(socket);
+  });
+
+  proxySocket.on("error", (err) => {
+    console.error("WebSocket proxy error:", err);
+    socket.end();
+  });
+
+  socket.on("error", (err) => {
+    console.error("WebSocket client error:", err);
+    proxySocket.end();
+  });
+});
+
+server.listen(targetPort);
 `;
 
 type ProxyState = { sourcePort: number; start: (arg: { proxyUrl: string }) => void; stop: () => void };
