@@ -49,9 +49,9 @@ server.on("upgrade", (req, socket, head) => {
   const proxySocket = net.connect(sourcePort, "localhost", () => {
     // Write the HTTP upgrade header to the target
     proxySocket.write(
-      \`\${req.method} \${req.url} HTTP/\${req.httpVersion}\r\n\` +
-      Object.keys(req.headers).map(key => \`\${key}: \${req.headers[key]}\`).join("\r\n") +
-      "\r\n\r\n"
+      \`\${req.method} \${req.url} HTTP/\${req.httpVersion}\\r\\n\` +
+      Object.keys(req.headers).map(key => \`\${key}: \${req.headers[key]}\`).join("\\r\\n") +
+      "\\r\\n\\r\\n"
     );
     
     // If there's a head buffer, write it to the target socket
