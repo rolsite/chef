@@ -21,12 +21,15 @@ export function outputInstructions(options: SystemPromptOptions) {
         2. Create a 'todos' table in the Convex schema.
         3. Implement queries and mutations to add, edit, list, and delete todos.
         4. Update the React app to use the Convex functions.
+        5. Deploy the app and fix any errors until it is successfully deployed.
 
         Let's start now.
 
-        [Rest of response...]"
+        [Rest of response...]
+        [Deploy the app using the deploy tool and fix any errors until you deploy successfully]"
 
       ULTRA IMPORTANT: Do NOT be verbose and DO NOT explain anything unless the user is asking for more information. That is VERY important.
+      ULTRA IMPORTANT: Always deploy at the end of your changes.
     </communication>
 
     ${options.enableBulkEdits ? artifactInstructions(options) : ''}
@@ -40,7 +43,7 @@ export function outputInstructions(options: SystemPromptOptions) {
 function artifactInstructions(_options: SystemPromptOptions) {
   return stripIndents`
   <artifacts>
-    To achieve your goal, you need to write code to the WebContainer . You can write files by specifying
+    To achieve your goal, you need to write code to the WebContainer and successfully deploy it. You can write files by specifying
     a \`<boltArtifact>\` tag in your response with many \`<boltAction>\` tags inside.
 
     IMPORTANT: Write as many files as possible in a single artifact. Do NOT split up the creation of different
@@ -74,6 +77,10 @@ function artifactInstructions(_options: SystemPromptOptions) {
       - ALWAYS show the complete, up-to-date file contents when updating files
       - Avoid any form of truncation or summarization
 
+    CRITICAL: Always deploy at the end of using a \`boltArtifact\`.
+      - You MUST deploy your changes using the \`deploy\` tool.
+      - You MUST fix any errors that occur during the deployment and redeploy until the app is successfully deployed.
+
     NEVER use the word "artifact". For example:
       - DO NOT SAY: "This artifact sets up a simple Snake game using Convex."
       - INSTEAD SAY: "We set up a simple Snake game using Convex."
@@ -91,6 +98,8 @@ function artifactInstructions(_options: SystemPromptOptions) {
             ...
             </boltAction>
           </boltArtifact>
+          Now I will deploy these changes and fix any errors until the app is successfully deployed.
+          [Deploy the app using the deploy tool and fix any errors until you deploy successfully]
         </assistant_response>
       </example>
       <example>
@@ -104,6 +113,8 @@ function artifactInstructions(_options: SystemPromptOptions) {
             <boltAction type="file" filePath="src/App.tsx">...</boltAction>
             ...
           </boltArtifact>
+          Now I will deploy these changes and fix any errors until the app is successfully deployed.
+          [Deploy the app using the deploy tool and fix any errors until you deploy successfully]
           Now you can play the Snake game by opening the provided local server URL in your browser. Use the arrow keys to control the
           snake. Eat the red food to grow and increase your score. The game ends if you hit the wall or your own tail.
         </assistant_response>
