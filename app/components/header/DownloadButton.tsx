@@ -2,6 +2,10 @@ import { classNames } from '~/utils/classNames';
 import { DownloadIcon } from '@radix-ui/react-icons';
 import { convexProjectStore } from '~/lib/stores/convexProject';
 import { workbenchStore } from '~/lib/stores/workbench.client';
+import { useQuery } from 'convex/react';
+import { api } from '@convex/_generated/api';
+import { useConvexSessionId, useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
+import { useChatId } from '~/lib/stores/chatId';
 
 interface ButtonProps {
   active?: boolean;
@@ -36,10 +40,14 @@ function Button({ active = false, disabled = false, children, onClick, className
 }
 
 export function DownloadButton() {
+  const chatId = useChatId();
+  const sessionId = useConvexSessionId();
+  const chatInfo = useQuery(api.messages.get, { id: chatId, sessionId });
   const handleDownload = async () => {
     const convexProject = convexProjectStore.get();
     workbenchStore.downloadZip({
       convexProject: convexProject ?? null,
+      chatTitle: chatInfo?.description ?? null,
     });
   };
 

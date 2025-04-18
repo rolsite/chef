@@ -6,7 +6,6 @@ import type { SerializedMessage } from '@convex/messages';
 import type { Message } from '@ai-sdk/react';
 import { setKnownUrlId } from '~/lib/stores/chatId';
 import { setKnownInitialId } from '~/lib/stores/chatId';
-import { description } from '~/lib/stores/description';
 import { toast } from 'sonner';
 import * as lz4 from 'lz4-wasm';
 import { getConvexSiteUrl } from '~/lib/convexSiteUrl';
@@ -95,7 +94,6 @@ export function useInitialMessages(chatId: string):
           deserialized: deserializedMessages,
           earliestRewindableMessageRank: earliestRewindableMessageRank ?? undefined,
         });
-        description.set(chatInfo.description);
       } catch (error) {
         toast.error('Failed to load chat messages from Convex. Reload the page?');
         console.error('Error fetching initial messages:', error);

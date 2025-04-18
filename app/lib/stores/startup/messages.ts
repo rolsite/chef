@@ -5,7 +5,6 @@ import { getKnownUrlId, setKnownInitialId, setKnownUrlId } from '~/lib/stores/ch
 import type { Id } from '@convex/_generated/dataModel';
 import type { ConvexReactClient } from 'convex/react';
 import { api } from '@convex/_generated/api';
-import { description as descriptionStore } from '~/lib/stores/description';
 import { compressWithLz4 } from '~/lib/compression';
 
 type CompleteMessageInfo = {
@@ -67,7 +66,6 @@ export async function handleUrlHintAndDescription(
       urlHint,
       description,
     });
-    descriptionStore.set(description);
     setKnownUrlId(urlId);
     setKnownInitialId(initialId);
   }

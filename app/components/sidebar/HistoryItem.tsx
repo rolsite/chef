@@ -5,7 +5,8 @@ import { useEditChatDescription } from '~/lib/hooks/useEditChatDescription';
 import { CheckIcon, Pencil1Icon, TrashIcon } from '@radix-ui/react-icons';
 import { Button } from '@ui/Button';
 import { TextInput } from '@ui/TextInput';
-
+import { useState } from 'react';
+import { useConvexSessionId } from '~/lib/stores/sessionId';
 interface HistoryItemProps {
   item: ChatHistoryItem;
   handleDeleteClick: (item: ChatHistoryItem) => void;
@@ -13,18 +14,32 @@ interface HistoryItemProps {
 
 export function HistoryItem({ item, handleDeleteClick }: HistoryItemProps) {
   const { id: urlId } = useParams();
+  const sessionId = useConvexSessionId();
   const isActiveChat = urlId === item.id;
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [newDescription, setNewDescription] = useState<string | undefined>(item.description);
 
-  const { editing, handleChange, handleBlur, handleSubmit, handleKeyDown, currentDescription, toggleEditMode } =
-    useEditChatDescription({
-      initialDescription: item.description,
-      customChatId: item.id,
-      syncWithGlobalStore: isActiveChat,
-    });
+  const editDescription = useEditChatDescription();
 
   // Chats get a description from the first message, so have a fallback so
   // they render reasonably
-  const description = currentDescription ?? 'New chat…';
+  const description = newDescription ?? item.description ?? 'New chat…';
+
+  const handleSaveDescription = (
+    e: React.FormEvent<HTMLFormElement> | React.KeyboardEvent<HTMLInputElement> | React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    e.preventDefault();
+    editDescription({
+      chatId: item.id,
+      sessionId,
+      description: newDescription ?? '',
+    }).then((result) => {
+      setEditingDescription(false);
+      if (result !== null) {
+        setNewDescription(result);
+      }
+    });
+  };
 
   return (
     <div
@@ -33,19 +48,33 @@ export function HistoryItem({ item, handleDeleteClick }: HistoryItemProps) {
         { 'text-gray-900 dark:text-white bg-[var(--bolt-elements-sidebar-active-item-background)]': isActiveChat },
       )}
     >
-      {editing ? (
-        <form onSubmit={handleSubmit} className="flex flex-1 items-center gap-2">
+      {editingDescription ? (
+        <form onSubmit={handleSaveDescription} className="flex flex-1 items-center gap-2">
           <TextInput
             labelHidden
             id="description"
             className="-ml-1.5 -mt-1.5"
             autoFocus
-            value={currentDescription}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
+            value={newDescription}
+            onChange={(e) => setNewDescription(e.target.value)}
+            onBlur={() => {
+              setEditingDescription(false);
+              setNewDescription(item.description ?? '');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSaveDescription(e as unknown as React.FormEvent<HTMLFormElement>);
+              }
+            }}
           />
-          <Button type="submit" variant="neutral" icon={<CheckIcon />} size="xs" inline onMouseDown={handleSubmit} />
+          <Button
+            type="submit"
+            variant="neutral"
+            icon={<CheckIcon />}
+            size="xs"
+            inline
+            onClick={handleSaveDescription}
+          />
         </form>
       ) : (
         <a href={`/chat/${item.urlId ?? item.initialId}`} className="relative flex w-full truncate">
@@ -66,7 +95,7 @@ export function HistoryItem({ item, handleDeleteClick }: HistoryItemProps) {
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  toggleEditMode();
+                  setEditingDescription(true);
                 }}
               />
               <ChatActionButton

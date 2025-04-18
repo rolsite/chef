@@ -36,7 +36,6 @@ interface BaseChatProps {
   // Top-level chat props
   showChat: boolean;
   chatStarted: boolean;
-  description: string | undefined;
 
   // Current input props
   input: string;

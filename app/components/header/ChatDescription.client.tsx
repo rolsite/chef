@@ -1,23 +1,48 @@
-import { useStore } from '@nanostores/react';
 import { useEditChatDescription } from '~/lib/hooks/useEditChatDescription';
-import { description as descriptionStore } from '~/lib/stores/description';
 import { CheckIcon, Pencil1Icon } from '@radix-ui/react-icons';
 import { Button } from '@ui/Button';
 import { TextInput } from '@ui/TextInput';
+import { useQuery } from 'convex/react';
+import { useChatId } from '~/lib/stores/chatId';
+import { api } from '@convex/_generated/api';
+import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
+import { useState } from 'react';
 
 export function ChatDescription() {
-  const initialDescription = useStore(descriptionStore)!;
-
-  const { editing, handleChange, handleBlur, handleSubmit, handleKeyDown, currentDescription, toggleEditMode } =
-    useEditChatDescription({
-      initialDescription,
-      syncWithGlobalStore: true,
-    });
-
-  if (!initialDescription) {
-    // doing this to prevent showing edit button until chat description is set
+  const chatId = useChatId();
+  const sessionId = useConvexSessionIdOrNullOrLoading();
+  const chatInfo = useQuery(
+    api.messages.get,
+    sessionId === null || sessionId === undefined ? 'skip' : { id: chatId, sessionId },
+  );
+  const [editing, setEditing] = useState(false);
+  const editDescription = useEditChatDescription();
+  const [newDescription, setNewDescription] = useState(chatInfo?.description ?? '');
+  const isLoading =
+    sessionId === null ||
+    sessionId === undefined ||
+    chatInfo === undefined ||
+    chatInfo === null ||
+    chatInfo.description === undefined;
+  if (isLoading) {
+    // Don't render this until the description is loaded
     return null;
   }
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    editDescription({
+      chatId: chatId,
+      sessionId: sessionId,
+      description: newDescription,
+    }).then((result) => {
+      setEditing(false);
+      if (result !== null) {
+        setNewDescription(result);
+      }
+    });
+  };
+  const description = editing ? newDescription : (chatInfo?.description ?? 'New chat…');
 
   return (
     <div className="flex items-center justify-center">
@@ -28,19 +53,29 @@ export function ChatDescription() {
             autoFocus
             className="mr-2"
             id="chat-description"
-            value={currentDescription}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
+            value={newDescription}
+            onChange={(e) => setNewDescription(e.target.value)}
+            onBlur={() => {
+              setEditing(false);
+              setNewDescription(chatInfo?.description ?? '');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSubmit(e as unknown as React.FormEvent<HTMLFormElement>);
+              }
+            }}
           />
-          <Button variant="neutral" onClick={handleSubmit} icon={<CheckIcon />} inline size="xs" tip="Save title" />
+          <Button variant="neutral" type="submit" icon={<CheckIcon />} inline size="xs" tip="Save title" />
         </form>
       ) : (
         <>
-          <span className="mr-1 max-w-64 truncate">{currentDescription}</span>
+          <span className="mr-1 max-w-64 truncate">{description}</span>
           <Button
             variant="neutral"
-            onClick={toggleEditMode}
+            onClick={() => {
+              setEditing(true);
+              setNewDescription(chatInfo?.description ?? '');
+            }}
             icon={<Pencil1Icon />}
             inline
             size="xs"

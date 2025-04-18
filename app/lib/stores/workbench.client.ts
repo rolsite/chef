@@ -12,7 +12,6 @@ import { TerminalStore } from './terminal';
 import JSZip from 'jszip';
 import fileSaver from 'file-saver';
 import { path } from '~/utils/path';
-import { description } from './description';
 import { createSampler } from '~/utils/sampler';
 import type { ActionAlert } from '~/types/actions';
 import type { WebContainer } from '@webcontainer/api';
@@ -464,12 +463,12 @@ export class WorkbenchStore {
     return artifacts[partId];
   }
 
-  async downloadZip(args: { convexProject: ConvexProject | null }) {
+  async downloadZip(args: { convexProject: ConvexProject | null; chatTitle: string | null }) {
     const zip = new JSZip();
     const files = this.files.get();
 
     // Get the project name from the description input, or use a default name
-    const projectName = (description.value ?? 'project').toLocaleLowerCase().split(' ').join('_');
+    const projectName = (args.chatTitle ?? 'project').toLocaleLowerCase().split(' ').join('_');
 
     // Generate a simple 6-character hash based on the current timestamp
     const timestampHash = Date.now().toString(36).slice(-6);
@@ -517,7 +516,7 @@ export class WorkbenchStore {
 
     // Add a README.md file specific to Chef here, but don't clobber an existing one
     const readmeContent = generateReadmeContent(
-      description.value ?? 'project',
+      args.chatTitle ?? 'project',
       args.convexProject?.deploymentName ?? null,
     );
     const readmePath = hasReadme ? `CHEF_README_${timestampHash}.md` : 'README.md';

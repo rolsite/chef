@@ -5,8 +5,7 @@ import { useAnimate } from 'framer-motion';
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMessageParser, type PartCache } from '~/lib/hooks/useMessageParser';
 import { useSnapScroll } from '~/lib/hooks/useSnapScroll';
-import { description } from '~/lib/stores/description';
-import { chatStore } from '~/lib/stores/chatId';
+import { chatStore, useChatId } from '~/lib/stores/chatId';
 import { workbenchStore } from '~/lib/stores/workbench.client';
 import { PROMPT_COOKIE_KEY, type ModelSelection } from '~/utils/constants';
 import { cubicEasingFn } from '~/utils/easings';
@@ -127,8 +126,6 @@ export const Chat = memo(
         }
       }
     };
-
-    const title = useStore(description);
 
     const { showChat } = useStore(chatStore);
 
@@ -510,7 +507,6 @@ export const Chat = memo(
         scrollRef={scrollRef}
         showChat={showChat}
         chatStarted={chatStarted}
-        description={title}
         input={input}
         handleInputChange={(e) => {
           onTextareaChange(e);

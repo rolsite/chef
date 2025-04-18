@@ -1,6 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { ClientOnly } from 'remix-utils/client-only';
-import { chatStore } from '~/lib/stores/chatId';
+import { chatStore, useChatId } from '~/lib/stores/chatId';
 import { HeaderActionButtons } from './HeaderActionButtons.client';
 import { ChatDescription } from '~/components/header/ChatDescription.client';
 import { DeployButton } from './DeployButton';
