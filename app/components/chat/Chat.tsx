@@ -5,7 +5,7 @@ import { useAnimate } from 'framer-motion';
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMessageParser, type PartCache } from '~/lib/hooks/useMessageParser';
 import { useSnapScroll } from '~/lib/hooks/useSnapScroll';
-import { chatStore, useChatId } from '~/lib/stores/chatId';
+import { chatStore } from '~/lib/stores/chatId';
 import { workbenchStore } from '~/lib/stores/workbench.client';
 import { PROMPT_COOKIE_KEY, type ModelSelection } from '~/utils/constants';
 import { cubicEasingFn } from '~/utils/easings';

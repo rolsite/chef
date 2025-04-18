@@ -4,7 +4,7 @@ import { convexProjectStore } from '~/lib/stores/convexProject';
 import { workbenchStore } from '~/lib/stores/workbench.client';
 import { useQuery } from 'convex/react';
 import { api } from '@convex/_generated/api';
-import { useConvexSessionId, useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
+import { useConvexSessionId } from '~/lib/stores/sessionId';
 import { useChatId } from '~/lib/stores/chatId';
 
 interface ButtonProps {

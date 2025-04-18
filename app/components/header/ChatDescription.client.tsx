@@ -5,25 +5,17 @@ import { TextInput } from '@ui/TextInput';
 import { useQuery } from 'convex/react';
 import { useChatId } from '~/lib/stores/chatId';
 import { api } from '@convex/_generated/api';
-import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
+import { useConvexSessionId } from '~/lib/stores/sessionId';
 import { useState } from 'react';
 
 export function ChatDescription() {
   const chatId = useChatId();
-  const sessionId = useConvexSessionIdOrNullOrLoading();
-  const chatInfo = useQuery(
-    api.messages.get,
-    sessionId === null || sessionId === undefined ? 'skip' : { id: chatId, sessionId },
-  );
+  const sessionId = useConvexSessionId();
+  const chatInfo = useQuery(api.messages.get, { id: chatId, sessionId });
   const [editing, setEditing] = useState(false);
   const editDescription = useEditChatDescription();
   const [newDescription, setNewDescription] = useState(chatInfo?.description ?? '');
-  const isLoading =
-    sessionId === null ||
-    sessionId === undefined ||
-    chatInfo === undefined ||
-    chatInfo === null ||
-    chatInfo.description === undefined;
+  const isLoading = chatInfo === undefined || chatInfo === null || chatInfo.description === undefined;
   if (isLoading) {
     // Don't render this until the description is loaded
     return null;
@@ -32,8 +24,8 @@ export function ChatDescription() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     editDescription({
-      chatId: chatId,
-      sessionId: sessionId,
+      chatId,
+      sessionId,
       description: newDescription,
     }).then((result) => {
       setEditing(false);
