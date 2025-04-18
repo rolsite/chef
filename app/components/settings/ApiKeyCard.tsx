@@ -3,8 +3,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { toast } from 'sonner';
-import { EyeSlashIcon } from '@heroicons/react/24/outline';
-import { EyeOpenIcon, QuestionMarkCircledIcon } from '@radix-ui/react-icons';
+import { EyeOpenIcon, EyeNoneIcon, QuestionMarkCircledIcon } from '@radix-ui/react-icons';
 import { Button } from '@ui/Button';
 import { TextInput } from '@ui/TextInput';
 import { Checkbox } from '@ui/Checkbox';
@@ -220,7 +219,9 @@ function ApiKeyInput(props: {
           action={(): void => {
             setShowKey(!showKey);
           }}
-          icon={showKey ? <EyeSlashIcon /> : <EyeOpenIcon />}
+          Icon={() => {
+            return showKey ? <EyeNoneIcon /> : <EyeOpenIcon />;
+          }}
         />
       </div>
       {props.value && (
