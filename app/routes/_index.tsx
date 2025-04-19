@@ -1,10 +1,11 @@
-import { type LoaderFunctionArgs, type MetaFunction } from '@remix-run/cloudflare';
+import { /* type LoaderFunctionArgs, */ type MetaFunction } from '@remix-run/cloudflare';
 import { ClientOnly } from 'remix-utils/client-only';
 import { WrappedBaseChat } from '~/components/chat/BaseChat';
 import { Chat } from '~/components/chat/Chat.client';
 import { Header } from '~/components/header/Header';
 import { SafariWarning } from '~/components/SafariWarning';
-import { getFlexAuthModeInLoader } from '~/lib/persistence/convex';
+//import { getFlexAuthModeInLoader } from '~/lib/persistence/convex';
+import { redirect } from '@remix-run/cloudflare';
 
 export const meta: MetaFunction = () => {
   return [
@@ -13,11 +14,17 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const loader = async (args: LoaderFunctionArgs) => {
+// This branch is a dead end, go check out the real thing!
+export const loader = async () => {
+  return redirect('https://chef.convex.dev', {
+    status: 301,
+  });
+  /*
   const url = new URL(args.request.url);
   const code = url.searchParams.get('code');
   const flexAuthMode = getFlexAuthModeInLoader(args.context);
   return Response.json({ code, flexAuthMode });
+  */
 };
 
 /**
