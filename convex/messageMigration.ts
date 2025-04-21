@@ -78,6 +78,7 @@ export const migrateSharedChats = internalMutation({
         );
         return;
       }
+      console.log('Scheduling next migration of shared chats with cursor: ', continueCursor);
       await ctx.scheduler.runAfter(getMigrationDelayMs(), internal.messageMigration.migrateSharedChats, {
         forReal: args.forReal,
         cursor: continueCursor,
@@ -112,6 +113,7 @@ export const migrateSharedChatToStorage = internalAction({
   handler: async (ctx, args) => {
     if (!args.forReal) {
       console.log(`Would have migrated shared chat to storage, but not for real: ${args.shareId}`);
+      console.log('Would have scheduled next migration of shared chats, continue cursor is: ', args.cursor);
       return;
     }
     const blob = new Blob([args.compressedMessages]);
@@ -128,6 +130,7 @@ export const migrateSharedChatToStorage = internalAction({
       );
       return;
     }
+    console.log('Scheduling next migration of shared chats with cursor: ', args.cursor);
     await ctx.scheduler.runAfter(getMigrationDelayMs(), internal.messageMigration.migrateSharedChats, {
       forReal: args.forReal,
       cursor: args.cursor,
