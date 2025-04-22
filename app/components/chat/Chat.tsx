@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react';
 import type { Message } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useAnimate } from 'framer-motion';
-import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode, lazy, Suspense } from 'react';
 import { useMessageParser, type PartCache } from '~/lib/hooks/useMessageParser';
 import { useSnapScroll } from '~/lib/hooks/useSnapScroll';
 import { description } from '~/lib/stores/description';
@@ -35,6 +35,7 @@ import { TeamSelector } from '~/components/convex/TeamSelector';
 import { ExternalLinkIcon } from '@radix-ui/react-icons';
 import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
 import type { Doc, Id } from 'convex/_generated/dataModel';
+import { useSearchParams } from '@remix-run/react';
 
 const logger = createScopedLogger('Chat');
 
@@ -83,6 +84,11 @@ const retryState = atom({
   nextRetry: Date.now(),
 });
 
+// Import eagerly in dev to avoid a reload, lazily in prod for bundle size.
+const DebugPromptView = import.meta.env.DEV
+  ? (await import('../DebugPromptView')).default
+  : lazy(() => import('../DebugPromptView'));
+
 export const Chat = memo(
   ({
     initialMessages,
@@ -97,6 +103,31 @@ export const Chat = memo(
     const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
     const actionAlert = useStore(workbenchStore.alert);
     const sessionId = useConvexSessionIdOrNullOrLoading();
+    const chatInitialId = initialIdStore.get();
+
+    const [searchParams] = useSearchParams();
+    const [showDebugView, setShowDebugView] = useState(false);
+
+    const debugPrompt = !!searchParams.get('debug-prompt');
+
+    useEffect(() => {
+      if (!debugPrompt) {
+        return;
+      }
+
+      const handleKeyPress = (event: KeyboardEvent) => {
+        if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'e') {
+          setShowDebugView((prev) => !prev);
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyPress);
+
+      // eslint-disable-next-line consistent-return
+      return () => {
+        window.removeEventListener('keydown', handleKeyPress);
+      };
+    }, [debugPrompt]);
 
     const rewindToMessage = async (messageIndex: number) => {
       if (sessionId && typeof sessionId === 'string') {
@@ -249,8 +280,9 @@ export const Chat = memo(
         } else {
           modelProvider = 'OpenAI';
         }
+        const preparedMessages = chatContextManager.current.prepareContext(messages);
         return {
-          messages: chatContextManager.current.prepareContext(messages),
+          messages: preparedMessages,
           firstUserMessage: messages.filter((message) => message.role == 'user').length == 1,
           chatInitialId,
           token,
@@ -259,6 +291,7 @@ export const Chat = memo(
           modelProvider,
           // Fall back to the user's API key if the request has failed too many times
           userApiKey: retries.numFailures < MAX_RETRIES ? apiKey : { ...apiKey, preference: 'always' },
+          recordRawPromptsForDebugging: debugPrompt,
         };
       },
       maxSteps: 64,
@@ -479,38 +512,45 @@ export const Chat = memo(
     const { messageRef, scrollRef, enableAutoScroll } = useSnapScroll();
 
     return (
-      <BaseChat
-        ref={animationScope}
-        messageRef={messageRef}
-        scrollRef={scrollRef}
-        showChat={showChat}
-        chatStarted={chatStarted}
-        description={title}
-        onStop={abort}
-        onSend={sendMessage}
-        streamStatus={status}
-        currentError={error}
-        toolStatus={toolStatus}
-        messages={parsedMessages /* Note that parsedMessages are throttled. */}
-        actionAlert={actionAlert}
-        clearAlert={() => workbenchStore.clearAlert()}
-        terminalInitializationOptions={terminalInitializationOptions}
-        disableChatMessage={
-          disableChatMessage?.type === 'ExceededQuota' ? (
-            <NoTokensText resetDisableChatMessage={() => setDisableChatMessage(null)} />
-          ) : disableChatMessage?.type === 'TeamDisabled' ? (
-            <DisabledText
-              isPaidPlan={disableChatMessage.isPaidPlan}
-              resetDisableChatMessage={() => setDisableChatMessage(null)}
-            />
-          ) : null
-        }
-        sendMessageInProgress={sendMessageInProgress}
-        modelSelection={modelSelection}
-        setModelSelection={setModelSelection}
-        onRewindToMessage={rewindToMessage}
-        earliestRewindableMessageRank={earliestRewindableMessageRank}
-      />
+      <>
+        <BaseChat
+          ref={animationScope}
+          messageRef={messageRef}
+          scrollRef={scrollRef}
+          showChat={showChat}
+          chatStarted={chatStarted}
+          description={title}
+          onStop={abort}
+          onSend={sendMessage}
+          streamStatus={status}
+          currentError={error}
+          toolStatus={toolStatus}
+          messages={parsedMessages /* Note that parsedMessages are throttled. */}
+          actionAlert={actionAlert}
+          clearAlert={() => workbenchStore.clearAlert()}
+          terminalInitializationOptions={terminalInitializationOptions}
+          disableChatMessage={
+            disableChatMessage?.type === 'ExceededQuota' ? (
+              <NoTokensText resetDisableChatMessage={() => setDisableChatMessage(null)} />
+            ) : disableChatMessage?.type === 'TeamDisabled' ? (
+              <DisabledText
+                isPaidPlan={disableChatMessage.isPaidPlan}
+                resetDisableChatMessage={() => setDisableChatMessage(null)}
+              />
+            ) : null
+          }
+          sendMessageInProgress={sendMessageInProgress}
+          modelSelection={modelSelection}
+          setModelSelection={setModelSelection}
+          onRewindToMessage={rewindToMessage}
+          earliestRewindableMessageRank={earliestRewindableMessageRank}
+        />
+        {debugPrompt && showDebugView && chatInitialId && (
+          <Suspense fallback={<div>Loading debug view...</div>}>
+            <DebugPromptView chatInitialId={chatInitialId} onClose={() => setShowDebugView(false)} />
+          </Suspense>
+        )}
+      </>
     );
   },
 );

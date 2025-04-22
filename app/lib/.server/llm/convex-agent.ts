@@ -1,6 +1,9 @@
 import {
   createDataStream,
   streamText,
+  type CoreAssistantMessage,
+  type CoreMessage,
+  type CoreToolMessage,
   type DataStreamWriter,
   type LanguageModelUsage,
   type LanguageModelV1,
@@ -24,6 +27,8 @@ import { captureException } from '@sentry/remix';
 import type { SystemPromptOptions } from 'chef-agent/types';
 import { awsCredentialsProvider } from '@vercel/functions/oidc';
 import { cleanupAssistantMessages } from 'chef-agent/cleanupAssistantMessages';
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from '@convex/_generated/api';
 
 // workaround for Vercel environment from
 // https://github.com/vercel/ai/issues/199#issuecomment-1605245593
@@ -60,6 +65,7 @@ export async function convexAgent(
     lastMessage: Message | undefined,
     finalGeneration: { usage: LanguageModelUsage; providerMetadata?: ProviderMetadata },
   ) => Promise<void>,
+  recordRawPromptsForDebugging: boolean,
 ) {
   console.debug('Starting agent with model provider', modelProvider);
   if (userApiKey) {
@@ -265,26 +271,37 @@ export async function convexAgent(
     tools.edit = editTool;
   }
 
+  const messagesForDataStream: CoreMessage[] = [
+    {
+      role: 'system',
+      content: ROLE_SYSTEM_PROMPT,
+    } as const,
+    {
+      role: 'system',
+      content: generalSystemPrompt(opts),
+    } as const,
+    ...cleanupAssistantMessages(messages),
+  ];
+
   const dataStream = createDataStream({
     execute(dataStream) {
       const result = streamText({
         model: provider.model,
         maxTokens: provider.maxTokens,
         providerOptions: provider.options,
-        messages: [
-          {
-            role: 'system',
-            content: ROLE_SYSTEM_PROMPT,
-          },
-          {
-            role: 'system',
-            content: generalSystemPrompt(opts),
-          },
-          ...cleanupAssistantMessages(messages),
-        ],
+        messages: messagesForDataStream,
         tools,
         onFinish: (result) => {
-          onFinishHandler(dataStream, messages, result, tracer, chatInitialId, recordUsageCb);
+          onFinishHandler(
+            dataStream,
+            messages,
+            result,
+            tracer,
+            chatInitialId,
+            recordUsageCb,
+            recordRawPromptsForDebugging,
+            messagesForDataStream,
+          );
         },
         onError({ error }) {
           console.error(error);
@@ -365,6 +382,8 @@ async function onFinishHandler(
     lastMessage: Message | undefined,
     finalGeneration: { usage: LanguageModelUsage; providerMetadata?: ProviderMetadata },
   ) => Promise<void>,
+  recordRawPromptsForDebugging: boolean,
+  coreMessages: CoreMessage[],
 ) {
   const { providerMetadata } = result;
   const usage = {
@@ -375,7 +394,7 @@ async function onFinishHandler(
   console.log('Finished streaming', {
     finishReason: result.finishReason,
     usage,
-    providerMetadata: result.providerMetadata,
+    providerMetadata,
   });
   if (tracer) {
     const span = tracer.startSpan('on-finish-handler');
@@ -384,8 +403,8 @@ async function onFinishHandler(
     span.setAttribute('usage.completionTokens', usage.completionTokens);
     span.setAttribute('usage.promptTokens', usage.promptTokens);
     span.setAttribute('usage.totalTokens', usage.totalTokens);
-    if (result.providerMetadata) {
-      const anthropic: any = result.providerMetadata.anthropic;
+    if (providerMetadata) {
+      const anthropic: any = providerMetadata.anthropic;
       if (anthropic) {
         span.setAttribute('providerMetadata.anthropic.cacheCreationInputTokens', anthropic.cacheCreationInputTokens);
         span.setAttribute('providerMetadata.anthropic.cacheReadInputTokens', anthropic.cacheReadInputTokens);
@@ -394,6 +413,30 @@ async function onFinishHandler(
     span.end();
   }
 
+  if (recordRawPromptsForDebugging) {
+    console.log(result.response.messages);
+
+    const allMessages: CoreMessage[] = [
+      ...coreMessages,
+      ...(result.response.messages as (CoreAssistantMessage | CoreToolMessage)[]),
+    ];
+
+    const client = new ConvexHttpClient(globalThis.process.env.VITE_CONVEX_URL!);
+    await client.mutation(api.debugPrompt.storeRawPrompt, {
+      coreMessages: allMessages,
+      chatInitialId,
+      finishReason: result.finishReason,
+      modelId: result.response.modelId,
+      cacheCreationInputTokens: providerMetadata?.anthropic
+        ? (providerMetadata.anthropic.cacheCreationInputTokens as number) || 0
+        : 0,
+      cacheReadInputTokens: providerMetadata?.anthropic
+        ? (providerMetadata.anthropic.cacheReadInputTokens as number) || 0
+        : 0,
+      inputTokensUncached: usage.promptTokens,
+      outputTokens: usage.completionTokens,
+    });
+  }
   // Stash this part's usage as an annotation if we're not done yet.
   if (result.finishReason !== 'stop') {
     let toolCallId: string | undefined;

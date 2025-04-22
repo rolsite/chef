@@ -1,6 +1,8 @@
 import { defineSchema, defineTable } from "convex/server";
-import { v, type VAny } from "convex/values";
+import { v } from "convex/values";
+import type { Validator, VAny } from "convex/values";
 import type { SerializedMessage } from "./messages";
+import type { CoreMessage } from "ai";
 
 export const apiKeyValidator = v.object({
   preference: v.union(v.literal("always"), v.literal("quotaExhausted")),
@@ -143,4 +145,20 @@ export default defineSchema({
   })
     .index("byMemberId", ["memberId"])
     .index("byToken", ["token"]),
+
+  /*
+   * Every prompt sent for a chat (only enabled for some chats for debugging)
+   * and every response received. Does not reset on rewind.
+   * This is not designed to be load-bearing data, it is just for debugging.
+   */
+  debugChatPrompts: defineTable({
+    chatId: v.id("chats"),
+    prompt: v.array(v.any() as Validator<CoreMessage, "required", any>),
+    finishReason: v.string(),
+    modelId: v.optional(v.any()),
+    cacheCreationInputTokens: v.number(),
+    cacheReadInputTokens: v.number(),
+    inputTokensUncached: v.number(),
+    outputTokens: v.number(),
+  }).index("byChatId", ["chatId"]),
 });
