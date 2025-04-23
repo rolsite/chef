@@ -89,7 +89,7 @@ export function useDebugPrompt(chatInitialId: string) {
   const firstErroredQuery = queries.find((query) => query.isError);
   if (firstErroredQuery) {
     return {
-      data: [],
+      data: null,
       isPending: false as const,
       error: firstErroredQuery.error,
     };

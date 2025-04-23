@@ -3,7 +3,7 @@ import { ChefAuthProvider } from '~/components/chat/ChefAuthWrapper';
 import type { MetaFunction } from '@vercel/remix';
 import { ArrowLeftIcon } from '@radix-ui/react-icons';
 import { useState, useEffect } from 'react';
-import DebugPromptView from '~/components/DebugPromptView';
+import DebugAllPromptsForChat from '~/components/DebugPromptView';
 import { useSearchParams } from '@remix-run/react';
 import { useIsAdmin } from '~/hooks/useDebugPrompt';
 
@@ -98,7 +98,9 @@ function PromptDebugContent() {
         </div>
       </div>
 
-      {showDebug && <DebugPromptView chatInitialId={chatId} onClose={() => setShowDebug(false)} isDebugPage={true} />}
+      {showDebug && (
+        <DebugAllPromptsForChat chatInitialId={chatId} onClose={() => setShowDebug(false)} isDebugPage={true} />
+      )}
     </div>
   );
 }

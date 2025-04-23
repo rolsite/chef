@@ -7,7 +7,7 @@ import { lazy, Suspense, useState } from 'react';
 import { useStore } from '@nanostores/react';
 
 // Import eagerly in dev to avoid a reload, lazily in prod for bundle size.
-const DebugPromptView = import.meta.env.DEV
+const DebugAllPromptsForChat = import.meta.env.DEV
   ? (await import('../../components/DebugPromptView')).default
   : lazy(() => import('../../components/DebugPromptView'));
 
@@ -29,7 +29,7 @@ export function PromptDebugButton() {
       </Button>
       {showDebugView && chatInitialId && (
         <Suspense fallback={<div>Loading debug view...</div>}>
-          <DebugPromptView chatInitialId={chatInitialId} onClose={() => setShowDebugView(false)} />
+          <DebugAllPromptsForChat chatInitialId={chatInitialId} onClose={() => setShowDebugView(false)} />
         </Suspense>
       )}
     </>

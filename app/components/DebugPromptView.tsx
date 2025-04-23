@@ -6,35 +6,89 @@ import type { CoreMessage, FilePart, ToolCallPart, TextPart } from 'ai';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/20/solid';
 import { useDebugPrompt } from '~/hooks/useDebugPrompt';
 
-type DebugPromptViewProps = {
-  chatInitialId: string;
-  onClose: () => void;
-  isDebugPage?: boolean;
-};
+/*
+ * The heirarchy here is:
+ *
+ * <DebugAllPromptsForChat initialChatId={}>
+ *   <UserPromptGroup>  // A group of LLM calls that were executed without the user typing anything in between
+ *     <LlmPromptAndResponseView model="Anthropic's Best">  // A single call to an LLM and the response we received bac
+ *       <CoreMessageView role='system'>      // CoreMessage is a Vercel AI SDK type, it's a User or Assistant or System or Tool message.
+ *         Do a good job.
+ *       </CoreMessageView>
+ *       <CoreMessageView role='user'>
+ *         Please make an app!
+ *       </CoreMessageView>
+ *       <CoreMessageView role='assistant'>
+ *         Will do! Please write these files and run this tool.
+ *       </CoreMessageView>
+ *     </LlmPromptAndResponseView>
+ *
+ *     --- this represents a new call to /api/chat and a new network request to an LLM provider
+ *
+ *     <LlmPromptAndResponseView model="Something from AWS">
+ *       <CoreMessageView role='system'> // We typically repeat back all these messages
+ *         Do a good job.
+ *       </CoreMessageView>
+ *       <CoreMessageView role='system'> // But we can also add new ones
+ *         BTW, the user is using Chrome on a Mac.
+ *       </CoreMessageView>
+ *       <CoreMessageView role='user'>
+ *         Please make an app!
+ *       </CoreMessageView>
+ *       <CoreMessageView role='assistant'>
+ *         Will do! Please write these files and run this tool.
+ *       </CoreMessageView>
+ *       <CoreMessageView role='tool'>
+ *         file write done! and also I deployed the app.
+ *       </CoreMessageView>
+ *     </LlmPromptAndResponseView>
+ *
+ *     --- this represents a new call to /api/chat and a new network request to an LLM provider
+ *
+ *     <LlmPromptAndResponseView model="Something from AWS">
+ *       <CoreMessageView role='system'> // We typically repeat back all these messages
+ *         Do a good job.
+ *       </CoreMessageView>
+ *       <CoreMessageView role='system'> // But we can also add new ones
+ *         BTW, the user is using Chrome on a Mac.
+ *       </CoreMessageView>
+ *       <CoreMessageView role='user'>
+ *         Please make an app!
+ *       </CoreMessageView>
+ *       <CoreMessageView role='assistant'>
+ *         Will do! Please write these files and run this tool.
+ *       </CoreMessageView>
+ *       <CoreMessageView role='tool'>
+ *         file write done! and also I deployed the app.
+ *       </CoreMessageView>
+ *       <CoreMessageView role='assistant'>
+ *         OK all done, I made you an app!
+ *       </CoreMessageView>
+ *     </LlmPromptAndResponseView>
+ *   </UserPromptGroup>
+ *
+ *   --- once the users types something, we have a new user prompt group
+ *
+ *   <UserPromptGroup>
+ *     ...
+ *   </UserPromptGroup>
+ * </DebugAllPromptsForChat>
+ */
 
-type DebugPromptData = {
-  url: string | null;
-  finishReason: string;
-  modelId: string;
-  cacheCreationInputTokens: number;
-  cacheReadInputTokens: number;
-  inputTokensUncached: number;
-  outputTokens: number;
-  prompt?: CoreMessage[];
-};
+/** Everything we prompt an LLM with plus its response. This corresponds to a single request to /api/chat. */
+type LlmPromptAndResponse = NonNullable<ReturnType<typeof useDebugPrompt>['data']>[number];
 
-type UserPromptGroup = {
-  promptAndResponses: DebugPromptData[];
+/** Every LLM interaction made to address a single user message: one initial call and n calls reporting tool call
+ * results. This corresponsides to multiple calls to /api/chat, and therefore these requests may have been serviced by
+ * different LLM models or model providers. */
+type AllPromptsForUserInteraction = {
+  promptAndResponses: LlmPromptAndResponse[];
   summary: {
     triggeringUserMessage: string;
     totalInputTokens: number;
     totalOutputTokens: number;
     modelId: string;
   };
-};
-
-type LlmPromptAndResponseProps = {
-  data: DebugPromptData;
 };
 
 function isTextPart(part: unknown): part is TextPart {
@@ -56,10 +110,8 @@ function getMessageCharCount(message: CoreMessage): number {
       if (isTextPart(part)) return sum + part.text.length;
       if (isFilePart(part) && typeof part.data === 'string') return sum + part.data.length;
       if (isToolCallPart(part)) {
-        // Include tool name, id, and stringified args
         return sum + part.toolName.length + part.toolCallId.length + JSON.stringify(part.args).length;
       }
-      // For tool results, include the result content too
       if (part.type === 'tool-result') {
         return sum + part.toolName.length + part.toolCallId.length + JSON.stringify(part.result).length;
       }
@@ -75,7 +127,8 @@ function estimateTokenCount(charCount: number, totalChars: number, totalTokens: 
 }
 
 function findLastAssistantMessage(prompt: CoreMessage[]): string {
-  // Look through messages in reverse order to find the last assistant message
+  // The last assistant message in a LLM  of messages is the response.
+  // It should generally just be the last message, full stop.
   for (let i = prompt.length - 1; i >= 0; i--) {
     const message = prompt[i];
     if (message.role === 'assistant') {
@@ -91,7 +144,8 @@ function findLastAssistantMessage(prompt: CoreMessage[]): string {
   return 'No assistant message';
 }
 
-function LlmPromptAndResponse({ data }: LlmPromptAndResponseProps) {
+// Everything we sent to an LLM, plus the response we recieved (an Assistant message);
+function LlmPromptAndResponseView({ data }: { data: LlmPromptAndResponse }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const totalInputTokens = data.cacheCreationInputTokens + data.cacheReadInputTokens + data.inputTokensUncached;
 
@@ -311,7 +365,7 @@ function CoreMessageView({ message, getTokenEstimate, totalInputTokens, totalOut
   );
 }
 
-function findTriggeringUserMessage(promptAndResponses: DebugPromptData[]): string {
+function findTriggeringUserMessage(promptAndResponses: LlmPromptAndResponse[]): string {
   // Look through all prompt and responses in reverse order
   for (let i = promptAndResponses.length - 1; i >= 0; i--) {
     const promptAndResponse = promptAndResponses[i];
@@ -328,9 +382,9 @@ function findTriggeringUserMessage(promptAndResponses: DebugPromptData[]): strin
   return 'No user message found';
 }
 
-function groupIntoUserPrompts(data: DebugPromptData[]): UserPromptGroup[] {
-  const groups: UserPromptGroup[] = [];
-  let currentGroup: DebugPromptData[] = [];
+function groupIntoUserPrompts(data: LlmPromptAndResponse[]): AllPromptsForUserInteraction[] {
+  const groups: AllPromptsForUserInteraction[] = [];
+  let currentGroup: LlmPromptAndResponse[] = [];
 
   data.forEach((item, index) => {
     currentGroup.push(item);
@@ -362,7 +416,7 @@ function groupIntoUserPrompts(data: DebugPromptData[]): UserPromptGroup[] {
   return groups;
 }
 
-function UserPrompt({ group }: { group: UserPromptGroup }) {
+function UserPrompt({ group }: { group: AllPromptsForUserInteraction }) {
   return (
     <div className="space-y-2 rounded-lg border-2 border-gray-200 p-4 dark:border-gray-700">
       <div className="mb-4 border-b border-gray-200 pb-2 dark:border-gray-700">
@@ -376,13 +430,19 @@ function UserPrompt({ group }: { group: UserPromptGroup }) {
         </div>
       </div>
       {group.promptAndResponses.map((promptAndResponse, index) => (
-        <LlmPromptAndResponse key={index} data={promptAndResponse} />
+        <LlmPromptAndResponseView key={index} data={promptAndResponse} />
       ))}
     </div>
   );
 }
 
-export default function DebugPromptView({ chatInitialId, onClose, isDebugPage }: DebugPromptViewProps) {
+type Props = {
+  chatInitialId: string;
+  onClose: () => void;
+  isDebugPage?: boolean;
+};
+
+export default function DebugAllPromptsForChat({ chatInitialId, onClose, isDebugPage }: Props) {
   const { data, isPending, error } = useDebugPrompt(chatInitialId);
 
   const handleEscape = useCallback(
