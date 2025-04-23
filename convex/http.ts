@@ -220,6 +220,7 @@ httpWithCors.route({
       throw new ConvexError("chatInitialId and finishReason are required in metadata");
     }
 
+    // TODO this could be made streaming.
     const blob = await request.blob();
     const storageId = await ctx.storage.store(blob);
 

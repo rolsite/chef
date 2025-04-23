@@ -125,7 +125,7 @@ export default defineSchema({
     chatHistoryId: v.optional(v.union(v.id("_storage"), v.null())),
 
     // Shares are created at one point in time, so this makes sure
-    // people using the link don't see newer messages.
+    // people using the link don’t see newer messages.
     lastMessageRank: v.number(),
     partIndex: v.optional(v.number()),
     // The description of the chat at the time the share was created.
@@ -156,8 +156,8 @@ export default defineSchema({
     .index("byToken", ["token"]),
 
   /*
-   * Every prompt sent for a chat (only enabled for some chats for debugging)
-   * and every response received. Does not reset on rewind.
+   * Every prompt sent for a chat and every agent response received.
+   * Does not reset on rewind.
    * This is not designed to be load-bearing data, it is just for debugging.
    */
   debugChatPrompts: defineTable({
