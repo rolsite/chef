@@ -32,7 +32,7 @@ export async function assertIsConvexAdmin(ctx: QueryCtx) {
     throw new ConvexError({ code: "NotAuthorized", message: "Not a Convex admin" });
   }
 
-  if (adminStatus?.wasAdmin) {
+  if (!adminStatus.wasAdmin) {
     throw new ConvexError({ code: "NotAuthorized", message: "Not a Convex admin" });
   }
 

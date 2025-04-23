@@ -9,6 +9,7 @@ import { useDebugPrompt } from '~/hooks/useDebugPrompt';
 type DebugPromptViewProps = {
   chatInitialId: string;
   onClose: () => void;
+  isDebugPage?: boolean;
 };
 
 type DebugPromptData = {
@@ -381,7 +382,7 @@ function UserPrompt({ group }: { group: UserPromptGroup }) {
   );
 }
 
-export default function DebugPromptView({ chatInitialId, onClose }: DebugPromptViewProps) {
+export default function DebugPromptView({ chatInitialId, onClose, isDebugPage }: DebugPromptViewProps) {
   const { data, isPending, error } = useDebugPrompt(chatInitialId);
 
   const handleEscape = useCallback(
@@ -430,22 +431,42 @@ export default function DebugPromptView({ chatInitialId, onClose }: DebugPromptV
             <h2 className="text-xl font-semibold">Debug Prompt View</h2>
             <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Chat ID: {chatInitialId}</div>
           </div>
-          <a
-            href={`/admin/prompt-debug?id=${encodeURIComponent(chatInitialId)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-4 inline-flex items-center text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-          >
-            Open in Debug Page
-            <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-              />
-            </svg>
-          </a>
+          {isDebugPage ? (
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/admin/prompt-debug?id=${encodeURIComponent(chatInitialId)}`;
+                navigator.clipboard.writeText(url);
+              }}
+              className="ml-4 inline-flex items-center text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              Copy Link
+              <svg className="ml-1 size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-2M15 5v2m0 4v2m0-8h3m-3 0h-3m3 0l-3-3m0 0l-3 3m3-3v13"
+                />
+              </svg>
+            </button>
+          ) : (
+            <a
+              href={`/admin/prompt-debug?id=${encodeURIComponent(chatInitialId)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-4 inline-flex items-center text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              Open in Debug Page
+              <svg className="ml-1 size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
+              </svg>
+            </a>
+          )}
         </div>
         <div className="space-y-4 overflow-auto">
           {userPromptGroups.map((group, index) => (

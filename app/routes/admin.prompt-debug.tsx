@@ -98,7 +98,7 @@ function PromptDebugContent() {
         </div>
       </div>
 
-      {showDebug && <DebugPromptView chatInitialId={chatId} onClose={() => setShowDebug(false)} />}
+      {showDebug && <DebugPromptView chatInitialId={chatId} onClose={() => setShowDebug(false)} isDebugPage={true} />}
     </div>
   );
 }
