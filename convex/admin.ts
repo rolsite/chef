@@ -5,7 +5,8 @@ import { internal } from "./_generated/api";
 
 const PROVISION_HOST = process.env.PROVISION_HOST || "https://api.convex.dev";
 const CONVEX_TEAM_ID = 4916;
-const ONE_HOUR_MS = 60 * 60 * 1000;
+const RETRY_MS = 60 * 60 * 1000;
+const STALE_ADMIN_STATUS_ALLOWED_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function assertIsConvexAdmin(ctx: QueryCtx) {
   const identity = await ctx.auth.getUserIdentity();
@@ -27,8 +28,16 @@ export async function assertIsConvexAdmin(ctx: QueryCtx) {
     .withIndex("byConvexMemberId", (q) => q.eq("convexMemberId", member._id))
     .unique();
 
-  if (!adminStatus?.wasAdmin) {
+  if (!adminStatus) {
     throw new ConvexError({ code: "NotAuthorized", message: "Not a Convex admin" });
+  }
+
+  if (adminStatus?.wasAdmin) {
+    throw new ConvexError({ code: "NotAuthorized", message: "Not a Convex admin" });
+  }
+
+  if (adminStatus.lastCheckedForAdminStatus < Date.now() - STALE_ADMIN_STATUS_ALLOWED_MS) {
+    throw new ConvexError({ code: "NotAuthorized", message: "Need to refresh auth" });
   }
 
   return { member, adminStatus };
@@ -117,12 +126,11 @@ export const requestAdminCheck = mutation({
       .withIndex("byConvexMemberId", (q) => q.eq("convexMemberId", member._id))
       .unique();
 
-    // Check if we need to rate limit
     if (adminStatus?.lastCheckedForAdminStatus) {
       const timeSinceLastCheck = Date.now() - adminStatus.lastCheckedForAdminStatus;
-      if (timeSinceLastCheck < ONE_HOUR_MS) {
+      if (timeSinceLastCheck < RETRY_MS) {
         throw new Error(
-          `Please wait ${Math.ceil((ONE_HOUR_MS - timeSinceLastCheck) / 1000 / 60)} minutes before checking again`,
+          `Please wait ${Math.ceil((RETRY_MS - timeSinceLastCheck) / 1000 / 60)} minutes before checking again`,
         );
       }
     }

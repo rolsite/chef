@@ -35,6 +35,7 @@ import { TeamSelector } from '~/components/convex/TeamSelector';
 import { ExternalLinkIcon } from '@radix-ui/react-icons';
 import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
 import type { Doc, Id } from 'convex/_generated/dataModel';
+import { useFlags } from 'launchdarkly-react-client-sdk';
 
 const logger = createScopedLogger('Chat');
 
@@ -122,6 +123,7 @@ export const Chat = memo(
         }
       }
     };
+    const { recordRawPromptsForDebugging } = useFlags();
 
     const title = useStore(description);
 
@@ -249,9 +251,8 @@ export const Chat = memo(
         } else {
           modelProvider = 'OpenAI';
         }
-        const preparedMessages = chatContextManager.current.prepareContext(messages);
         return {
-          messages: preparedMessages,
+          messages: chatContextManager.current.prepareContext(messages),
           firstUserMessage: messages.filter((message) => message.role == 'user').length == 1,
           chatInitialId,
           token,
@@ -260,7 +261,7 @@ export const Chat = memo(
           modelProvider,
           // Fall back to the user's API key if the request has failed too many times
           userApiKey: retries.numFailures < MAX_RETRIES ? apiKey : { ...apiKey, preference: 'always' },
-          recordRawPromptsForDebugging: true,
+          recordRawPromptsForDebugging,
         };
       },
       maxSteps: 64,
@@ -481,40 +482,38 @@ export const Chat = memo(
     const { messageRef, scrollRef, enableAutoScroll } = useSnapScroll();
 
     return (
-      <>
-        <BaseChat
-          ref={animationScope}
-          messageRef={messageRef}
-          scrollRef={scrollRef}
-          showChat={showChat}
-          chatStarted={chatStarted}
-          description={title}
-          onStop={abort}
-          onSend={sendMessage}
-          streamStatus={status}
-          currentError={error}
-          toolStatus={toolStatus}
-          messages={parsedMessages /* Note that parsedMessages are throttled. */}
-          actionAlert={actionAlert}
-          clearAlert={() => workbenchStore.clearAlert()}
-          terminalInitializationOptions={terminalInitializationOptions}
-          disableChatMessage={
-            disableChatMessage?.type === 'ExceededQuota' ? (
-              <NoTokensText resetDisableChatMessage={() => setDisableChatMessage(null)} />
-            ) : disableChatMessage?.type === 'TeamDisabled' ? (
-              <DisabledText
-                isPaidPlan={disableChatMessage.isPaidPlan}
-                resetDisableChatMessage={() => setDisableChatMessage(null)}
-              />
-            ) : null
-          }
-          sendMessageInProgress={sendMessageInProgress}
-          modelSelection={modelSelection}
-          setModelSelection={setModelSelection}
-          onRewindToMessage={rewindToMessage}
-          earliestRewindableMessageRank={earliestRewindableMessageRank}
-        />
-      </>
+      <BaseChat
+        ref={animationScope}
+        messageRef={messageRef}
+        scrollRef={scrollRef}
+        showChat={showChat}
+        chatStarted={chatStarted}
+        description={title}
+        onStop={abort}
+        onSend={sendMessage}
+        streamStatus={status}
+        currentError={error}
+        toolStatus={toolStatus}
+        messages={parsedMessages /* Note that parsedMessages are throttled. */}
+        actionAlert={actionAlert}
+        clearAlert={() => workbenchStore.clearAlert()}
+        terminalInitializationOptions={terminalInitializationOptions}
+        disableChatMessage={
+          disableChatMessage?.type === 'ExceededQuota' ? (
+            <NoTokensText resetDisableChatMessage={() => setDisableChatMessage(null)} />
+          ) : disableChatMessage?.type === 'TeamDisabled' ? (
+            <DisabledText
+              isPaidPlan={disableChatMessage.isPaidPlan}
+              resetDisableChatMessage={() => setDisableChatMessage(null)}
+            />
+          ) : null
+        }
+        sendMessageInProgress={sendMessageInProgress}
+        modelSelection={modelSelection}
+        setModelSelection={setModelSelection}
+        onRewindToMessage={rewindToMessage}
+        earliestRewindableMessageRank={earliestRewindableMessageRank}
+      />
     );
   },
 );

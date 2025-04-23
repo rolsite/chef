@@ -3,10 +3,9 @@ import { ChefAuthProvider } from '~/components/chat/ChefAuthWrapper';
 import type { MetaFunction } from '@vercel/remix';
 import { ArrowLeftIcon } from '@radix-ui/react-icons';
 import { useState, useEffect } from 'react';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
 import DebugPromptView from '~/components/DebugPromptView';
 import { useSearchParams } from '@remix-run/react';
+import { useIsAdmin } from '~/hooks/useDebugPrompt';
 
 export const meta: MetaFunction = () => {
   return [{ title: 'Prompt Debug | Chef Admin' }];
@@ -27,7 +26,7 @@ function PromptDebugContent() {
   const initialId = searchParams.get('id');
   const [chatId, setChatId] = useState(initialId || '');
   const [showDebug, setShowDebug] = useState(!!initialId);
-  const isAdmin = useQuery(api.admin.isCurrentUserAdmin);
+  const isAdmin = useIsAdmin();
 
   // Update state when URL parameter changes
   useEffect(() => {

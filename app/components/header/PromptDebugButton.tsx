@@ -12,6 +12,8 @@ const DebugPromptView = import.meta.env.DEV
   : lazy(() => import('../../components/DebugPromptView'));
 
 export function PromptDebugButton() {
+  // Note: isAdmin won't change to true unless the user vists /admin/prompt-debug.
+  // That lasts one week then expires.
   const isAdmin = useQuery(api.admin.isCurrentUserAdmin);
   const [showDebugView, setShowDebugView] = useState(false);
   const chatInitialId = useStore(initialIdStore);

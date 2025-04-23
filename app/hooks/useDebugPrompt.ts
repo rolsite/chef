@@ -2,7 +2,7 @@ import { useConvex, useMutation, useQuery } from 'convex/react';
 import { useQueries as useReactQueries } from '@tanstack/react-query';
 import { api } from '@convex/_generated/api';
 import type { CoreMessage } from 'ai';
-import { decompressWithLz4Client } from '~/lib/compression.client';
+import { decompressWithLz4 } from '~/lib/compression';
 import { queryClient } from '~/lib/stores/reactQueryClient';
 import { useEffect, useState } from 'react';
 import { getConvexAuthToken } from '~/lib/stores/sessionId';
@@ -14,7 +14,7 @@ async function fetchPromptData(url: string): Promise<CoreMessage[]> {
   }
 
   const compressedData = await response.arrayBuffer();
-  const decompressedData = decompressWithLz4Client(new Uint8Array(compressedData));
+  const decompressedData = decompressWithLz4(new Uint8Array(compressedData));
   const textDecoder = new TextDecoder();
   const jsonString = textDecoder.decode(decompressedData);
   return JSON.parse(jsonString) as CoreMessage[];
@@ -48,7 +48,7 @@ function useAuthToken() {
 }
 
 /** Also requests the convex deployment to check if the user is an admin. */
-function useAdminStatus() {
+export function useIsAdmin() {
   // Get the auth token (the same one this Convex WebSocket connection is already authenticated with)
   // because we don't make it available in Convex functions.
   const authToken = useAuthToken();
@@ -69,7 +69,7 @@ function useAdminStatus() {
 }
 
 export function useDebugPrompt(chatInitialId: string) {
-  const isAdmin = useAdminStatus();
+  const isAdmin = useIsAdmin();
   const promptMetadatas = useQuery(api.debugPrompt.show, isAdmin ? { chatInitialId } : 'skip');
 
   // Use React Query to fetch and cache the prompts for each URL
