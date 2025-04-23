@@ -155,7 +155,7 @@ export default defineSchema({
     chatId: v.id("chats"),
     prompt: v.array(v.any() as Validator<CoreMessage, "required", any>),
     finishReason: v.string(),
-    modelId: v.optional(v.any()),
+    modelId: v.string(),
     cacheCreationInputTokens: v.number(),
     cacheReadInputTokens: v.number(),
     inputTokensUncached: v.number(),

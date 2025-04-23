@@ -16,6 +16,16 @@ type LlmPromptAndResponseProps = {
   data: (typeof api.debugPrompt.show)['_returnType'][number];
 };
 
+type UserPromptGroup = {
+  promptAndResponses: (typeof api.debugPrompt.show)['_returnType'][number][];
+  summary: {
+    triggeringUserMessage: string;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    modelId: string;
+  };
+};
+
 function isTextPart(part: unknown): part is TextPart {
   return typeof part === 'object' && part !== null && 'type' in part && part.type === 'text';
 }
@@ -53,6 +63,23 @@ function estimateTokenCount(charCount: number, totalChars: number, totalTokens: 
   return Math.round((charCount / totalChars) * totalTokens);
 }
 
+function findLastAssistantMessage(prompt: CoreMessage[]): string {
+  // Look through messages in reverse order to find the last assistant message
+  for (let i = prompt.length - 1; i >= 0; i--) {
+    const message = prompt[i];
+    if (message.role === 'assistant') {
+      const preview = getMessagePreview(message.content);
+      // Get first line and add ellipsis if there are more lines
+      const lines = preview.split('\n');
+      if (lines.length > 1) {
+        return lines[0] + '...';
+      }
+      return preview;
+    }
+  }
+  return 'No assistant message';
+}
+
 function LlmPromptAndResponse({ data }: LlmPromptAndResponseProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const totalInputTokens = data.cacheCreationInputTokens + data.cacheReadInputTokens + data.inputTokensUncached;
@@ -73,32 +100,43 @@ function LlmPromptAndResponse({ data }: LlmPromptAndResponseProps) {
     }
   };
 
+  const lastAssistantMessage = findLastAssistantMessage(data.prompt);
+
   return (
     <div onClick={() => setIsExpanded(!isExpanded)} className="cursor-pointer rounded border p-4 dark:border-gray-700">
-      <div className="mb-2 flex items-center gap-2">
+      <div className="flex items-center gap-2">
         <div className="text-gray-500">
           {isExpanded ? <ChevronDownIcon className="size-5" /> : <ChevronRightIcon className="size-5" />}
         </div>
-        <div className="flex flex-1 justify-between text-sm text-gray-500 dark:text-gray-400">
-          <div>
-            {totalInputTokens}
-            {data.cacheReadInputTokens ? ` (${totalInputTokens - data.cacheReadInputTokens} uncached)` : ''} input
+        <div className="flex flex-1 flex-col gap-1">
+          <div className="font-medium text-gray-900 dark:text-gray-100">{lastAssistantMessage}</div>
+          <div className="flex justify-between text-sm text-gray-500 dark:text-gray-400">
+            <div>
+              {totalInputTokens}
+              {data.cacheReadInputTokens ? ` (${totalInputTokens - data.cacheReadInputTokens} uncached)` : ''} input
+            </div>
+            <div>{data.outputTokens} output</div>
+            <div>finish: {data.finishReason}</div>
+            <div>model: {data.modelId}</div>
+            {!!(data.cacheCreationInputTokens || data.cacheReadInputTokens) && (
+              <>
+                <div>Created cached input tokens: {data.cacheCreationInputTokens}</div>
+              </>
+            )}
           </div>
-          <div>{data.outputTokens} output</div>
-          <div>finish: {data.finishReason}</div>
-          <div>model: {data.modelId}</div>
-          {!!(data.cacheCreationInputTokens || data.cacheReadInputTokens) && (
-            <>
-              <div>Created cached input tokens: {data.cacheCreationInputTokens}</div>
-            </>
-          )}
         </div>
       </div>
       <div onClick={(e) => e.stopPropagation()}>
         {isExpanded && (
           <div className="mt-4 space-y-1">
             {data.prompt.map((message, idx) => (
-              <CoreMessageView key={idx} message={message} getTokenEstimate={getTokenEstimate} />
+              <CoreMessageView
+                key={idx}
+                message={message}
+                getTokenEstimate={getTokenEstimate}
+                totalInputTokens={totalInputTokens}
+                totalOutputTokens={data.outputTokens}
+              />
             ))}
           </div>
         )}
@@ -110,6 +148,8 @@ function LlmPromptAndResponse({ data }: LlmPromptAndResponseProps) {
 type CoreMessageViewProps = {
   message: CoreMessage;
   getTokenEstimate: (message: CoreMessage) => number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
 };
 
 function getMessagePreview(content: CoreMessage['content']): string {
@@ -209,7 +249,7 @@ function MessageContentView({ content, showRawJson = false }: MessageContentView
   );
 }
 
-function CoreMessageView({ message, getTokenEstimate }: CoreMessageViewProps) {
+function CoreMessageView({ message, getTokenEstimate, totalInputTokens, totalOutputTokens }: CoreMessageViewProps) {
   const [isExpanded, setIsExpanded] = useState(message.role !== 'system');
 
   const roleColors = {
@@ -222,6 +262,8 @@ function CoreMessageView({ message, getTokenEstimate }: CoreMessageViewProps) {
   const roleColor = roleColors[message.role as keyof typeof roleColors] || roleColors.user;
   const preview = getMessagePreview(message.content);
   const tokenEstimate = getTokenEstimate(message);
+  const totalTokens = message.role === 'assistant' ? totalOutputTokens : totalInputTokens;
+  const percentage = totalTokens ? Math.round((tokenEstimate / totalTokens) * 100) : 0;
 
   return (
     <div className={`rounded border px-4 py-1 ${roleColor}`} onClick={() => setIsExpanded(!isExpanded)}>
@@ -232,7 +274,7 @@ function CoreMessageView({ message, getTokenEstimate }: CoreMessageViewProps) {
           </div>
           <div className="font-medium capitalize">{message.role}</div>
           <div className="text-xs text-gray-500" title="token estimate is approximate">
-            {tokenEstimate} tokens~
+            {tokenEstimate} tokens ({percentage}%)
           </div>
           <div className="flex-1 truncate text-sm text-gray-600 dark:text-gray-300">{preview}</div>
         </div>
@@ -244,7 +286,7 @@ function CoreMessageView({ message, getTokenEstimate }: CoreMessageViewProps) {
             </div>
             <div className="font-medium capitalize">{message.role}</div>
             <div className="text-xs text-gray-500" title="Token estimate is approximate">
-              {tokenEstimate} tokens~
+              {tokenEstimate} tokens ({percentage}%)
             </div>
           </div>
           <div>
@@ -254,6 +296,75 @@ function CoreMessageView({ message, getTokenEstimate }: CoreMessageViewProps) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function findTriggeringUserMessage(promptAndResponses: (typeof api.debugPrompt.show)['_returnType'][number][]): string {
+  // Look through all prompt and responses in reverse order
+  for (let i = promptAndResponses.length - 1; i >= 0; i--) {
+    const promptAndResponse = promptAndResponses[i];
+    // Look through messages in reverse order to find the last user message
+    for (let j = promptAndResponse.prompt.length - 1; j >= 0; j--) {
+      const message = promptAndResponse.prompt[j];
+      if (message.role === 'user') {
+        return getMessagePreview(message.content);
+      }
+    }
+  }
+  return 'No user message found';
+}
+
+function groupIntoUserPrompts(data: (typeof api.debugPrompt.show)['_returnType']): UserPromptGroup[] {
+  const groups: UserPromptGroup[] = [];
+  let currentGroup: (typeof api.debugPrompt.show)['_returnType'][number][] = [];
+
+  data.forEach((item, index) => {
+    currentGroup.push(item);
+
+    // If this item has a finish reason other than tool-call, or if it's the last item,
+    // we end the current group and start a new one
+    if (item.finishReason !== 'tool-calls' || index === data.length - 1) {
+      if (currentGroup.length > 0) {
+        const totalInputTokens = currentGroup.reduce(
+          (sum, item) => sum + item.cacheCreationInputTokens + item.cacheReadInputTokens + item.inputTokensUncached,
+          0,
+        );
+        const totalOutputTokens = currentGroup.reduce((sum, item) => sum + item.outputTokens, 0);
+
+        groups.push({
+          promptAndResponses: [...currentGroup],
+          summary: {
+            triggeringUserMessage: findTriggeringUserMessage(currentGroup),
+            totalInputTokens,
+            totalOutputTokens,
+            modelId: currentGroup[0].modelId,
+          },
+        });
+        currentGroup = [];
+      }
+    }
+  });
+
+  return groups;
+}
+
+function UserPrompt({ group }: { group: UserPromptGroup }) {
+  return (
+    <div className="space-y-2 rounded-lg border-2 border-gray-200 p-4 dark:border-gray-700">
+      <div className="mb-4 border-b border-gray-200 pb-2 dark:border-gray-700">
+        <div className="text-lg font-medium text-gray-900 dark:text-gray-100">
+          {group.summary.triggeringUserMessage}
+        </div>
+        <div className="mt-1 flex gap-4 text-sm text-gray-500 dark:text-gray-400">
+          <div>Model: {group.summary.modelId}</div>
+          <div>Input tokens: {group.summary.totalInputTokens}</div>
+          <div>Output tokens: {group.summary.totalOutputTokens}</div>
+        </div>
+      </div>
+      {group.promptAndResponses.map((promptAndResponse, index) => (
+        <LlmPromptAndResponse key={index} data={promptAndResponse} />
+      ))}
     </div>
   );
 }
@@ -281,6 +392,8 @@ export default function DebugPromptView({ chatInitialId, onClose }: DebugPromptV
     return null;
   }
 
+  const userPromptGroups = groupIntoUserPrompts(debugData);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="relative max-h-[90vh] w-[90vw] overflow-auto rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
@@ -292,8 +405,8 @@ export default function DebugPromptView({ chatInitialId, onClose }: DebugPromptV
         </button>
         <h2 className="mb-4 text-xl font-semibold">Debug Prompt View</h2>
         <div className="space-y-4 overflow-auto">
-          {debugData.map((promptAndResponse, index) => (
-            <LlmPromptAndResponse key={index} data={promptAndResponse} />
+          {userPromptGroups.map((group, index) => (
+            <UserPrompt key={index} group={group} />
           ))}
         </div>
       </div>
