@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react';
 import type { Message } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useAnimate } from 'framer-motion';
-import { memo, useEffect, useMemo, useRef, useState, type ReactNode, lazy, Suspense } from 'react';
+import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMessageParser, type PartCache } from '~/lib/hooks/useMessageParser';
 import { useSnapScroll } from '~/lib/hooks/useSnapScroll';
 import { description } from '~/lib/stores/description';
@@ -35,7 +35,6 @@ import { TeamSelector } from '~/components/convex/TeamSelector';
 import { ExternalLinkIcon } from '@radix-ui/react-icons';
 import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
 import type { Doc, Id } from 'convex/_generated/dataModel';
-import { useSearchParams } from '@remix-run/react';
 
 const logger = createScopedLogger('Chat');
 
@@ -84,11 +83,6 @@ const retryState = atom({
   nextRetry: Date.now(),
 });
 
-// Import eagerly in dev to avoid a reload, lazily in prod for bundle size.
-const DebugPromptView = import.meta.env.DEV
-  ? (await import('../DebugPromptView')).default
-  : lazy(() => import('../DebugPromptView'));
-
 export const Chat = memo(
   ({
     initialMessages,
@@ -103,31 +97,6 @@ export const Chat = memo(
     const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
     const actionAlert = useStore(workbenchStore.alert);
     const sessionId = useConvexSessionIdOrNullOrLoading();
-    const chatInitialId = initialIdStore.get();
-
-    const [searchParams] = useSearchParams();
-    const [showDebugView, setShowDebugView] = useState(false);
-
-    const debugPrompt = !!searchParams.get('debug-prompt');
-
-    useEffect(() => {
-      if (!debugPrompt) {
-        return;
-      }
-
-      const handleKeyPress = (event: KeyboardEvent) => {
-        if (event.metaKey && event.shiftKey && event.key.toLowerCase() === 'e') {
-          setShowDebugView((prev) => !prev);
-        }
-      };
-
-      window.addEventListener('keydown', handleKeyPress);
-
-      // eslint-disable-next-line consistent-return
-      return () => {
-        window.removeEventListener('keydown', handleKeyPress);
-      };
-    }, [debugPrompt]);
 
     const rewindToMessage = async (messageIndex: number) => {
       if (sessionId && typeof sessionId === 'string') {
@@ -291,7 +260,7 @@ export const Chat = memo(
           modelProvider,
           // Fall back to the user's API key if the request has failed too many times
           userApiKey: retries.numFailures < MAX_RETRIES ? apiKey : { ...apiKey, preference: 'always' },
-          recordRawPromptsForDebugging: debugPrompt,
+          recordRawPromptsForDebugging: true,
         };
       },
       maxSteps: 64,
@@ -545,11 +514,6 @@ export const Chat = memo(
           onRewindToMessage={rewindToMessage}
           earliestRewindableMessageRank={earliestRewindableMessageRank}
         />
-        {debugPrompt && showDebugView && chatInitialId && (
-          <Suspense fallback={<div>Loading debug view...</div>}>
-            <DebugPromptView chatInitialId={chatInitialId} onClose={() => setShowDebugView(false)} />
-          </Suspense>
-        )}
       </>
     );
   },

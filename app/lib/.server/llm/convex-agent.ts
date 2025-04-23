@@ -23,18 +23,18 @@ import { npmInstallTool } from 'chef-agent/tools/npmInstall';
 import { createOpenAI } from '@ai-sdk/openai';
 import type { Tracer } from '~/lib/.server/chat';
 import { editTool } from 'chef-agent/tools/edit';
-import { captureException } from '@sentry/remix';
+import { captureException, captureMessage } from '@sentry/remix';
 import type { SystemPromptOptions } from 'chef-agent/types';
 import { awsCredentialsProvider } from '@vercel/functions/oidc';
 import { cleanupAssistantMessages } from 'chef-agent/cleanupAssistantMessages';
-import { ConvexHttpClient } from 'convex/browser';
-import { api } from '@convex/_generated/api';
+import { logger } from 'chef-agent/utils/logger';
+import { encodeUsageAnnotation } from '~/lib/.server/usage';
+import { compressWithLz4Server } from '~/lib/compression.server';
 
 // workaround for Vercel environment from
 // https://github.com/vercel/ai/issues/199#issuecomment-1605245593
 import { fetch as undiciFetch } from 'undici';
-import { logger } from 'chef-agent/utils/logger';
-import { encodeUsageAnnotation } from '~/lib/.server/usage';
+import { getConvexSiteUrl } from '~/lib/convexSiteUrl';
 type Fetch = typeof fetch;
 
 type Messages = Message[];
@@ -413,30 +413,6 @@ async function onFinishHandler(
     span.end();
   }
 
-  if (recordRawPromptsForDebugging) {
-    console.log(result.response.messages);
-
-    const allMessages: CoreMessage[] = [
-      ...coreMessages,
-      ...(result.response.messages as (CoreAssistantMessage | CoreToolMessage)[]),
-    ];
-
-    const client = new ConvexHttpClient(globalThis.process.env.VITE_CONVEX_URL!);
-    await client.mutation(api.debugPrompt.storeRawPrompt, {
-      coreMessages: allMessages,
-      chatInitialId,
-      finishReason: result.finishReason,
-      modelId: result.response.modelId,
-      cacheCreationInputTokens: providerMetadata?.anthropic
-        ? (providerMetadata.anthropic.cacheCreationInputTokens as number) || 0
-        : 0,
-      cacheReadInputTokens: providerMetadata?.anthropic
-        ? (providerMetadata.anthropic.cacheReadInputTokens as number) || 0
-        : 0,
-      inputTokensUncached: usage.promptTokens,
-      outputTokens: usage.completionTokens,
-    });
-  }
   // Stash this part's usage as an annotation if we're not done yet.
   if (result.finishReason !== 'stop') {
     let toolCallId: string | undefined;
@@ -456,7 +432,59 @@ async function onFinishHandler(
   else {
     await recordUsageCb(messages[messages.length - 1], { usage, providerMetadata });
   }
+  if (recordRawPromptsForDebugging) {
+    const allMessages: CoreMessage[] = [
+      ...coreMessages,
+      ...(result.response.messages as (CoreAssistantMessage | CoreToolMessage)[]),
+    ];
+
+    await storeDebugPrompt(allMessages, {
+      chatInitialId,
+      finishReason: result.finishReason,
+      modelId: result.response.modelId || '',
+      cacheCreationInputTokens: Number(providerMetadata?.anthropic?.cacheCreationInputTokens || 0),
+      cacheReadInputTokens: Number(providerMetadata?.anthropic?.cacheReadInputTokens || 0),
+      inputTokensUncached: usage.promptTokens,
+      outputTokens: usage.completionTokens,
+    });
+  }
   await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/* Just for debugging so don't kill the request on failure. */
+async function storeDebugPrompt(
+  allMessages: CoreMessage[],
+  metadata: {
+    chatInitialId: string;
+    finishReason: string;
+    modelId: string;
+    cacheCreationInputTokens: number;
+    cacheReadInputTokens: number;
+    inputTokensUncached: number;
+    outputTokens: number;
+  },
+) {
+  try {
+    const messageData = new TextEncoder().encode(JSON.stringify(allMessages));
+    const compressedData = compressWithLz4Server(messageData);
+
+    const response = await fetch(`${getConvexSiteUrl()}/upload_debug_prompt`, {
+      method: 'POST',
+      headers: {
+        'x-debug-metadata': JSON.stringify(metadata),
+      },
+      body: compressedData,
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      const message = `Failed to store debug prompt: ${response.status} ${text}`;
+      console.error(message);
+      captureMessage(message);
+    }
+  } catch (error) {
+    captureException(error);
+  }
 }
 
 // TODO this was cool, do something to type our environment variables

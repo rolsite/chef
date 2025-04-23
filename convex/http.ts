@@ -190,4 +190,57 @@ httpWithCors.route({
   }),
 });
 
+httpWithCors.route({
+  path: "/upload_debug_prompt",
+  method: "POST",
+  handler: httpActionWithErrorHandling(async (ctx, request) => {
+    const metadataHeader = request.headers.get("x-debug-metadata");
+    if (!metadataHeader) {
+      throw new ConvexError("x-debug-metadata header is required");
+    }
+
+    let metadata;
+    try {
+      metadata = JSON.parse(metadataHeader);
+    } catch (_e) {
+      throw new ConvexError("Invalid x-debug-metadata header: must be valid JSON");
+    }
+
+    const {
+      chatInitialId,
+      finishReason,
+      modelId,
+      cacheCreationInputTokens,
+      cacheReadInputTokens,
+      inputTokensUncached,
+      outputTokens,
+    } = metadata;
+
+    if (!chatInitialId || !finishReason) {
+      throw new ConvexError("chatInitialId and finishReason are required in metadata");
+    }
+
+    const blob = await request.blob();
+    const storageId = await ctx.storage.store(blob);
+
+    await ctx.runMutation(internal.debugPrompt.storeDebugPrompt, {
+      chatInitialId,
+      storageId,
+      finishReason,
+      modelId: modelId ?? "",
+      cacheCreationInputTokens: cacheCreationInputTokens ?? 0,
+      cacheReadInputTokens: cacheReadInputTokens ?? 0,
+      inputTokensUncached: inputTokensUncached ?? 0,
+      outputTokens: outputTokens ?? 0,
+    });
+
+    return new Response(JSON.stringify({ storageId }), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  }),
+});
+
 export default httpWithCors.http;

@@ -1,7 +1,8 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import type { CoreMessage } from "ai";
 import type { QueryCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { assertIsConvexAdmin } from "./admin";
 
 async function getChatByInitialId(ctx: QueryCtx, initialId: string) {
   const chatByInitialId = await ctx.db
@@ -14,13 +15,12 @@ async function getChatByInitialId(ctx: QueryCtx, initialId: string) {
   return chatByInitialId;
 }
 
-// This debug-only endpoint is not authenticated
-export const storeRawPrompt = mutation({
+export const storeDebugPrompt = internalMutation({
   args: {
     chatInitialId: v.string(),
+    storageId: v.id("_storage"),
     finishReason: v.string(),
-    modelId: v.optional(v.any()),
-    coreMessages: v.array(v.any()),
+    modelId: v.optional(v.string()),
     cacheCreationInputTokens: v.number(),
     cacheReadInputTokens: v.number(),
     inputTokensUncached: v.number(),
@@ -29,7 +29,7 @@ export const storeRawPrompt = mutation({
   handler: async (ctx, args) => {
     const {
       chatInitialId,
-      coreMessages,
+      storageId,
       cacheCreationInputTokens,
       cacheReadInputTokens,
       inputTokensUncached,
@@ -40,9 +40,9 @@ export const storeRawPrompt = mutation({
     const chat = await getChatByInitialId(ctx, chatInitialId);
     await ctx.db.insert("debugChatPrompts", {
       chatId: chat._id,
-      prompt: coreMessages as CoreMessage[],
+      storageId,
       finishReason,
-      modelId,
+      modelId: modelId ?? "",
       cacheCreationInputTokens,
       cacheReadInputTokens,
       inputTokensUncached,
@@ -51,19 +51,55 @@ export const storeRawPrompt = mutation({
   },
 });
 
+export const deleteDebugPrompt = internalMutation({
+  args: {
+    id: v.id("debugChatPrompts"),
+  },
+  handler: async (ctx, args) => {
+    const record = await ctx.db.get(args.id);
+    if (!record) {
+      return;
+    }
+    await ctx.storage.delete(record.storageId);
+    await ctx.db.delete(args.id);
+  },
+});
+
+export const deleteAllDebugPrompts = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const records = await ctx.db.query("debugChatPrompts").collect();
+
+    for (let i = 0; i < records.length; i += 10) {
+      const chunk = records.slice(i, i + 10);
+      await Promise.all(
+        chunk.map((record) => ctx.runMutation(internal.debugPrompt.deleteDebugPrompt, { id: record._id })),
+      );
+    }
+  },
+});
+
 export const show = query({
   args: {
     chatInitialId: v.string(),
   },
   handler: async (ctx, args) => {
+    await assertIsConvexAdmin(ctx);
+
     const chat = await getChatByInitialId(ctx, args.chatInitialId);
 
-    // Get all debug prompts for this chat
     const debugPrompts = await ctx.db
       .query("debugChatPrompts")
       .withIndex("byChatId", (q) => q.eq("chatId", chat._id))
       .collect();
 
-    return debugPrompts;
+    const promptsWithUrls = await Promise.all(
+      debugPrompts.map(async (prompt) => ({
+        ...prompt,
+        url: await ctx.storage.getUrl(prompt.storageId),
+      })),
+    );
+
+    return promptsWithUrls;
   },
 });

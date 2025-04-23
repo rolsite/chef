@@ -1,29 +1,39 @@
 /* eslint-disable curly */
 import { useEffect, useCallback, useState } from 'react';
-import { useQuery } from 'convex/react';
-import { api } from '@convex/_generated/api';
 import { JsonView } from 'react-json-view-lite';
 import 'react-json-view-lite/dist/index.css';
 import type { CoreMessage, FilePart, ToolCallPart, TextPart } from 'ai';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/20/solid';
+import { useDebugPrompt } from '~/hooks/useDebugPrompt';
 
 type DebugPromptViewProps = {
   chatInitialId: string;
   onClose: () => void;
 };
 
-type LlmPromptAndResponseProps = {
-  data: (typeof api.debugPrompt.show)['_returnType'][number];
+type DebugPromptData = {
+  url: string | null;
+  finishReason: string;
+  modelId: string;
+  cacheCreationInputTokens: number;
+  cacheReadInputTokens: number;
+  inputTokensUncached: number;
+  outputTokens: number;
+  prompt?: CoreMessage[];
 };
 
 type UserPromptGroup = {
-  promptAndResponses: (typeof api.debugPrompt.show)['_returnType'][number][];
+  promptAndResponses: DebugPromptData[];
   summary: {
     triggeringUserMessage: string;
     totalInputTokens: number;
     totalOutputTokens: number;
     modelId: string;
   };
+};
+
+type LlmPromptAndResponseProps = {
+  data: DebugPromptData;
 };
 
 function isTextPart(part: unknown): part is TextPart {
@@ -70,7 +80,7 @@ function findLastAssistantMessage(prompt: CoreMessage[]): string {
     if (message.role === 'assistant') {
       const preview = getMessagePreview(message.content);
       // Get first line and add ellipsis if there are more lines
-      const lines = preview.split('\n');
+      const lines = preview.split('\n').filter((line) => line.trim().length);
       if (lines.length > 1) {
         return lines[0] + '...';
       }
@@ -85,8 +95,8 @@ function LlmPromptAndResponse({ data }: LlmPromptAndResponseProps) {
   const totalInputTokens = data.cacheCreationInputTokens + data.cacheReadInputTokens + data.inputTokensUncached;
 
   // Calculate character counts and token estimates
-  const inputMessages = data.prompt.filter((m) => m.role === 'system' || m.role === 'user' || m.role === 'tool');
-  const outputMessages = data.prompt.filter((m) => m.role === 'assistant');
+  const inputMessages = data.prompt?.filter((m) => m.role === 'system' || m.role === 'user' || m.role === 'tool') ?? [];
+  const outputMessages = data.prompt?.filter((m) => m.role === 'assistant') ?? [];
 
   const totalInputChars = inputMessages.reduce((sum, msg) => sum + getMessageCharCount(msg), 0);
   const totalOutputChars = outputMessages.reduce((sum, msg) => sum + getMessageCharCount(msg), 0);
@@ -100,7 +110,7 @@ function LlmPromptAndResponse({ data }: LlmPromptAndResponseProps) {
     }
   };
 
-  const lastAssistantMessage = findLastAssistantMessage(data.prompt);
+  const lastAssistantMessage = data.prompt ? findLastAssistantMessage(data.prompt) : 'Loading...';
 
   return (
     <div onClick={() => setIsExpanded(!isExpanded)} className="cursor-pointer rounded border p-4 dark:border-gray-700">
@@ -118,7 +128,7 @@ function LlmPromptAndResponse({ data }: LlmPromptAndResponseProps) {
             <div>{data.outputTokens} output</div>
             <div>finish: {data.finishReason}</div>
             <div>model: {data.modelId}</div>
-            {!!(data.cacheCreationInputTokens || data.cacheReadInputTokens) && (
+            {!!data.cacheCreationInputTokens && (
               <>
                 <div>Created cached input tokens: {data.cacheCreationInputTokens}</div>
               </>
@@ -127,7 +137,7 @@ function LlmPromptAndResponse({ data }: LlmPromptAndResponseProps) {
         </div>
       </div>
       <div onClick={(e) => e.stopPropagation()}>
-        {isExpanded && (
+        {isExpanded && data.prompt && (
           <div className="mt-4 space-y-1">
             {data.prompt.map((message, idx) => (
               <CoreMessageView
@@ -250,7 +260,7 @@ function MessageContentView({ content, showRawJson = false }: MessageContentView
 }
 
 function CoreMessageView({ message, getTokenEstimate, totalInputTokens, totalOutputTokens }: CoreMessageViewProps) {
-  const [isExpanded, setIsExpanded] = useState(message.role !== 'system');
+  const [isExpanded, setIsExpanded] = useState(message.role === 'user');
 
   const roleColors = {
     system: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
@@ -291,7 +301,7 @@ function CoreMessageView({ message, getTokenEstimate, totalInputTokens, totalOut
           </div>
           <div>
             <div className="mt-2 cursor-default" onClick={(e) => e.stopPropagation()}>
-              <MessageContentView content={message.content} showRawJson />
+              <MessageContentView content={message.content} />
             </div>
           </div>
         </>
@@ -300,24 +310,26 @@ function CoreMessageView({ message, getTokenEstimate, totalInputTokens, totalOut
   );
 }
 
-function findTriggeringUserMessage(promptAndResponses: (typeof api.debugPrompt.show)['_returnType'][number][]): string {
+function findTriggeringUserMessage(promptAndResponses: DebugPromptData[]): string {
   // Look through all prompt and responses in reverse order
   for (let i = promptAndResponses.length - 1; i >= 0; i--) {
     const promptAndResponse = promptAndResponses[i];
     // Look through messages in reverse order to find the last user message
-    for (let j = promptAndResponse.prompt.length - 1; j >= 0; j--) {
-      const message = promptAndResponse.prompt[j];
-      if (message.role === 'user') {
-        return getMessagePreview(message.content);
+    if (promptAndResponse.prompt) {
+      for (let j = promptAndResponse.prompt.length - 1; j >= 0; j--) {
+        const message = promptAndResponse.prompt[j];
+        if (message.role === 'user') {
+          return getMessagePreview(message.content);
+        }
       }
     }
   }
   return 'No user message found';
 }
 
-function groupIntoUserPrompts(data: (typeof api.debugPrompt.show)['_returnType']): UserPromptGroup[] {
+function groupIntoUserPrompts(data: DebugPromptData[]): UserPromptGroup[] {
   const groups: UserPromptGroup[] = [];
-  let currentGroup: (typeof api.debugPrompt.show)['_returnType'][number][] = [];
+  let currentGroup: DebugPromptData[] = [];
 
   data.forEach((item, index) => {
     currentGroup.push(item);
@@ -370,7 +382,7 @@ function UserPrompt({ group }: { group: UserPromptGroup }) {
 }
 
 export default function DebugPromptView({ chatInitialId, onClose }: DebugPromptViewProps) {
-  const debugData = useQuery(api.debugPrompt.show, { chatInitialId });
+  const { data, isPending, error } = useDebugPrompt(chatInitialId);
 
   const handleEscape = useCallback(
     (event: KeyboardEvent) => {
@@ -388,11 +400,21 @@ export default function DebugPromptView({ chatInitialId, onClose }: DebugPromptV
     };
   }, [handleEscape]);
 
-  if (!debugData) {
+  if (isPending) {
     return null;
   }
 
-  const userPromptGroups = groupIntoUserPrompts(debugData);
+  if (error) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="relative max-h-[90vh] w-[90vw] overflow-auto rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800">
+          <div className="text-center text-red-500">{error.toString()}</div>
+        </div>
+      </div>
+    );
+  }
+
+  const userPromptGroups = groupIntoUserPrompts(data);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
@@ -403,7 +425,28 @@ export default function DebugPromptView({ chatInitialId, onClose }: DebugPromptV
         >
           ✕
         </button>
-        <h2 className="mb-4 text-xl font-semibold">Debug Prompt View</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-semibold">Debug Prompt View</h2>
+            <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">Chat ID: {chatInitialId}</div>
+          </div>
+          <a
+            href={`/admin/prompt-debug?id=${encodeURIComponent(chatInitialId)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-4 inline-flex items-center text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            Open in Debug Page
+            <svg className="ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+              />
+            </svg>
+          </a>
+        </div>
         <div className="space-y-4 overflow-auto">
           {userPromptGroups.map((group, index) => (
             <UserPrompt key={index} group={group} />

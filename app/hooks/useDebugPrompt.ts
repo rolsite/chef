@@ -1,0 +1,113 @@
+import { useConvex, useMutation, useQuery } from 'convex/react';
+import { useQueries as useReactQueries } from '@tanstack/react-query';
+import { api } from '@convex/_generated/api';
+import type { CoreMessage } from 'ai';
+import { decompressWithLz4Client } from '~/lib/compression.client';
+import { queryClient } from '~/lib/stores/reactQueryClient';
+import { useEffect, useState } from 'react';
+import { getConvexAuthToken } from '~/lib/stores/sessionId';
+
+async function fetchPromptData(url: string): Promise<CoreMessage[]> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch prompt data: ${response.statusText}`);
+  }
+
+  const compressedData = await response.arrayBuffer();
+  const decompressedData = decompressWithLz4Client(new Uint8Array(compressedData));
+  const textDecoder = new TextDecoder();
+  const jsonString = textDecoder.decode(decompressedData);
+  return JSON.parse(jsonString) as CoreMessage[];
+}
+
+function useAuthToken() {
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const convex = useConvex();
+  useEffect(() => {
+    async function grabAuthToken() {
+      const token = getConvexAuthToken(convex);
+      setAuthToken((prev) => {
+        if (token !== prev) {
+          return token;
+        }
+        return null;
+      });
+    }
+    grabAuthToken();
+
+    // This token doesn't expire for 24 hours, but it might not be refreshed until there's just a little time left.
+    const intervalId = setInterval(
+      () => {
+        grabAuthToken();
+      },
+      10 * 60 * 1000,
+    );
+    return () => clearInterval(intervalId);
+  }, [convex]);
+  return authToken;
+}
+
+/** Also requests the convex deployment to check if the user is an admin. */
+function useAdminStatus() {
+  // Get the auth token (the same one this Convex WebSocket connection is already authenticated with)
+  // because we don't make it available in Convex functions.
+  const authToken = useAuthToken();
+  const requestAdminCheck = useMutation(api.admin.requestAdminCheck);
+  const isAdmin = useQuery(api.admin.isCurrentUserAdmin, {});
+
+  useEffect(() => {
+    if (isAdmin === false && authToken) {
+      requestAdminCheck({
+        token: authToken,
+      }).catch((error) => {
+        console.error('Error requesting admin check:', error);
+      });
+    }
+  }, [isAdmin, requestAdminCheck, authToken]);
+
+  return !!isAdmin;
+}
+
+export function useDebugPrompt(chatInitialId: string) {
+  const isAdmin = useAdminStatus();
+  const promptMetadatas = useQuery(api.debugPrompt.show, isAdmin ? { chatInitialId } : 'skip');
+
+  // Use React Query to fetch and cache the prompts for each URL
+  const queries = useReactQueries(
+    {
+      queries: (promptMetadatas || []).map((promptMetadata) => ({
+        queryKey: ['prompt', promptMetadata.url],
+        queryFn: () => fetchPromptData(promptMetadata.url!),
+        // These data at these URLs never changes
+        staleTime: Infinity,
+        // If this is a dedicated debugging page where many prompts are shown this might need to change
+        gcTime: 10 * 60 * 1000,
+      })),
+    },
+    queryClient,
+  );
+  const firstErroredQuery = queries.find((query) => query.isError);
+  if (firstErroredQuery) {
+    return {
+      data: [],
+      isPending: false as const,
+      error: firstErroredQuery.error,
+    };
+  }
+  if (promptMetadatas === undefined || (queries.length > 0 && !queries.some((query) => query.data))) {
+    return {
+      data: null,
+      isPending: true as const,
+      error: null,
+    };
+  }
+
+  return {
+    data: queries.map((query, i) => ({
+      prompt: query.data,
+      ...promptMetadatas[i],
+    })),
+    isPending: false as const,
+    error: null,
+  };
+}

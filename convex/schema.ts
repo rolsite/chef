@@ -1,8 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
-import type { Validator, VAny } from "convex/values";
+import type { VAny } from "convex/values";
 import type { SerializedMessage } from "./messages";
-import type { CoreMessage } from "ai";
 
 export const apiKeyValidator = v.object({
   preference: v.union(v.literal("always"), v.literal("quotaExhausted")),
@@ -30,6 +29,16 @@ export default defineSchema({
     tokenIdentifier: v.string(),
     apiKey: v.optional(apiKeyValidator),
   }).index("byTokenIdentifier", ["tokenIdentifier"]),
+
+  /*
+   * Admin status means being on the convex team on the provision host.
+   * It doesn't work when using a local big brain (provision host).
+   */
+  convexAdmins: defineTable({
+    convexMemberId: v.id("convexMembers"), // should be unique
+    lastCheckedForAdminStatus: v.number(),
+    wasAdmin: v.boolean(),
+  }).index("byConvexMemberId", ["convexMemberId"]),
 
   /*
    * All chats have two IDs -- an `initialId` that is always set (UUID) and a `urlId`
@@ -116,7 +125,7 @@ export default defineSchema({
     chatHistoryId: v.optional(v.union(v.id("_storage"), v.null())),
 
     // Shares are created at one point in time, so this makes sure
-    // people using the link don’t see newer messages.
+    // people using the link don't see newer messages.
     lastMessageRank: v.number(),
     partIndex: v.optional(v.number()),
     // The description of the chat at the time the share was created.
@@ -153,7 +162,7 @@ export default defineSchema({
    */
   debugChatPrompts: defineTable({
     chatId: v.id("chats"),
-    prompt: v.array(v.any() as Validator<CoreMessage, "required", any>),
+    storageId: v.id("_storage"),
     finishReason: v.string(),
     modelId: v.string(),
     cacheCreationInputTokens: v.number(),
