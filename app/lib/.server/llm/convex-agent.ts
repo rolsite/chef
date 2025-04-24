@@ -308,6 +308,8 @@ export async function convexAgent(args: {
     ...cleanupAssistantMessages(messages),
   ];
 
+  console.log('cleaned up messages', cleanupAssistantMessages(messages));
+
   const dataStream = createDataStream({
     execute(dataStream) {
       const result = streamText({
