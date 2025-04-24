@@ -221,7 +221,7 @@ export const Chat = memo(
       }
     }
 
-    const { messages, status, stop, append, setMessages, reload, error } = useChat({
+    const { messages, status, stop, append, setMessages, reload, error, addToolResult } = useChat({
       initialMessages,
       api: '/api/chat',
       sendExtraMessageFields: true,
@@ -320,6 +320,36 @@ export const Chat = memo(
         }
         if (response.finishReason == 'stop') {
           retryState.set({ numFailures: 0, nextRetry: Date.now() });
+
+          // Injects a deploy tool call if the LLM forgets to do it
+          if (
+            message.content.includes('<boltAction') &&
+            message.parts?.find((part) => part.type === 'tool-invocation') === undefined
+          ) {
+            let id = `tool-${Date.now()}`;
+            setMessages((messages) => {
+              const lastMessage = messages[messages.length - 1];
+              const newParts = lastMessage.parts || [];
+              newParts.push({
+                type: 'tool-invocation',
+                toolInvocation: {
+                  toolCallId: id,
+                  toolName: 'deploy',
+                  state: 'call',
+                  step: 0,
+                  args: {},
+                },
+              });
+              return [
+                ...messages.slice(0, -1),
+                {
+                  ...messages[messages.length - 1],
+                  parts: newParts,
+                },
+              ];
+            });
+            response.finishReason = 'tool-calls';
+          }
         }
         logger.debug('Finished streaming');
 
@@ -339,6 +369,7 @@ export const Chat = memo(
     }, [initialMessages.length]);
 
     useEffect(() => {
+      console.log('messages', messages);
       processSampledMessages({
         messages,
         initialMessages,
