@@ -241,7 +241,25 @@ export const Chat = memo(
         }
         let modelProvider: ModelProvider;
         const retries = retryState.get();
-        if (modelSelection === 'auto' || modelSelection === 'claude-3.5-sonnet') {
+        if (modelSelection === 'auto') {
+          // If there has been a successful deploy tool call, then use Google otherwise use Anthropic
+          if (
+            messages.find((message) =>
+              message.parts?.find(
+                (part) =>
+                  part.type === 'tool-invocation' &&
+                  part.toolInvocation.toolName === 'deploy' &&
+                  part.toolInvocation.state === 'result',
+              ),
+            )
+          ) {
+            modelProvider = 'Google';
+          } else {
+            // Send all traffic to Anthropic first before failing over to Bedrock.
+            const providers: ModelProvider[] = ['Anthropic', 'Bedrock'];
+            modelProvider = providers[retries.numFailures % providers.length];
+          }
+        } else if (modelSelection === 'claude-3.5-sonnet') {
           // Send all traffic to Anthropic first before failing over to Bedrock.
           const providers: ModelProvider[] = ['Anthropic', 'Bedrock'];
           modelProvider = providers[retries.numFailures % providers.length];

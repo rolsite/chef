@@ -22,6 +22,7 @@ export function google(options: SystemPromptOptions) {
     - You can use the deploy tool as many times as you need to.
     - Do NOT write your code directly in the output. Stuff like \`\`\`tsx\`\`\` is not allowed.
     - Use \`<boltAction>...\<\/boltAction\>\`  and \`<boltArtifact>...\<\/boltArtifact\>\` tags to write your code.
+    - It is important that you break up your frontend files, lik \`src/App.tsx\`, into smaller files and components. This makes it easier to edit.
   </reminders>
   `;
 }
