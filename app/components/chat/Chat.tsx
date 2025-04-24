@@ -369,7 +369,6 @@ export const Chat = memo(
     }, [initialMessages.length]);
 
     useEffect(() => {
-      console.log('messages', messages);
       processSampledMessages({
         messages,
         initialMessages,
