@@ -36,12 +36,11 @@ import { ExternalLinkIcon } from '@radix-ui/react-icons';
 import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
 import type { Doc, Id } from 'convex/_generated/dataModel';
 import { useFlags } from 'launchdarkly-react-client-sdk';
+import { VITE_PROVISION_HOST } from '~/lib/convexProvisionHost';
 
 const logger = createScopedLogger('Chat');
 
 const MAX_RETRIES = 4;
-
-export const VITE_PROVISION_HOST = import.meta.env.VITE_PROVISION_HOST || 'https://api.convex.dev';
 
 const processSampledMessages = createSampler(
   (options: {
@@ -124,6 +123,7 @@ export const Chat = memo(
         }
       }
     };
+    const { recordRawPromptsForDebugging } = useFlags();
 
     const title = useStore(description);
 
@@ -282,6 +282,7 @@ export const Chat = memo(
           userApiKey: retries.numFailures < MAX_RETRIES ? apiKey : { ...apiKey, preference: 'always' },
           shouldDisableTools: shouldDisableToolsStore.get(),
           skipSystemPrompt: skipSystemPromptStore.get(),
+          recordRawPromptsForDebugging,
         };
       },
       maxSteps: 64,
