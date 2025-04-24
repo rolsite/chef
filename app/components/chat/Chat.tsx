@@ -339,7 +339,7 @@ export const Chat = memo(
             message.content.includes('<boltAction') &&
             message.parts?.find((part) => part.type === 'tool-invocation') === undefined
           ) {
-            let id = `tool-${Date.now()}`;
+            const id = `tool-${Date.now()}`;
             setMessages((messages) => {
               const toolInvocation = {
                 type: 'tool-invocation' as const,
