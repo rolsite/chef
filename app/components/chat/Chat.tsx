@@ -35,6 +35,7 @@ import { TeamSelector } from '~/components/convex/TeamSelector';
 import { ExternalLinkIcon } from '@radix-ui/react-icons';
 import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
 import type { Doc, Id } from 'convex/_generated/dataModel';
+import { useFlags } from 'launchdarkly-react-client-sdk';
 
 const logger = createScopedLogger('Chat');
 
@@ -82,7 +83,8 @@ const retryState = atom({
   numFailures: 0,
   nextRetry: Date.now(),
 });
-
+const shouldDisableToolsStore = atom(false);
+const skipSystemPromptStore = atom(false);
 export const Chat = memo(
   ({
     initialMessages,
@@ -221,6 +223,7 @@ export const Chat = memo(
       }
     }
 
+    const { enableSkipSystemPrompt } = useFlags();
     const { messages, status, stop, append, setMessages, reload, error, addToolResult } = useChat({
       initialMessages,
       api: '/api/chat',
@@ -259,13 +262,23 @@ export const Chat = memo(
           modelProvider,
           // Fall back to the user's API key if the request has failed too many times
           userApiKey: retries.numFailures < MAX_RETRIES ? apiKey : { ...apiKey, preference: 'always' },
+          shouldDisableTools: shouldDisableToolsStore.get(),
+          skipSystemPrompt: skipSystemPromptStore.get(),
         };
       },
       maxSteps: 64,
       async onToolCall({ toolCall }) {
         console.log('Starting tool call', toolCall);
-        const result = await workbenchStore.waitOnToolCall(toolCall.toolCallId);
+        const { result, shouldDisableTools, skipSystemPrompt } = await workbenchStore.waitOnToolCall(
+          toolCall.toolCallId,
+        );
         console.log('Tool call finished', result);
+        if (shouldDisableTools) {
+          shouldDisableToolsStore.set(true);
+        }
+        if (skipSystemPrompt && enableSkipSystemPrompt) {
+          skipSystemPromptStore.set(true);
+        }
         return result;
       },
       onError: async (e: Error) => {
@@ -478,6 +491,8 @@ export const Chat = memo(
         const modifiedFiles = workbenchStore.getModifiedFiles();
         chatStore.setKey('aborted', false);
 
+        shouldDisableToolsStore.set(false);
+        skipSystemPromptStore.set(false);
         if (modifiedFiles !== undefined) {
           const userUpdateArtifact = filesToArtifacts(modifiedFiles, `${Date.now()}`);
           append({

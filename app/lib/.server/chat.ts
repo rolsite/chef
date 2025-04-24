@@ -61,6 +61,9 @@ export async function chatAction({ request }: ActionFunctionArgs) {
     userApiKey:
       | { preference: 'always' | 'quotaExhausted'; value?: string; openai?: string; xai?: string; google?: string }
       | undefined;
+
+    shouldDisableTools: boolean;
+    skipSystemPrompt: boolean;
   };
   const { messages, firstUserMessage, chatInitialId, deploymentName, token, teamSlug } = body;
 
@@ -135,16 +138,18 @@ export async function chatAction({ request }: ActionFunctionArgs) {
   try {
     const totalMessageContent = messages.reduce((acc, message) => acc + message.content, '');
     logger.debug(`Total message length: ${totalMessageContent.split(' ').length}, words`);
-    const dataStream = await convexAgent(
+    const dataStream = await convexAgent({
       chatInitialId,
       env,
       firstUserMessage,
       messages,
       tracer,
-      body.modelProvider,
+      modelProvider: body.modelProvider,
       userApiKey,
+      shouldDisableTools: body.shouldDisableTools,
+      skipSystemPrompt: body.skipSystemPrompt,
       recordUsageCb,
-    );
+    });
 
     return new Response(dataStream, {
       status: 200,

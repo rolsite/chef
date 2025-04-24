@@ -12,7 +12,7 @@ import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { createXai } from '@ai-sdk/xai';
-import { ROLE_SYSTEM_PROMPT, GENERAL_SYSTEM_PROMPT_PRELUDE, generalSystemPrompt } from 'chef-agent/prompts/system';
+import { ROLE_SYSTEM_PROMPT, generalSystemPrompt } from 'chef-agent/prompts/system';
 import { deployTool } from 'chef-agent/tools/deploy';
 import { viewTool } from 'chef-agent/tools/view';
 import type { ConvexToolSet } from '~/lib/common/types';
@@ -30,6 +30,7 @@ import { cleanupAssistantMessages } from 'chef-agent/cleanupAssistantMessages';
 import { fetch as undiciFetch } from 'undici';
 import { logger } from 'chef-agent/utils/logger';
 import { encodeUsageAnnotation } from '~/lib/.server/usage';
+import { REPEATED_ERROR_REASON } from '~/lib/common/errors';
 type Fetch = typeof fetch;
 
 type Messages = Message[];
@@ -48,19 +49,33 @@ export type ModelProvider = 'Anthropic' | 'Bedrock' | 'OpenAI' | 'XAI' | 'Google
 
 const ALLOWED_AWS_REGIONS = ['us-east-1', 'us-east-2', 'us-west-2'];
 
-export async function convexAgent(
-  chatInitialId: string,
-  env: Record<string, string | undefined>,
-  firstUserMessage: boolean,
-  messages: Messages,
-  tracer: Tracer | null,
-  modelProvider: ModelProvider,
-  userApiKey: string | undefined,
+export async function convexAgent(args: {
+  chatInitialId: string;
+  env: Record<string, string | undefined>;
+  firstUserMessage: boolean;
+  messages: Messages;
+  tracer: Tracer | null;
+  modelProvider: ModelProvider;
+  userApiKey: string | undefined;
+  shouldDisableTools: boolean;
+  skipSystemPrompt: boolean;
   recordUsageCb: (
     lastMessage: Message | undefined,
     finalGeneration: { usage: LanguageModelUsage; providerMetadata?: ProviderMetadata },
-  ) => Promise<void>,
-) {
+  ) => Promise<void>;
+}) {
+  const {
+    chatInitialId,
+    env,
+    firstUserMessage,
+    messages,
+    tracer,
+    modelProvider,
+    userApiKey,
+    shouldDisableTools,
+    skipSystemPrompt,
+    recordUsageCb,
+  } = args;
   console.debug('Starting agent with model provider', modelProvider);
   if (userApiKey) {
     console.debug('Using user provided API key');
@@ -255,6 +270,7 @@ export async function convexAgent(
     usingOpenAi: modelProvider == 'OpenAI',
     usingGoogle: modelProvider == 'Google',
     resendProxyEnabled: getEnv(env, 'RESEND_PROXY_ENABLED') == '1',
+    skipSystemPrompt,
   };
   const tools: ConvexToolSet = {
     deploy: deployTool,
@@ -273,18 +289,31 @@ export async function convexAgent(
         providerOptions: provider.options,
         messages: [
           {
-            role: 'system',
+            role: 'system' as const,
             content: ROLE_SYSTEM_PROMPT,
           },
-          {
-            role: 'system',
-            content: generalSystemPrompt(opts),
-          },
+          ...(skipSystemPrompt
+            ? []
+            : [
+                {
+                  role: 'system' as const,
+                  content: generalSystemPrompt(opts),
+                },
+              ]),
           ...cleanupAssistantMessages(messages),
         ],
         tools,
+        toolChoice: shouldDisableTools ? 'none' : 'auto',
         onFinish: (result) => {
-          onFinishHandler(dataStream, messages, result, tracer, chatInitialId, recordUsageCb);
+          onFinishHandler({
+            dataStream,
+            messages,
+            result,
+            tracer,
+            chatInitialId,
+            recordUsageCb,
+            toolsDisabledFromRepeatedErrors: shouldDisableTools,
+          });
         },
         onError({ error }) {
           console.error(error);
@@ -342,9 +371,6 @@ function anthropicInjectCacheControl(options?: RequestInit) {
   if (body.system[0].text !== ROLE_SYSTEM_PROMPT) {
     throw new Error('First system message must be the roleSystemPrompt');
   }
-  if (!body.system[1].text.startsWith(GENERAL_SYSTEM_PROMPT_PRELUDE)) {
-    throw new Error('Second system message must be the generalSystemPrompt');
-  }
 
   // Inject the cache control header after the constant prompt, but leave
   // the dynamic system prompts uncached.
@@ -355,17 +381,26 @@ function anthropicInjectCacheControl(options?: RequestInit) {
   return { ...options, body: newBody };
 }
 
-async function onFinishHandler(
-  dataStream: DataStreamWriter,
-  messages: Messages,
-  result: Omit<StepResult<any>, 'stepType' | 'isContinued'>,
-  tracer: Tracer | null,
-  chatInitialId: string,
+async function onFinishHandler({
+  dataStream,
+  messages,
+  result,
+  tracer,
+  chatInitialId,
+  recordUsageCb,
+  toolsDisabledFromRepeatedErrors,
+}: {
+  dataStream: DataStreamWriter;
+  messages: Messages;
+  result: Omit<StepResult<any>, 'stepType' | 'isContinued'>;
+  tracer: Tracer | null;
+  chatInitialId: string;
   recordUsageCb: (
     lastMessage: Message | undefined,
     finalGeneration: { usage: LanguageModelUsage; providerMetadata?: ProviderMetadata },
-  ) => Promise<void>,
-) {
+  ) => Promise<void>;
+  toolsDisabledFromRepeatedErrors: boolean;
+}) {
   const { providerMetadata } = result;
   const usage = {
     completionTokens: normalizeUsage(result.usage.completionTokens),
@@ -394,6 +429,10 @@ async function onFinishHandler(
     span.end();
   }
 
+  if (toolsDisabledFromRepeatedErrors) {
+    dataStream.writeMessageAnnotation({ type: 'failure', reason: REPEATED_ERROR_REASON });
+  }
+
   // Stash this part's usage as an annotation if we're not done yet.
   if (result.finishReason !== 'stop') {
     let toolCallId: string | undefined;
@@ -413,6 +452,7 @@ async function onFinishHandler(
   else {
     await recordUsageCb(messages[messages.length - 1], { usage, providerMetadata });
   }
+
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
