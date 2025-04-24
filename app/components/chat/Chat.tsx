@@ -287,17 +287,7 @@ export const Chat = memo(
       },
       maxSteps: 64,
       async onToolCall({ toolCall }) {
-        console.log('Starting tool call', toolCall);
-        const { result, shouldDisableTools, skipSystemPrompt } = await workbenchStore.waitOnToolCall(
-          toolCall.toolCallId,
-        );
-        console.log('Tool call finished', result);
-        if (shouldDisableTools) {
-          shouldDisableToolsStore.set(true);
-        }
-        if (skipSystemPrompt && enableSkipSystemPrompt) {
-          skipSystemPromptStore.set(true);
-        }
+        const result = await waitForToolCall(toolCall.toolCallId);
         return result;
       },
       onError: async (e: Error) => {
@@ -359,6 +349,10 @@ export const Chat = memo(
             message.parts?.find((part) => part.type === 'tool-invocation') === undefined
           ) {
             const id = `tool-${Date.now()}`;
+
+            // Set messages causes the UI to re-render and start executing the tool call. We then wait
+            // for the tool call to finish and add the result to the messages. This mimics the behavior
+            // of the `onToolCall` callback.
             setMessages((messages) => {
               const toolInvocation = {
                 type: 'tool-invocation' as const,
@@ -379,7 +373,7 @@ export const Chat = memo(
               return [...messages, message];
             });
 
-            const result = await workbenchStore.waitOnToolCall(id);
+            const result = await waitForToolCall(id);
             addToolResult({
               toolCallId: id,
               result,
@@ -391,6 +385,18 @@ export const Chat = memo(
         await checkTokenUsage();
       },
     });
+
+    async function waitForToolCall(toolCallId: string) {
+      const { result, shouldDisableTools, skipSystemPrompt } = await workbenchStore.waitOnToolCall(toolCallId);
+      console.log('Tool call finished', result);
+      if (shouldDisableTools) {
+        shouldDisableToolsStore.set(true);
+      }
+      if (skipSystemPrompt && enableSkipSystemPrompt) {
+        skipSystemPromptStore.set(true);
+      }
+      return result;
+    }
 
     (window as any).chefMessages = messages;
 
