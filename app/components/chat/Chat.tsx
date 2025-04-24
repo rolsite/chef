@@ -328,27 +328,30 @@ export const Chat = memo(
           ) {
             let id = `tool-${Date.now()}`;
             setMessages((messages) => {
-              const lastMessage = messages[messages.length - 1];
-              const newParts = lastMessage.parts || [];
-              newParts.push({
-                type: 'tool-invocation',
+              const toolInvocation = {
+                type: 'tool-invocation' as const,
                 toolInvocation: {
                   toolCallId: id,
                   toolName: 'deploy',
-                  state: 'call',
+                  state: 'call' as const,
                   step: 0,
                   args: {},
                 },
-              });
-              return [
-                ...messages.slice(0, -1),
-                {
-                  ...messages[messages.length - 1],
-                  parts: newParts,
-                },
-              ];
+              };
+              const message = {
+                id: `${Date.now()}`,
+                role: 'assistant' as const,
+                content: 'tool call',
+                parts: [toolInvocation],
+              };
+              return [...messages, message];
             });
-            response.finishReason = 'tool-calls';
+
+            const result = await workbenchStore.waitOnToolCall(id);
+            addToolResult({
+              toolCallId: id,
+              result,
+            });
           }
         }
         logger.debug('Finished streaming');
