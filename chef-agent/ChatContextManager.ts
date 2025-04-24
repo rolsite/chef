@@ -155,12 +155,19 @@ export class ChatContextManager {
           }
         }
       } else if (i === iCutoff) {
-        const filteredParts = message.parts.filter((p, j) => {
-          if (p.type !== 'tool-invocation' || p.toolInvocation.state !== 'result') {
-            return true;
-          }
-          return j > jCutoff;
-        });
+        const filteredParts = message.parts
+          .filter((p, j) => {
+            if (p.type !== 'tool-invocation' || p.toolInvocation.state !== 'result') {
+              return true;
+            }
+            return j > jCutoff;
+          })
+          .map((part) => {
+            if (part.type === 'text') {
+              return { ...part, text: StreamingMessageParser.stripArtifacts(part.text) };
+            }
+            return part;
+          });
         for (let j = 0; j < filteredParts.length; j++) {
           const part = filteredParts[j];
           if (part.type === 'tool-invocation' && part.toolInvocation.state === 'result' && j <= jCutoff) {
@@ -177,7 +184,21 @@ export class ChatContextManager {
         };
         fullMessages.push(remainingMessage);
       } else {
-        fullMessages.push(message);
+        // Strip artifacts from recent messages too because they are probably included in relevant files.
+        const strippedContent = StreamingMessageParser.stripArtifacts(message.content);
+
+        const strippedMessage = {
+          ...message,
+          content: strippedContent,
+          parts: message.parts.map((part) => {
+            if (part.type === 'text') {
+              const strippedText = StreamingMessageParser.stripArtifacts(part.text);
+              return { ...part, text: strippedText };
+            }
+            return part;
+          }),
+        };
+        fullMessages.push(strippedMessage);
       }
     }
     const result: UIMessage[] = [];
