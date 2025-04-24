@@ -123,6 +123,7 @@ export const Chat = memo(
         }
       }
     };
+    const { recordRawPromptsForDebugging } = useFlags();
 
     const title = useStore(description);
 
@@ -281,6 +282,7 @@ export const Chat = memo(
           userApiKey: retries.numFailures < MAX_RETRIES ? apiKey : { ...apiKey, preference: 'always' },
           shouldDisableTools: shouldDisableToolsStore.get(),
           skipSystemPrompt: skipSystemPromptStore.get(),
+          recordRawPromptsForDebugging,
         };
       },
       maxSteps: 64,
