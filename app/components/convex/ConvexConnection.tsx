@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
 import { convexProjectStore } from '~/lib/stores/convexProject';
 import { useChatId } from '~/lib/stores/chatId';
@@ -12,6 +12,7 @@ import { Callout } from '@ui/Callout';
 
 export function ConvexConnection() {
   const [isOpen, setIsOpen] = useState(false);
+  const open = useCallback(() => setIsOpen(true), []);
 
   const sessionId = useConvexSessionIdOrNullOrLoading();
   const chatId = useChatId();
@@ -27,7 +28,7 @@ export function ConvexConnection() {
 
   return (
     <div className="relative">
-      <Button variant="neutral" onClick={() => setIsOpen(true)} className="font-normal">
+      <Button variant="neutral" onClick={open} className="font-normal">
         <img className="size-4" height="16" width="16" src="/icons/Convex.svg" alt="Convex" />
         <ConnectionStatus projectInfo={projectInfo} />
       </Button>
