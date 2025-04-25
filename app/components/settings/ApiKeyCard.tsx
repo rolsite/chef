@@ -255,7 +255,7 @@ function ApiKeyInput(props: {
           action={(): void => {
             setShowKey(!showKey);
           }}
-          icon={showKey ? <EyeSlashIcon /> : <EyeOpenIcon />}
+          Icon={showKey ? EyeSlashIcon : EyeOpenIcon}
         />
       </div>
       {props.value && (
