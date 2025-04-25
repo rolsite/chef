@@ -99,30 +99,33 @@ export const Chat = memo(
     const actionAlert = useStore(workbenchStore.alert);
     const sessionId = useConvexSessionIdOrNullOrLoading();
 
-    const rewindToMessage = async (messageIndex: number) => {
-      if (sessionId && typeof sessionId === 'string') {
-        const chatId = chatIdStore.get();
-        if (!chatId) {
-          return;
-        }
+    const rewindToMessage = useCallback(
+      async (messageIndex: number) => {
+        if (sessionId && typeof sessionId === 'string') {
+          const chatId = chatIdStore.get();
+          if (!chatId) {
+            return;
+          }
 
-        const url = new URL(window.location.href);
-        url.searchParams.set('rewind', 'true');
+          const url = new URL(window.location.href);
+          url.searchParams.set('rewind', 'true');
 
-        try {
-          await convex.mutation(api.messages.rewindChat, {
-            sessionId: sessionId as Id<'sessions'>,
-            chatId,
-            lastMessageRank: messageIndex,
-          });
-          // Reload the chat to show the rewound state
-          window.location.replace(url.href);
-        } catch (error) {
-          console.error('Failed to rewind chat:', error);
-          toast.error('Failed to rewind chat');
+          try {
+            await convex.mutation(api.messages.rewindChat, {
+              sessionId: sessionId as Id<'sessions'>,
+              chatId,
+              lastMessageRank: messageIndex,
+            });
+            // Reload the chat to show the rewound state
+            window.location.replace(url.href);
+          } catch (error) {
+            console.error('Failed to rewind chat:', error);
+            toast.error('Failed to rewind chat');
+          }
         }
-      }
-    };
+      },
+      [convex, sessionId],
+    );
     const { recordRawPromptsForDebugging } = useFlags();
 
     const title = useStore(description);
