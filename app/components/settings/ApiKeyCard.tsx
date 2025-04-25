@@ -252,8 +252,6 @@ function ApiKeyInput(props: {
             props.onChange(e.target.value);
           }}
           placeholder={`Enter your ${props.label}`}
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-expect-error Unclear issue with typing of design system
           action={(): void => {
             setShowKey(!showKey);
           }}
