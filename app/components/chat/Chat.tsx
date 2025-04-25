@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react';
 import type { Message } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useAnimate } from 'framer-motion';
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMessageParser, type PartCache } from '~/lib/hooks/useMessageParser';
 import { useSnapScroll } from '~/lib/hooks/useSnapScroll';
 import { description } from '~/lib/stores/description';
@@ -373,7 +373,7 @@ export const Chat = memo(
 
     const { messageRef, scrollRef, enableAutoScroll } = useSnapScroll();
 
-    const sendMessage = useCallback(
+    const unstableSendMessage = useCallback(
       async (messageInput: string) => {
         const now = Date.now();
         const retries = retryState.get();
@@ -493,6 +493,15 @@ export const Chat = memo(
         status,
       ],
     );
+
+    const latestSendMessage = useRef(unstableSendMessage);
+    useLayoutEffect(() => {
+      latestSendMessage.current = unstableSendMessage;
+    }, [unstableSendMessage]);
+
+    const sendMessage = useCallback(async (messageInput: string) => {
+      await latestSendMessage.current(messageInput);
+    }, []);
 
     const clearAlert = useCallback(() => {
       workbenchStore.clearAlert();
