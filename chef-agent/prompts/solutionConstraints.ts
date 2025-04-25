@@ -184,6 +184,12 @@ function templateInfo() {
     <file path="index.html">
       This file is the entry point for Vite and includes the <head> and <body> tags.
     </file>
+
+    <file path="package.json">
+      This file contains the dependencies for the app. Do NOT modify this file under any circumstances. If you
+      edit this file, your changes will not be persisted because it is locked. You must use the npm install tool
+      instead to add dependencies.
+    </file>
   </template_info>
   `;
 }
