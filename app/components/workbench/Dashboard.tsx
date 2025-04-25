@@ -35,7 +35,7 @@ export const Dashboard = memo(function Dashboard() {
         throw new Error('iframe ref not found');
       }
 
-      iframeRef.current.contentWindow?.postMessage(
+      iframeRef.current?.contentWindow?.postMessage(
         {
           type: 'dashboard-credentials',
           adminKey: token,
