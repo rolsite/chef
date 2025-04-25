@@ -275,9 +275,7 @@ export const Workbench = memo(function Workbench({
 });
 
 // View component for rendering content with motion transitions
-interface ViewProps extends HTMLMotionProps<'div'> {
-  children: JSX.Element;
-}
+type ViewProps = React.PropsWithChildren<HTMLMotionProps<'div'>>;
 
 const View = memo(function View({ children, ...props }: ViewProps) {
   return (

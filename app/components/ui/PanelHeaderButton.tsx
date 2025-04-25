@@ -1,13 +1,5 @@
-import { memo } from 'react';
+import React, { memo } from 'react';
 import { classNames } from '~/utils/classNames';
-
-interface PanelHeaderButtonProps {
-  className?: string;
-  disabledClassName?: string;
-  disabled?: boolean;
-  children: string | JSX.Element | Array<JSX.Element | string>;
-  onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
-}
 
 export const PanelHeaderButton = memo(function PanelHeaderButton({
   className,
@@ -15,7 +7,12 @@ export const PanelHeaderButton = memo(function PanelHeaderButton({
   disabled = false,
   children,
   onClick,
-}: PanelHeaderButtonProps) {
+}: React.PropsWithChildren<{
+  className?: string;
+  disabledClassName?: string;
+  disabled?: boolean;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
+}>) {
   return (
     <button
       className={classNames(
