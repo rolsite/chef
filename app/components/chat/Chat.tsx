@@ -2,7 +2,7 @@ import { useStore } from '@nanostores/react';
 import type { Message } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useAnimate } from 'framer-motion';
-import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMessageParser, type PartCache } from '~/lib/hooks/useMessageParser';
 import { useSnapScroll } from '~/lib/hooks/useSnapScroll';
 import { description } from '~/lib/stores/description';
@@ -134,6 +134,8 @@ export const Chat = memo(
     const apiKey = useQuery(api.apiKeys.apiKeyForCurrentMember);
 
     const [modelSelection, setModelSelection] = useState<ModelSelection>('auto');
+    const hasApiKeySet = useHasApiKeySet(modelSelection);
+
     const terminalInitializationOptions = useMemo(
       () => ({
         isReload,
@@ -169,28 +171,8 @@ export const Chat = memo(
     >(null);
     const [sendMessageInProgress, setSendMessageInProgress] = useState(false);
 
-    function hasApiKeySet() {
-      const useAnthropic = modelSelection === 'claude-3.5-sonnet' || modelSelection === 'auto';
-      const useOpenai = modelSelection === 'gpt-4.1';
-      const useXai = modelSelection === 'grok-3-mini';
-      const useGoogle = modelSelection === 'gemini-2.5-pro';
-      if (useAnthropic && apiKey && apiKey.value) {
-        return true;
-      }
-      if (useOpenai && apiKey && apiKey.openai) {
-        return true;
-      }
-      if (useXai && apiKey && apiKey.xai) {
-        return true;
-      }
-      if (useGoogle && apiKey && apiKey.google) {
-        return true;
-      }
-      return false;
-    }
-
     async function checkTokenUsage() {
-      if (hasApiKeySet()) {
+      if (!hasApiKeySet) {
         return;
       }
 
@@ -362,15 +344,15 @@ export const Chat = memo(
       });
     }, [initialMessages, messages, parseMessages, status, storeMessageHistory]);
 
-    const abort = () => {
+    const abort = useCallback(() => {
       stop();
       chatStore.setKey('aborted', true);
       workbenchStore.abortAllActions();
-    };
+    }, [stop]);
 
     const toolStatus = useCurrentToolStatus();
 
-    const runAnimation = async () => {
+    const runAnimation = useCallback(async () => {
       if (chatStarted) {
         return;
       }
@@ -384,64 +366,102 @@ export const Chat = memo(
       chatStore.setKey('started', true);
 
       setChatStarted(true);
-    };
+    }, [animate, chatStarted]);
 
-    const sendMessage = async (messageInput: string) => {
-      const now = Date.now();
-      const retries = retryState.get();
-      if ((retries.numFailures >= MAX_RETRIES || now < retries.nextRetry) && !hasApiKeySet()) {
-        let message: string | ReactNode = 'Chef is too busy cooking right now. ';
-        if (retries.numFailures >= MAX_RETRIES) {
-          message = (
-            <>
-              {message}
-              Please{' '}
-              <a href="https://chef.convex.dev/settings" className="text-content-link hover:underline">
-                enter your own API key
-              </a>
-              .
-            </>
-          );
-        } else {
-          const remaining = formatDistanceStrict(now, retries.nextRetry);
-          message = (
-            <>
-              {message}
-              Please try again in {remaining} or{' '}
-              <a href="https://chef.convex.dev/settings" className="text-content-link hover:underline">
-                enter your own API key
-              </a>
-              .
-            </>
-          );
+    const { messageRef, scrollRef, enableAutoScroll } = useSnapScroll();
+
+    const sendMessage = useCallback(
+      async (messageInput: string) => {
+        const now = Date.now();
+        const retries = retryState.get();
+        if ((retries.numFailures >= MAX_RETRIES || now < retries.nextRetry) && !hasApiKeySet) {
+          let message: string | ReactNode = 'Chef is too busy cooking right now. ';
+          if (retries.numFailures >= MAX_RETRIES) {
+            message = (
+              <>
+                {message}
+                Please{' '}
+                <a href="https://chef.convex.dev/settings" className="text-content-link hover:underline">
+                  enter your own API key
+                </a>
+                .
+              </>
+            );
+          } else {
+            const remaining = formatDistanceStrict(now, retries.nextRetry);
+            message = (
+              <>
+                {message}
+                Please try again in {remaining} or{' '}
+                <a href="https://chef.convex.dev/settings" className="text-content-link hover:underline">
+                  enter your own API key
+                </a>
+                .
+              </>
+            );
+          }
+          toast.error(message);
+          captureMessage('User tried to send message but chef is too busy');
+          return;
         }
-        toast.error(message);
-        captureMessage('User tried to send message but chef is too busy');
-        return;
-      }
 
-      if (status === 'streaming' || status === 'submitted') {
-        console.log('Aborting current message.');
-        abort();
-        return;
-      }
+        if (status === 'streaming' || status === 'submitted') {
+          console.log('Aborting current message.');
+          abort();
+          return;
+        }
 
-      if (sendMessageInProgress) {
-        console.log('sendMessage already in progress, returning.');
-        return;
-      }
-      try {
-        setSendMessageInProgress(true);
+        if (sendMessageInProgress) {
+          console.log('sendMessage already in progress, returning.');
+          return;
+        }
+        try {
+          setSendMessageInProgress(true);
 
-        enableAutoScroll();
+          enableAutoScroll();
 
-        await initializeChat();
-        runAnimation();
+          await initializeChat();
+          runAnimation();
 
-        if (!chatStarted) {
-          setMessages([
-            {
-              id: `${new Date().getTime()}`,
+          if (!chatStarted) {
+            setMessages([
+              {
+                id: `${new Date().getTime()}`,
+                role: 'user',
+                content: messageInput,
+                parts: [
+                  {
+                    type: 'text',
+                    text: messageInput,
+                  },
+                ],
+              },
+            ]);
+            reload();
+            return;
+          }
+
+          const modifiedFiles = workbenchStore.getModifiedFiles();
+          chatStore.setKey('aborted', false);
+
+          shouldDisableToolsStore.set(false);
+          skipSystemPromptStore.set(false);
+          if (modifiedFiles !== undefined) {
+            const userUpdateArtifact = filesToArtifacts(modifiedFiles, `${Date.now()}`);
+            append({
+              role: 'user',
+              content: messageInput,
+              parts: [
+                {
+                  type: 'text',
+                  text: `${userUpdateArtifact}${messageInput}`,
+                },
+              ],
+            });
+
+            workbenchStore.resetAllFileModifications();
+          } else {
+            append({
               role: 'user',
               content: messageInput,
               parts: [
@@ -450,49 +470,26 @@ export const Chat = memo(
                   text: messageInput,
                 },
               ],
-            },
-          ]);
-          reload();
-          return;
+            });
+          }
+        } finally {
+          setSendMessageInProgress(false);
         }
-
-        const modifiedFiles = workbenchStore.getModifiedFiles();
-        chatStore.setKey('aborted', false);
-
-        shouldDisableToolsStore.set(false);
-        skipSystemPromptStore.set(false);
-        if (modifiedFiles !== undefined) {
-          const userUpdateArtifact = filesToArtifacts(modifiedFiles, `${Date.now()}`);
-          append({
-            role: 'user',
-            content: messageInput,
-            parts: [
-              {
-                type: 'text',
-                text: `${userUpdateArtifact}${messageInput}`,
-              },
-            ],
-          });
-
-          workbenchStore.resetAllFileModifications();
-        } else {
-          append({
-            role: 'user',
-            content: messageInput,
-            parts: [
-              {
-                type: 'text',
-                text: messageInput,
-              },
-            ],
-          });
-        }
-      } finally {
-        setSendMessageInProgress(false);
-      }
-    };
-
-    const { messageRef, scrollRef, enableAutoScroll } = useSnapScroll();
+      },
+      [
+        abort,
+        append,
+        chatStarted,
+        enableAutoScroll,
+        hasApiKeySet,
+        initializeChat,
+        reload,
+        runAnimation,
+        sendMessageInProgress,
+        setMessages,
+        status,
+      ],
+    );
 
     return (
       <BaseChat
@@ -693,4 +690,26 @@ function hasAnyApiKeySet(apiKey?: Doc<'convexMembers'>['apiKey'] | null) {
     }
     return false;
   });
+}
+
+function useHasApiKeySet(modelSelection: ModelSelection) {
+  const apiKey = useQuery(api.apiKeys.apiKeyForCurrentMember);
+
+  const useAnthropic = modelSelection === 'claude-3.5-sonnet' || modelSelection === 'auto';
+  const useOpenai = modelSelection === 'gpt-4.1';
+  const useXai = modelSelection === 'grok-3-mini';
+  const useGoogle = modelSelection === 'gemini-2.5-pro';
+  if (useAnthropic && apiKey && apiKey.value) {
+    return true;
+  }
+  if (useOpenai && apiKey && apiKey.openai) {
+    return true;
+  }
+  if (useXai && apiKey && apiKey.xai) {
+    return true;
+  }
+  if (useGoogle && apiKey && apiKey.google) {
+    return true;
+  }
+  return false;
 }
