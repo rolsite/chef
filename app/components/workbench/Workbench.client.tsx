@@ -75,15 +75,15 @@ export const Workbench = memo(function Workbench({
 
   const [previewPanes, setPreviewPanes] = useState<string[]>(() => [randomId()]);
 
-  const setSelectedView = (view: WorkbenchViewType) => {
+  const setSelectedView = useCallback((view: WorkbenchViewType) => {
     workbenchStore.currentView.set(view);
-  };
+  }, []);
 
   useEffect(() => {
     if (hasPreview) {
       setSelectedView('preview');
     }
-  }, [hasPreview]);
+  }, [hasPreview, setSelectedView]);
 
   useEffect(() => {
     workbenchStore.setDocuments(files);
