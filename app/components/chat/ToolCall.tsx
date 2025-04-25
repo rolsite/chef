@@ -171,7 +171,7 @@ const Terminal = memo(
       terminalOutput = invocation.result;
     }
     const terminalElementRef = useRef<HTMLDivElement>(null);
-    const terminalRef = useRef<XTerm>();
+    const terminalRef = useRef<XTerm>(undefined);
     useEffect(() => {
       const element = terminalElementRef.current!;
       const fitAddon = new FitAddon();
