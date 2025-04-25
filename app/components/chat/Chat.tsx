@@ -491,6 +491,10 @@ export const Chat = memo(
       ],
     );
 
+    const clearAlert = useCallback(() => {
+      workbenchStore.clearAlert();
+    }, []);
+
     return (
       <BaseChat
         ref={animationScope}
@@ -506,7 +510,7 @@ export const Chat = memo(
         toolStatus={toolStatus}
         messages={parsedMessages /* Note that parsedMessages are throttled. */}
         actionAlert={actionAlert}
-        clearAlert={() => workbenchStore.clearAlert()}
+        clearAlert={clearAlert}
         terminalInitializationOptions={terminalInitializationOptions}
         disableChatMessage={
           disableChatMessage?.type === 'ExceededQuota' ? (
