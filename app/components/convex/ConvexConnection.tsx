@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
 import { convexProjectStore } from '~/lib/stores/convexProject';
 import { useChatId } from '~/lib/stores/chatId';
@@ -10,7 +10,7 @@ import { Button } from '@ui/Button';
 import { Modal } from '@ui/Modal';
 import { Callout } from '@ui/Callout';
 
-export function ConvexConnection() {
+export const ConvexConnection = memo(function ConvexConnection() {
   const [isOpen, setIsOpen] = useState(false);
   const open = useCallback(() => setIsOpen(true), []);
 
@@ -57,7 +57,7 @@ export function ConvexConnection() {
       )}
     </div>
   );
-}
+});
 
 function ConnectedDialogContent({
   projectInfo,
