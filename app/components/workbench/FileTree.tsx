@@ -105,7 +105,7 @@ export const FileTree = memo(
       return list;
     }, [fileList, collapsedFolders]);
 
-    const toggleCollapseState = (fullPath: string) => {
+    const toggleCollapseState = useCallback((fullPath: string) => {
       setCollapsedFolders((prevSet) => {
         const newSet = new Set(prevSet);
 
@@ -117,7 +117,7 @@ export const FileTree = memo(
 
         return newSet;
       });
-    };
+    }, []);
 
     return (
       <div className={classNames('text-sm', className, 'overflow-y-auto')}>
