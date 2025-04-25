@@ -167,6 +167,16 @@ export const Workbench = memo(function Workbench({
   // TODO get rid of fileHistory since we don't use it
   const fileHistory = useMemo(() => ({}), []);
 
+  const handleToggleTerminal = useCallback(() => {
+    workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
+  }, []);
+  const handleAddPreview = useCallback(() => {
+    setPreviewPanes([...previewPanes, randomId()]);
+  }, [previewPanes]);
+  const handleCloseWorkbench = useCallback(() => {
+    workbenchStore.showWorkbench.set(false);
+  }, []);
+
   return (
     chatStarted && (
       <>
@@ -196,36 +206,19 @@ export const Workbench = memo(function Workbench({
                     <div className="flex overflow-y-auto">
                       <BackupStatusIndicator />
                       <div className="w-4" />
-                      <PanelHeaderButton
-                        className="mr-1 text-sm"
-                        onClick={() => {
-                          workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
-                        }}
-                      >
+                      <PanelHeaderButton className="mr-1 text-sm" onClick={handleToggleTerminal}>
                         <CommandLineIcon className="size-4" />
                         Toggle Terminal
                       </PanelHeaderButton>
                     </div>
                   )}
                   {selectedView === 'preview' && (
-                    <PanelHeaderButton
-                      className="mr-1 text-sm"
-                      onClick={() => {
-                        setPreviewPanes([...previewPanes, randomId()]);
-                      }}
-                    >
+                    <PanelHeaderButton className="mr-1 text-sm" onClick={handleAddPreview}>
                       <PlusIcon />
                       Add Preview
                     </PanelHeaderButton>
                   )}
-                  <IconButton
-                    icon={<Cross2Icon />}
-                    className="-mr-1"
-                    size="xl"
-                    onClick={() => {
-                      workbenchStore.showWorkbench.set(false);
-                    }}
-                  />
+                  <IconButton icon={<Cross2Icon />} className="-mr-1" size="xl" onClick={handleCloseWorkbench} />
                 </div>
                 <div className="relative flex-1 overflow-hidden">
                   <View {...slidingPosition({ view: 'code', selectedView, showDashboard })}>
