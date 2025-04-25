@@ -330,7 +330,9 @@ export const Chat = memo(
           nextRetry: Date.now() + backoff,
         });
 
-        if (isFirstFailure) {
+        // Don't reload the chat if the last message is an assistant message because it will blow away those
+        // messages and re-write the whole response.
+        if (isFirstFailure && messages[messages.length - 1].role === 'user') {
           reload();
         }
         await checkTokenUsage();
