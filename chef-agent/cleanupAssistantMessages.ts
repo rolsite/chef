@@ -23,7 +23,7 @@ export function cleanupAssistantMessages(messages: Message[]) {
       message.content.trim() !== '' ||
       (message.parts && message.parts.filter((part) => part.type === 'text').length > 0),
   );
-  return convertToCoreMessages(processedMessages);
+  return convertToCoreMessages(processedMessages).filter((message) => message.content.length > 0);
 }
 
 function cleanMessage(message: string) {
