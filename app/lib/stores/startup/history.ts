@@ -189,7 +189,7 @@ async function chatSyncWorker(args: { chatId: string; sessionId: Id<'sessions'>;
         urlHintAndDescription.description,
       );
     }
-    if (messageBlob === undefined && snapshotBlob === undefined) {
+    if (messageBlob === undefined) {
       logger.info('Complete message info not initialized');
       continue;
     }
