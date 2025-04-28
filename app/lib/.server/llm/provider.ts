@@ -185,9 +185,6 @@ export function getProvider(userApiKey: string | undefined, modelProvider: Model
 }
 
 const userKeyApiFetch = (provider: ModelProvider) => {
-  // https://github.com/vercel/ai/issues/199#issuecomment-1605245593
-  const fetch = undiciFetch as unknown as Fetch;
-
   return async (input: RequestInfo | URL, init?: RequestInit) => {
     const result = await fetch(input, init);
     if (result.status === 401) {
