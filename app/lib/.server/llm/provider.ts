@@ -9,12 +9,11 @@ import { captureException } from '@sentry/remix';
 import { logger } from 'chef-agent/utils/logger';
 import { GENERAL_SYSTEM_PROMPT_PRELUDE, ROLE_SYSTEM_PROMPT } from 'chef-agent/prompts/system';
 import type { ProviderType } from '~/lib/common/annotations';
+import { getEnv } from '~/lib/.server/env';
 // workaround for Vercel environment from
 // https://github.com/vercel/ai/issues/199#issuecomment-1605245593
-import { fetch as undiciFetch } from 'undici';
-import { getEnv } from '~/lib/.server/env';
+import { fetch } from '~/lib/.server/fetch';
 
-type Fetch = typeof fetch;
 const ALLOWED_AWS_REGIONS = ['us-east-1', 'us-east-2', 'us-west-2'];
 
 export type ModelProvider = Exclude<ProviderType, 'Unknown'>;
@@ -50,9 +49,6 @@ export function modelForProvider(provider: ModelProvider) {
 export function getProvider(userApiKey: string | undefined, modelProvider: ModelProvider): Provider {
   let model: string;
   let provider: Provider;
-
-  // https://github.com/vercel/ai/issues/199#issuecomment-1605245593
-  const fetch = undiciFetch as unknown as Fetch;
 
   switch (modelProvider) {
     case 'Google': {
