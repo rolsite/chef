@@ -49,7 +49,7 @@ export function ApiKeyCard() {
         <div className="space-y-4">
           <AlwaysUseKeyCheckbox
             isLoading={apiKey === undefined}
-            disabled={!hasAnyKey}
+            disabled={!hasAnyKey && apiKey?.preference !== 'always'}
             value={apiKey?.preference === 'always'}
             onChange={handleAlwaysUseKeyChange}
           />
