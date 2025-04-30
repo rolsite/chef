@@ -86,7 +86,6 @@ const retryState = atom({
   nextRetry: Date.now(),
 });
 const shouldDisableToolsStore = atom(false);
-const skipSystemPromptStore = atom(false);
 export const Chat = memo(
   ({
     initialMessages,
@@ -253,7 +252,7 @@ export const Chat = memo(
       }
     }, [apiKey, checkApiKeyForCurrentModel, convex, modelSelection, setDisableChatMessage]);
 
-    const { enableSkipSystemPrompt, smallFiles, maxCollapsedMessagesSize } = useLaunchDarkly();
+    const { smallFiles, maxCollapsedMessagesSize } = useLaunchDarkly();
     const { messages, status, stop, append, setMessages, reload, error } = useChat({
       initialMessages,
       api: '/api/chat',
@@ -296,7 +295,6 @@ export const Chat = memo(
           // Fall back to the user's API key if the request has failed too many times
           userApiKey: retries.numFailures < MAX_RETRIES ? apiKey : { ...apiKey, preference: 'always' },
           shouldDisableTools: shouldDisableToolsStore.get(),
-          skipSystemPrompt: skipSystemPromptStore.get(),
           smallFiles,
           recordRawPromptsForDebugging,
           modelChoice: undefined,
@@ -305,15 +303,10 @@ export const Chat = memo(
       maxSteps: 64,
       async onToolCall({ toolCall }) {
         console.log('Starting tool call', toolCall);
-        const { result, shouldDisableTools, skipSystemPrompt } = await workbenchStore.waitOnToolCall(
-          toolCall.toolCallId,
-        );
+        const { result, shouldDisableTools } = await workbenchStore.waitOnToolCall(toolCall.toolCallId);
         console.log('Tool call finished', result);
         if (shouldDisableTools) {
           shouldDisableToolsStore.set(true);
-        }
-        if (skipSystemPrompt && enableSkipSystemPrompt) {
-          skipSystemPromptStore.set(true);
         }
         return result;
       },
@@ -496,7 +489,6 @@ export const Chat = memo(
         chatStore.setKey('aborted', false);
 
         shouldDisableToolsStore.set(false);
-        skipSystemPromptStore.set(false);
         if (modifiedFiles !== undefined) {
           const userUpdateArtifact = filesToArtifacts(modifiedFiles, `${Date.now()}`);
           append({

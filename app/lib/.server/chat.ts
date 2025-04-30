@@ -64,7 +64,6 @@ export async function chatAction({ request }: ActionFunctionArgs) {
       | { preference: 'always' | 'quotaExhausted'; value?: string; openai?: string; xai?: string; google?: string }
       | undefined;
     shouldDisableTools: boolean;
-    skipSystemPrompt: boolean;
     smallFiles: boolean;
     recordRawPromptsForDebugging?: boolean;
   };
@@ -161,7 +160,6 @@ export async function chatAction({ request }: ActionFunctionArgs) {
       modelChoice: userApiKey ? body.modelChoice : undefined,
       userApiKey,
       shouldDisableTools: body.shouldDisableTools,
-      skipSystemPrompt: body.skipSystemPrompt,
       smallFiles: body.smallFiles,
       recordUsageCb,
       recordRawPromptsForDebugging: !!recordRawPromptsForDebugging,

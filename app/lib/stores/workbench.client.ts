@@ -49,10 +49,8 @@ export class WorkbenchStore {
   #filesStore = new FilesStore(webcontainer);
   #editorStore = new EditorStore(this.#filesStore);
   #terminalStore = new TerminalStore(webcontainer);
-  #toolCalls: Map<
-    string,
-    PromiseWithResolvers<{ result: string; shouldDisableTools: boolean; skipSystemPrompt: boolean }> & { done: boolean }
-  > = new Map();
+  #toolCalls: Map<string, PromiseWithResolvers<{ result: string; shouldDisableTools: boolean }> & { done: boolean }> =
+    new Map();
 
   #reloadedParts = import.meta.hot?.data.reloadedParts ?? new Set<string>();
 
@@ -132,13 +130,11 @@ export class WorkbenchStore {
     return this.#filesStore.prewarmWorkdir(container);
   }
 
-  async waitOnToolCall(
-    toolCallId: string,
-  ): Promise<{ result: string; shouldDisableTools: boolean; skipSystemPrompt: boolean }> {
+  async waitOnToolCall(toolCallId: string): Promise<{ result: string; shouldDisableTools: boolean }> {
     let resolvers = this.#toolCalls.get(toolCallId);
     if (!resolvers) {
       resolvers = {
-        ...withResolvers<{ result: string; shouldDisableTools: boolean; skipSystemPrompt: boolean }>(),
+        ...withResolvers<{ result: string; shouldDisableTools: boolean }>(),
         done: false,
       };
       this.#toolCalls.set(toolCallId, resolvers);
@@ -391,7 +387,7 @@ export class WorkbenchStore {
           const toolCallResults = this._toolCallResults.get(messageId);
           if (!toolCallResults) {
             console.error('Tool call results not found');
-            toolCallPromise.resolve({ result, shouldDisableTools: false, skipSystemPrompt: false });
+            toolCallPromise.resolve({ result, shouldDisableTools: false });
             return;
           }
           toolCallResults.push({ partId, kind, toolName });
@@ -400,8 +396,6 @@ export class WorkbenchStore {
             toolCallPromise.resolve({
               result,
               shouldDisableTools: false,
-              // Skip sending the system prompt if the last tool call was a successful deploy. The model should not need any Convex information at that point.
-              skipSystemPrompt: toolName === 'deploy',
             });
             return;
           }
@@ -420,7 +414,6 @@ export class WorkbenchStore {
             toolCallPromise.resolve({
               result,
               shouldDisableTools: numConsecutiveDeployErrors >= MAX_CONSECUTIVE_DEPLOY_ERRORS,
-              skipSystemPrompt: false,
             });
           }
         },
@@ -514,7 +507,7 @@ export class WorkbenchStore {
         let toolCallPromise = this.#toolCalls.get(action.parsedContent.toolCallId);
         if (!toolCallPromise) {
           toolCallPromise = {
-            ...withResolvers<{ result: string; shouldDisableTools: boolean; skipSystemPrompt: boolean }>(),
+            ...withResolvers<{ result: string; shouldDisableTools: boolean }>(),
             done: false,
           };
           this.#toolCalls.set(action.parsedContent.toolCallId, toolCallPromise);

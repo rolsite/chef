@@ -5,8 +5,8 @@ import { EXCLUDED_FILE_PATHS } from './constants.js';
 export function cleanupAssistantMessages(messages: Message[]) {
   let processedMessages = messages.map((message) => {
     if (message.role == 'assistant') {
-      let content = cleanMessage(message.content);
-      let parts = message.parts?.map((part) => {
+      const content = cleanMessage(message.content);
+      const parts = message.parts?.map((part) => {
         if (part.type === 'text') {
           part.text = cleanMessage(part.text);
         }

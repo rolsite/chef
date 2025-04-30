@@ -5,7 +5,6 @@ const flagDefaults: {
   maintenanceMode: boolean;
   openAiLaunch202504: boolean;
   rewindButton: boolean;
-  enableSkipSystemPrompt: boolean;
   showUsageAnnotations: boolean;
   smallFiles: boolean;
   recordRawPromptsForDebugging: boolean;
@@ -14,7 +13,6 @@ const flagDefaults: {
   maintenanceMode: false,
   openAiLaunch202504: false,
   rewindButton: true,
-  enableSkipSystemPrompt: false,
   showUsageAnnotations: false,
   smallFiles: true,
   recordRawPromptsForDebugging: false,
