@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import type { Message } from 'ai';
+import type { Message, UIMessage } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useAnimate } from 'framer-motion';
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -165,6 +165,7 @@ export const Chat = memo(
         () => workbenchStore.currentDocument.get(),
         () => workbenchStore.files.get(),
         () => workbenchStore.userWrites,
+        initialMessages.filter((message) => message.parts !== undefined) as UIMessage[],
       ),
     );
     const [disableChatMessage, setDisableChatMessage] = useState<
@@ -252,7 +253,7 @@ export const Chat = memo(
       }
     }, [apiKey, checkApiKeyForCurrentModel, convex, modelSelection, setDisableChatMessage]);
 
-    const { enableSkipSystemPrompt, smallFiles } = useLaunchDarkly();
+    const { enableSkipSystemPrompt, smallFiles, maxCollapsedMessagesSize } = useLaunchDarkly();
     const { messages, status, stop, append, setMessages, reload, error } = useChat({
       initialMessages,
       api: '/api/chat',
@@ -270,10 +271,13 @@ export const Chat = memo(
         }
         let modelProvider: ProviderType;
         const retries = retryState.get();
+        // For non-anthropic models not yet using caching, use a lower message size limit.
+        let maxCollapsedMessagesSizeByProvider = 8192;
         if (modelSelection === 'auto' || modelSelection === 'claude-3.5-sonnet') {
           // Send all traffic to Anthropic first before failing over to Bedrock.
           const providers: ProviderType[] = ['Anthropic', 'Bedrock'];
           modelProvider = providers[retries.numFailures % providers.length];
+          maxCollapsedMessagesSizeByProvider = maxCollapsedMessagesSize;
         } else if (modelSelection === 'grok-3-mini') {
           modelProvider = 'XAI';
         } else if (modelSelection === 'gemini-2.5-pro') {
@@ -282,7 +286,7 @@ export const Chat = memo(
           modelProvider = 'OpenAI';
         }
         return {
-          messages: chatContextManager.current.prepareContext(messages),
+          messages: chatContextManager.current.prepareContext(messages, maxCollapsedMessagesSizeByProvider),
           firstUserMessage: messages.filter((message) => message.role == 'user').length == 1,
           chatInitialId,
           token,
