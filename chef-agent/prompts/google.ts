@@ -22,6 +22,9 @@ export function google(options: SystemPromptOptions) {
     - You can use the deploy tool as many times as you need to.
     - Do NOT write your code directly in the output. Stuff like \`\`\`tsx\`\`\` is not allowed.
     - Use \`<boltAction>...\<\/boltAction\>\`  and \`<boltArtifact>...\<\/boltArtifact\>\` tags to write your code.
+    - Your \`<boltAction>...\<\/boltAction\>\` tags should NEVER be empty. Make sure to ALWAYS rewrite the whole file.
+    - \`[{"executableCode":{"language":"PYTHON","code":"print(default_api.deploy())"}}]\` is not allowed. You must use the deploy tool defined in your tools instead.
+    - NEVER write empty files.
   </reminders>
   `;
 }
