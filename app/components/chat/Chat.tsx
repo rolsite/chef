@@ -1,5 +1,4 @@
-import { useStore } from '@nanostores/react';
-import type { Message, UIMessage } from 'ai';
+import type { Message } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useAnimate } from 'framer-motion';
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -171,8 +170,6 @@ export const Chat = memo(
         () => workbenchStore.currentDocument.get(),
         () => workbenchStore.files.get(),
         () => workbenchStore.userWrites,
-        initialMessages.filter((message) => message.parts !== undefined) as UIMessage[],
-        maxSizeForModel(modelSelection, maxRelevantFilesSize),
       ),
     );
     const [disableChatMessage, setDisableChatMessage] = useState<

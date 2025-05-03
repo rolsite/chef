@@ -25,7 +25,6 @@ export class ChatContextManager {
   assistantMessageCache: WeakMap<UIMessage, ParsedAssistantMessage> = new WeakMap();
   messageSizeCache: WeakMap<UIMessage, number> = new WeakMap();
   partSizeCache: WeakMap<UIMessagePart, number> = new WeakMap();
-  initialRelevantFiles: string[] = [];
   messageICutoff: number = -1;
   messageJCutoff: number = -1;
 
@@ -33,11 +32,7 @@ export class ChatContextManager {
     private getCurrentDocument: () => EditorDocument | undefined,
     private getFiles: () => FileMap,
     private getUserWrites: () => Map<AbsolutePath, number>,
-    initialMessages: UIMessage[],
-    maxRelevantFilesSize: number,
-  ) {
-    this.initialRelevantFiles = this.relevantFiles(initialMessages, maxRelevantFilesSize);
-  }
+  ) {}
 
   /**
    * Our request context has a few sections:
@@ -53,11 +48,10 @@ export class ChatContextManager {
     // If the last message is a user message this is the first LLM call that includes that user message.
     // Only update the relevant files and the message cutoff indices if the last message is a user message to avoid clearing the cache as the agent makes changes.
     if (messages[messages.length - 1].role === 'user') {
-      this.initialRelevantFiles = this.relevantFiles(messages, maxRelevantFilesSize);
       const [iCutoff, jCutoff] = this.messagePartCutoff(messages, maxCollapsedMessagesSize);
       this.messageICutoff = iCutoff;
       this.messageJCutoff = jCutoff;
-      messages[messages.length - 1].annotations = this.initialRelevantFiles;
+      messages[messages.length - 1].annotations = this.relevantFiles(messages, maxRelevantFilesSize);
     }
     const collapsedMessages = this.collapseMessages(messages);
     return [...collapsedMessages];
