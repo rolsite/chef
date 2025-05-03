@@ -13,7 +13,6 @@ import { path } from './utils/path.js';
 
 // It's wasteful to actually tokenize the content, so we'll just use character
 // counts as a heuristic.
-const MAX_RELEVANT_FILES_SIZE = 8192;
 const MAX_RELEVANT_FILES = 16;
 
 type UIMessagePart = UIMessage['parts'][number];
@@ -26,7 +25,7 @@ export class ChatContextManager {
   assistantMessageCache: WeakMap<UIMessage, ParsedAssistantMessage> = new WeakMap();
   messageSizeCache: WeakMap<UIMessage, number> = new WeakMap();
   partSizeCache: WeakMap<UIMessagePart, number> = new WeakMap();
-  initialRelevantFiles: UIMessage[] = [];
+  initialRelevantFiles: string[] = [];
   messageICutoff: number = -1;
   messageJCutoff: number = -1;
 
@@ -58,12 +57,13 @@ export class ChatContextManager {
       const [iCutoff, jCutoff] = this.messagePartCutoff(messages, maxCollapsedMessagesSize);
       this.messageICutoff = iCutoff;
       this.messageJCutoff = jCutoff;
+      messages[messages.length - 1].annotations = this.initialRelevantFiles;
     }
     const collapsedMessages = this.collapseMessages(messages);
-    return [...this.initialRelevantFiles, ...collapsedMessages];
+    return [...collapsedMessages];
   }
 
-  private relevantFiles(messages: UIMessage[], maxRelevantFilesSize: number): UIMessage[] {
+  private relevantFiles(messages: UIMessage[], maxRelevantFilesSize: number): string[] {
     const currentDocument = this.getCurrentDocument();
 
     // Seed the set with the PREWARM_PATHS.
@@ -113,16 +113,14 @@ export class ChatContextManager {
 
     const sortedByLastUsed = Array.from(lastUsed.entries()).sort((a, b) => b[1] - a[1]);
     let sizeEstimate = 0;
-    const relevantFiles: UIMessage[] = [];
+    const relevantFiles: string[] = [];
 
     if (sortedByLastUsed.length > 0) {
-      relevantFiles.push(
-        makeSystemMessage(`Here are all the paths in the project:\n${allPaths.map((p) => ` - ${p}`).join('\n')}`),
-      );
+      relevantFiles.push(`Here are all the paths in the project:\n${allPaths.map((p) => ` - ${p}`).join('\n')}`);
     }
     const debugInfo: string[] = [];
     if (sortedByLastUsed.length > 0) {
-      relevantFiles.push(makeSystemMessage('Here are some relevant files in the project (with line numbers).'));
+      relevantFiles.push('Here are some relevant files in the project (with line numbers).');
       for (const [path] of sortedByLastUsed) {
         if (sizeEstimate > maxRelevantFilesSize) {
           break;
@@ -136,7 +134,7 @@ export class ChatContextManager {
         }
         if (entry.type === 'file') {
           const content = renderFile(entry.content);
-          relevantFiles.push(makeSystemMessage(`"${path}":\n${content}`));
+          relevantFiles.push(`"${path}":\n${content}`);
           const size = estimateSize(entry);
           sizeEstimate += size;
           debugInfo.push(`  "${path}": ${size}`);
@@ -147,7 +145,7 @@ export class ChatContextManager {
     if (currentDocument) {
       let message = `The user currently has an editor open at ${currentDocument.filePath}. Here are its contents (with line numbers):\n`;
       message += renderFile(currentDocument.value);
-      relevantFiles.push(makeSystemMessage(message));
+      relevantFiles.push(message);
     }
 
     return relevantFiles;
