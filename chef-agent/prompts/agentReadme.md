@@ -1,10 +1,22 @@
+# Convex Components
+
+Convex Components package up code and data in a sandbox that allows you to confidently and quickly add new features to your backend.
+
+Convex Components are like mini self-contained Convex backends, and installing them is always safe. They can't read your app's tables or call your app's functions unless you pass them in explicitly.
+
+Each component is installed as its own independent library from NPM. You also need to add a `convex.config.ts` file that includes the component.
+
+ALWAYS prefer using a component for a feature than writing the code yourself.
+
 # Convex Agent Component
+
+For AI chat apps or AI agents, use the Convex agent component.
 
 [![npm version](https://badge.fury.io/js/@convex-dev%2fagent.svg)](https://badge.fury.io/js/@convex-dev%2fagent)
 
 <!-- START: Include on https://convex.dev/components -->
 
-AI Agent framework built on Convex.
+The Convex agent component is an AI Agent framework built on Convex.
 
 - Automatic storage of chat history, per-user or per-thread, that can span multiple agents.
 - RAG for chat context, via hybrid text & vector search, with configuration options.
@@ -19,78 +31,6 @@ AI Agent framework built on Convex.
 - Optionally filter tool calls out of the thread history.
 
 [Read the associated Stack post here](https://stack.convex.dev/ai-agents).
-
-Example usage:
-
-```ts
-// Define an agent similarly to the AI SDK
-const supportAgent = new Agent(components.agent, {
-  chat: openai.chat('gpt-4o-mini'),
-  textEmbedding: openai.embedding('text-embedding-3-small'),
-  instructions: 'You are a helpful assistant.',
-  tools: { accountLookup, fileTicket, sendEmail },
-});
-
-// Use the agent from within a normal action:
-export const createThread = action({
-  args: { prompt: v.string() },
-  handler: async (ctx, { prompt }) => {
-    // Start a new thread for the user.
-    const { threadId, thread } = await supportAgent.createThread(ctx);
-    // Creates a user message with the prompt, and an assistant reply message.
-    const result = await thread.generateText({ prompt });
-    return { threadId, text: result.text };
-  },
-});
-
-// Pick up where you left off, with the same or a different agent:
-export const continueThread = action({
-  args: { prompt: v.string(), threadId: v.string() },
-  handler: async (ctx, { prompt, threadId }) => {
-    // Continue a thread, picking up where you left off.
-    const { thread } = await anotherAgent.continueThread(ctx, { threadId });
-    // This includes previous message history from the thread automatically.
-    const result = await thread.generateText({ prompt });
-    return result.text;
-  },
-});
-
-// Or use it within a workflow, specific to a user:
-export const { generateText: getSupport } = supportAgent.asActions({ maxSteps: 10 });
-
-const workflow = new WorkflowManager(components.workflow);
-
-export const supportAgentWorkflow = workflow.define({
-  args: { prompt: v.string(), userId: v.string(), threadId: v.string() },
-  handler: async (step, { prompt, userId, threadId }) => {
-    const suggestion = await step.runAction(internal.example.getSupport, {
-      threadId,
-      userId,
-      prompt,
-    });
-    const polished = await step.runAction(internal.example.adaptSuggestionForUser, {
-      userId,
-      suggestion,
-    });
-    await step.runMutation(internal.example.sendUserMessage, {
-      userId,
-      message: polished.message,
-    });
-  },
-});
-```
-
-Also see the [Stack article](https://stack.convex.dev/ai-agents).
-
-Found a bug? Feature request? [File it here](https://github.com/get-convex/agent/issues).
-
-## Pre-requisite: Convex
-
-You'll need an existing Convex project to use the component.
-Convex is a hosted backend platform, including a database, serverless functions,
-and a ton more you can learn about [here](https://docs.convex.dev/get-started).
-
-Run `npm create convex` or follow any of the [quickstarts](https://docs.convex.dev/home) to set one up.
 
 ## Installation
 
@@ -191,6 +131,66 @@ const supportAgent = new Agent(components.agent, {
       usage, providerMetadata
     } = args;
     // ... log, save usage to your database, etc.
+  },
+});
+```
+
+Example usage:
+
+```ts
+// Define an agent similarly to the AI SDK
+const supportAgent = new Agent(components.agent, {
+  chat: openai.chat('gpt-4o-mini'),
+  textEmbedding: openai.embedding('text-embedding-3-small'),
+  instructions: 'You are a helpful assistant.',
+  tools: { accountLookup, fileTicket, sendEmail },
+});
+
+// Use the agent from within a normal action:
+export const createThread = action({
+  args: { prompt: v.string() },
+  handler: async (ctx, { prompt }) => {
+    // Start a new thread for the user.
+    const { threadId, thread } = await supportAgent.createThread(ctx);
+    // Creates a user message with the prompt, and an assistant reply message.
+    const result = await thread.generateText({ prompt });
+    return { threadId, text: result.text };
+  },
+});
+
+// Pick up where you left off, with the same or a different agent:
+export const continueThread = action({
+  args: { prompt: v.string(), threadId: v.string() },
+  handler: async (ctx, { prompt, threadId }) => {
+    // Continue a thread, picking up where you left off.
+    const { thread } = await anotherAgent.continueThread(ctx, { threadId });
+    // This includes previous message history from the thread automatically.
+    const result = await thread.generateText({ prompt });
+    return result.text;
+  },
+});
+
+// Or use it within a workflow, specific to a user:
+export const { generateText: getSupport } = supportAgent.asActions({ maxSteps: 10 });
+
+const workflow = new WorkflowManager(components.workflow);
+
+export const supportAgentWorkflow = workflow.define({
+  args: { prompt: v.string(), userId: v.string(), threadId: v.string() },
+  handler: async (step, { prompt, userId, threadId }) => {
+    const suggestion = await step.runAction(internal.example.getSupport, {
+      threadId,
+      userId,
+      prompt,
+    });
+    const polished = await step.runAction(internal.example.adaptSuggestionForUser, {
+      userId,
+      suggestion,
+    });
+    await step.runMutation(internal.example.sendUserMessage, {
+      userId,
+      message: polished.message,
+    });
   },
 });
 ```
