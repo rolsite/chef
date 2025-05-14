@@ -20,7 +20,7 @@ export function SignInForm({ onFlowChange }: SignInFormProps) {
 
   return (
     <form
-      className="space-y-4"
+      className="form-container"
       onSubmit={(e) => {
         e.preventDefault();
         setSubmitting(true);
@@ -41,7 +41,7 @@ export function SignInForm({ onFlowChange }: SignInFormProps) {
         });
       }}
     >
-      <div className="space-y-3">
+      <div className="form-input-group">
         <input
           className="input"
           type="email"
@@ -64,8 +64,8 @@ export function SignInForm({ onFlowChange }: SignInFormProps) {
         disabled={submitting}
       >
         {submitting ? (
-          <div className="flex items-center justify-center gap-2">
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-[spin_0.8s_linear_infinite]"></div>
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
             <span>Processing...</span>
           </div>
         ) : flow === "signIn" ? (
@@ -75,7 +75,7 @@ export function SignInForm({ onFlowChange }: SignInFormProps) {
         )}
       </button>
 
-      <div className="text-center caption">
+      <div className="form-switch-text">
         <span>
           {flow === "signIn"
             ? "Don't have an account? "
@@ -83,7 +83,7 @@ export function SignInForm({ onFlowChange }: SignInFormProps) {
         </span>
         <button
           type="button"
-          className="text-indigo-600 hover:text-indigo-700 font-medium focus:outline-none focus:underline"
+          className="form-switch-button"
           onClick={() =>
             handleFlowChange(flow === "signIn" ? "signUp" : "signIn")
           }
@@ -92,12 +92,12 @@ export function SignInForm({ onFlowChange }: SignInFormProps) {
         </button>
       </div>
 
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-200"></div>
+      <div className="divider">
+        <div className="divider-line">
+          <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
         </div>
-        <div className="relative flex justify-center text-sm">
-          <span className="px-2 bg-white caption">or</span>
+        <div className="divider-content">
+          <span className="divider-text">or</span>
         </div>
       </div>
 
