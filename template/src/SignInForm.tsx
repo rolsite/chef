@@ -1,5 +1,6 @@
 "use client";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { ConvexError } from "convex/values";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -25,11 +26,16 @@ export function SignInForm({ onFlowChange }: SignInFormProps) {
         setSubmitting(true);
         const formData = new FormData(e.target as HTMLFormElement);
         formData.set("flow", flow);
-        void signIn("password", formData).catch((_error) => {
-          const toastTitle =
-            flow === "signIn"
-              ? "Could not sign in, did you mean to sign up?"
-              : "Could not sign up, did you mean to sign in?";
+        void signIn("password", formData).catch((error) => {
+          let toastTitle = "";
+          if (error.message.includes("Invalid password")) {
+            toastTitle = "Invalid password. Please try again.";
+          } else {
+            toastTitle =
+              flow === "signIn"
+                ? "Could not sign in, did you mean to sign up?"
+                : "Could not sign up, did you mean to sign in?";
+          }
           toast.error(toastTitle);
           setSubmitting(false);
         });
