@@ -51,17 +51,7 @@ export function Content() {
           transition={{ delay: 0.3 }}
           className="card dark:bg-slate-800 dark:border-slate-700"
         >
-          <div className="text-center space-y-2 mb-6">
-            <h2 className="h2 dark:text-slate-200">
-              {flow === "signIn" ? "Welcome Back" : "Create Account"}
-            </h2>
-            <p className="caption dark:text-slate-400">
-              {flow === "signIn"
-                ? "Enter your credentials to continue"
-                : "Join us to get started"}
-            </p>
-          </div>
-          <SignInForm onFlowChange={setFlow} />
+          <SignInForm />
         </motion.div>
       </Unauthenticated>
     </motion.div>

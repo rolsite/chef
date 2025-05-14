@@ -1,13 +1,8 @@
 import { motion } from "framer-motion";
-import { ThemeToggle } from "./ThemeToggle";
 import { SignOutButton } from "@/SignOutButton";
 
-interface HeaderProps {
-  isDark: boolean;
-  onToggleTheme: () => void;
-}
 
-export function Header({ isDark, onToggleTheme }: HeaderProps) {
+export function Header() {
   return (
     <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-3 sm:p-4 flex justify-between items-center border-b border-slate-200/50 dark:border-slate-700/50 shadow-sm">
       <motion.h2
@@ -17,10 +12,6 @@ export function Header({ isDark, onToggleTheme }: HeaderProps) {
       >
         Chef
       </motion.h2>
-      <div className="flex items-center gap-4">
-        <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
-        <SignOutButton />
-      </div>
     </header>
   );
 }
