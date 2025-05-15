@@ -37,7 +37,7 @@ function Content() {
   return (
     <div className="flex flex-col gap-8">
       <div className="text-center space-y-4">
-        <h1 className="text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">
           Cook with Chef
         </h1>
         <Authenticated>
@@ -58,7 +58,7 @@ function Content() {
 
       <Unauthenticated>
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
-        <SignInForm />
+          <SignInForm />
         </div>
       </Unauthenticated>
     </div>
