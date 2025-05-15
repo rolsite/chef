@@ -2,6 +2,7 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useState } from "react";
 import { toast } from "sonner";
+import "./styles/buttons.css";
 
 export function SignInForm() {
   const { signIn } = useAuthActions();
@@ -41,7 +42,11 @@ export function SignInForm() {
           placeholder="Password"
           required
         />
-        <button className="auth-button" type="submit" disabled={submitting}>
+        <button
+          className="btn btn-primary btn-md w-full"
+          type="submit"
+          disabled={submitting}
+        >
           {flow === "signIn" ? "Sign in" : "Sign up"}
         </button>
         <div className="text-center text-sm text-slate-600">
@@ -52,7 +57,7 @@ export function SignInForm() {
           </span>
           <button
             type="button"
-            className="text-blue-500 cursor-pointer"
+            className="btn btn-link btn-sm"
             onClick={() => setFlow(flow === "signIn" ? "signUp" : "signIn")}
           >
             {flow === "signIn" ? "Sign up instead" : "Sign in instead"}
@@ -60,11 +65,14 @@ export function SignInForm() {
         </div>
       </form>
       <div className="flex items-center justify-center my-3">
-        <hr className="my-4 grow" />
-        <span className="mx-4 text-slate-400 ">or</span>
-        <hr className="my-4 grow" />
+        <hr className="my-4 grow border-slate-200" />
+        <span className="mx-4 text-slate-400">or</span>
+        <hr className="my-4 grow border-slate-200" />
       </div>
-      <button className="auth-button" onClick={() => void signIn("anonymous")}>
+      <button
+        className="btn btn-secondary btn-md w-full"
+        onClick={() => void signIn("anonymous")}
+      >
         Sign in anonymously
       </button>
     </div>
