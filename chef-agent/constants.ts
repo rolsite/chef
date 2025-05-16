@@ -46,6 +46,7 @@ export const PREWARM_PATHS = [
   `${WORK_DIR}/src/components/Header.tsx`,
   `${WORK_DIR}/src/components/Content.tsx`,
   `${WORK_DIR}/src/index.css`,
+  `${WORK_DIR}/src/styles/button.css`,
 ];
 
 // A list of files that we block the LLM from modifying
