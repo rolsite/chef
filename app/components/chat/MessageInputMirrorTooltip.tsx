@@ -48,9 +48,11 @@ const MessageInputMirrorTooltip: React.FC<MessageInputMirrorTooltipProps> = ({
           key={i}
           data-highlight={found.word}
           style={{
-            background: '#fef08a',
+            background: '#f8d077',
+            opacity: 0.5,
             color: 'transparent',
             whiteSpace: 'pre',
+            borderRadius: '2px',
           }}
         >
           {value.substring(i, i + found.word.length).replace(/ /g, '\u00A0')}
