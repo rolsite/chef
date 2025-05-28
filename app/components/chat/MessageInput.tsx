@@ -2,16 +2,7 @@ import Cookies from 'js-cookie';
 import { useStore } from '@nanostores/react';
 import { EnhancePromptButton } from './EnhancePromptButton.client';
 import { messageInputStore } from '~/lib/stores/messageInput';
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ChangeEventHandler,
-  type KeyboardEventHandler,
-} from 'react';
+import { memo, useCallback, useEffect, useRef, useState, type KeyboardEventHandler, useMemo } from 'react';
 import { useSearchParams } from '@remix-run/react';
 import { classNames } from '~/utils/classNames';
 import { ConvexConnection } from '~/components/convex/ConvexConnection';
@@ -36,6 +27,175 @@ import { PencilSquareIcon } from '@heroicons/react/24/outline';
 import { ChatBubbleLeftIcon, DocumentArrowUpIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 
 const PROMPT_LENGTH_WARNING_THRESHOLD = 2000;
+
+function escapeRegExp(string: string) {
+  if (!string) {
+    return string;
+  } else {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+}
+
+function MessageInputMirrorTooltip({
+  value,
+  highlights,
+  textareaRef,
+  setTooltip,
+  minHeight = 100,
+  maxHeight = 400,
+}: {
+  value: string;
+  highlights: { word: string; tooltip: string }[];
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  setTooltip: (t: { text: string; x: number; y: number } | null) => void;
+  minHeight?: number;
+  maxHeight?: number;
+}) {
+  const mirrorRef = useRef<HTMLDivElement>(null);
+
+  const regex = useMemo(
+    () => new RegExp(highlights.map((h) => `(${escapeRegExp(h.word)})`).join('|'), 'gi'),
+    [highlights],
+  );
+
+  const charHighlights = useMemo(() => {
+    const arr: (null | { word: string; tooltip: string })[] = [];
+    let match: RegExpExecArray | null;
+    let lastIndex = 0;
+    while ((match = regex.exec(value))) {
+      if (!match) {
+        break;
+      }
+      const start = match!.index;
+      const end = regex.lastIndex;
+      for (let i = lastIndex; i < start; i++) {
+        arr[i] = null;
+      }
+      for (let i = start; i < end; i++) {
+        arr[i] = highlights.find((h) => h.word.toLowerCase() === match![0].toLowerCase()) || null;
+      }
+      lastIndex = end;
+    }
+    for (let i = lastIndex; i < value.length; i++) {
+      arr[i] = null;
+    }
+    return arr;
+  }, [regex, value, highlights]);
+
+  // Mirror content: each char in a span, handle spaces and newlines for proportional fonts
+  const mirrorContent = [];
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i];
+    if (ch === '\n') {
+      mirrorContent.push(<br key={i} />);
+    } else {
+      mirrorContent.push(
+        <span
+          key={i}
+          data-idx={i}
+          style={{
+            background: charHighlights[i] ? '#fef08a' : undefined,
+            color: 'transparent',
+            whiteSpace: ch === ' ' ? 'pre' : undefined,
+          }}
+        >
+          {ch === ' ' ? '\u00A0' : ch}
+        </span>,
+      );
+    }
+  }
+
+  // Scroll sync: when textarea scrolls, mirror scrolls
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    const mirror = mirrorRef.current;
+    if (!textarea || !mirror) {
+      return undefined;
+    }
+    function onScroll() {
+      if (mirror && textarea) {
+        mirror.scrollTop = textarea.scrollTop;
+        mirror.scrollLeft = textarea.scrollLeft;
+      }
+    }
+    textarea.addEventListener('scroll', onScroll);
+    return () => {
+      textarea.removeEventListener('scroll', onScroll);
+    };
+  }, [textareaRef]);
+
+  // Mouse move handler
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    const mirror = mirrorRef.current;
+    if (!textarea || !mirror) {
+      return undefined;
+    }
+    function onMouseMove(e: MouseEvent) {
+      if (!mirror) {
+        return;
+      }
+      // Find the span under the mouse in the mirror
+      const spans = Array.from(mirror.querySelectorAll('span[data-idx]')) as HTMLSpanElement[];
+      for (const span of spans) {
+        const spanRect = span.getBoundingClientRect();
+        if (
+          e.clientX >= spanRect.left &&
+          e.clientX <= spanRect.right &&
+          e.clientY >= spanRect.top &&
+          e.clientY <= spanRect.bottom
+        ) {
+          const idx = Number(span.dataset.idx);
+          const highlight = charHighlights[idx];
+          if (highlight && mirror.parentElement) {
+            const parentRect = mirror.parentElement.getBoundingClientRect();
+            setTooltip({
+              text: highlight.tooltip,
+              x: spanRect.left - parentRect.left,
+              y: spanRect.bottom - parentRect.top + 10,
+            });
+            return;
+          }
+        }
+      }
+      setTooltip(null);
+    }
+    textarea.addEventListener('mousemove', onMouseMove);
+    textarea.addEventListener('mouseleave', () => setTooltip(null));
+    return () => {
+      textarea.removeEventListener('mousemove', onMouseMove);
+      textarea.removeEventListener('mouseleave', () => setTooltip(null));
+    };
+  }, [value, highlights, textareaRef, setTooltip, charHighlights]);
+
+  // Mirror style: match textarea (proportional font)
+  const mirrorStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    minHeight,
+    maxHeight,
+    fontFamily: 'inherit', // match textarea
+    fontSize: '1rem',
+    lineHeight: '1.5',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    color: 'transparent',
+    pointerEvents: 'none',
+    zIndex: 3,
+    padding: '8px 12px',
+    overflow: 'hidden',
+  };
+
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <div ref={mirrorRef} style={mirrorStyle} aria-hidden>
+        {mirrorContent}
+      </div>
+    </div>
+  );
+}
 
 export const MessageInput = memo(function MessageInput({
   chatStarted,
@@ -86,13 +246,6 @@ export const MessageInput = memo(function MessageInput({
       textarea.style.overflowY = scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
     }
   }, [input, textareaRef, TEXTAREA_MAX_HEIGHT]);
-  const textareaStyle = useMemo(
-    () => ({
-      minHeight: TEXTAREA_MIN_HEIGHT,
-      maxHeight: TEXTAREA_MAX_HEIGHT,
-    }),
-    [TEXTAREA_MAX_HEIGHT],
-  );
 
   // Send messages
   const handleSend = useCallback(async () => {
@@ -141,12 +294,6 @@ export const MessageInput = memo(function MessageInput({
     },
     [selectedTeamSlug, handleSend, isStreaming, onStop],
   );
-
-  const handleChange: ChangeEventHandler<HTMLTextAreaElement> = useCallback((event) => {
-    const value = event.target.value;
-    messageInputStore.set(value);
-    cachePrompt(value);
-  }, []);
 
   const enhancePrompt = useCallback(async () => {
     try {
@@ -207,6 +354,8 @@ export const MessageInput = memo(function MessageInput({
     [input],
   );
 
+  const [tooltip, setTooltip] = useState<null | { text: string; x: number; y: number }>(null);
+
   return (
     <div className="relative z-20 mx-auto w-full max-w-chat rounded-xl shadow transition-all duration-200">
       <div className="rounded-xl bg-background-primary/75 backdrop-blur-md">
@@ -215,25 +364,71 @@ export const MessageInput = memo(function MessageInput({
             'pt-2 pr-1 rounded-t-xl transition-all',
             'border has-[textarea:focus]:border-border-selected',
           )}
+          style={{ position: 'relative' }}
         >
+          {/* Mirror overlay for highlights and tooltip */}
+          <MessageInputMirrorTooltip
+            value={input}
+            highlights={[
+              { word: 'feature', tooltip: 'This is a feature keyword' },
+              { word: 'collaborative', tooltip: 'This is a collaborative keyword' },
+            ]}
+            textareaRef={textareaRef}
+            setTooltip={setTooltip}
+            minHeight={TEXTAREA_MIN_HEIGHT}
+            maxHeight={TEXTAREA_MAX_HEIGHT}
+          />
+          {/* Textarea (monospace for demo) */}
           <textarea
             ref={textareaRef}
+            value={input}
+            onChange={(e) => {
+              messageInputStore.set(e.target.value);
+              cachePrompt(e.target.value);
+            }}
+            style={{
+              fontFamily: 'inherit',
+              fontSize: '1rem',
+              lineHeight: '1.5',
+              minHeight: TEXTAREA_MIN_HEIGHT,
+              maxHeight: TEXTAREA_MAX_HEIGHT,
+              padding: '8px 12px',
+              width: '100%',
+              resize: 'none',
+              background: 'transparent',
+              color: '#000',
+              zIndex: 4,
+              position: 'relative',
+            }}
             className={classNames(
-              'w-full px-3 pt-1 outline-none resize-none text-content-primary placeholder-content-tertiary bg-transparent text-sm',
-              'transition-all',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              'scrollbar-thin scrollbar-thumb-macosScrollbar-thumb scrollbar-track-transparent',
+              'w-full outline-none resize-none transition-all disabled:opacity-50 disabled:cursor-not-allowed scrollbar-thin scrollbar-thumb-macosScrollbar-thumb scrollbar-track-transparent',
             )}
             disabled={disabled}
             onKeyDown={handleKeyDown}
-            value={input}
-            onChange={handleChange}
-            style={textareaStyle}
             placeholder={chatStarted ? 'Request changes by sending another message…' : 'What app do you want to serve?'}
             translate="no"
-            // Disable Grammarly
             data-gramm="false"
           />
+          {/* Tooltip overlay */}
+          {tooltip && (
+            <div
+              style={{
+                position: 'absolute',
+                left: tooltip.x,
+                top: tooltip.y + 4,
+                background: '#222',
+                color: '#fff',
+                padding: '4px 8px',
+                borderRadius: 4,
+                fontSize: 12,
+                pointerEvents: 'none',
+                zIndex: 100,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {tooltip.text}
+            </div>
+          )}
         </div>
         <div
           className={classNames(
