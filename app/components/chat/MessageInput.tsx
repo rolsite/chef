@@ -2,7 +2,7 @@ import Cookies from 'js-cookie';
 import { useStore } from '@nanostores/react';
 import { EnhancePromptButton } from './EnhancePromptButton.client';
 import { messageInputStore } from '~/lib/stores/messageInput';
-import { memo, useCallback, useEffect, useRef, useState, type KeyboardEventHandler, useMemo } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, type KeyboardEventHandler } from 'react';
 import { useSearchParams } from '@remix-run/react';
 import { classNames } from '~/utils/classNames';
 import { ConvexConnection } from '~/components/convex/ConvexConnection';
@@ -28,14 +28,6 @@ import { ChatBubbleLeftIcon, DocumentArrowUpIcon, InformationCircleIcon } from '
 
 const PROMPT_LENGTH_WARNING_THRESHOLD = 2000;
 
-function escapeRegExp(string: string) {
-  if (!string) {
-    return string;
-  } else {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
-}
-
 function MessageInputMirrorTooltip({
   value,
   highlights,
@@ -53,55 +45,51 @@ function MessageInputMirrorTooltip({
 }) {
   const mirrorRef = useRef<HTMLDivElement>(null);
 
-  const regex = useMemo(
-    () => new RegExp(highlights.map((h) => `(${escapeRegExp(h.word)})`).join('|'), 'gi'),
-    [highlights],
-  );
-
-  const charHighlights = useMemo(() => {
-    const arr: (null | { word: string; tooltip: string })[] = [];
-    let match: RegExpExecArray | null;
-    let lastIndex = 0;
-    while ((match = regex.exec(value))) {
-      if (!match) {
+  // Render highlighted words as a single span
+  const mirrorContent = [];
+  let i = 0;
+  while (i < value.length) {
+    // Check if a highlight starts at this position
+    let found = null;
+    for (const h of highlights) {
+      if (value.substring(i, i + h.word.length).toLowerCase() === h.word.toLowerCase()) {
+        found = h;
         break;
       }
-      const start = match!.index;
-      const end = regex.lastIndex;
-      for (let i = lastIndex; i < start; i++) {
-        arr[i] = null;
-      }
-      for (let i = start; i < end; i++) {
-        arr[i] = highlights.find((h) => h.word.toLowerCase() === match![0].toLowerCase()) || null;
-      }
-      lastIndex = end;
     }
-    for (let i = lastIndex; i < value.length; i++) {
-      arr[i] = null;
-    }
-    return arr;
-  }, [regex, value, highlights]);
-
-  // Mirror content: each char in a span, handle spaces and newlines for proportional fonts
-  const mirrorContent = [];
-  for (let i = 0; i < value.length; i++) {
-    const ch = value[i];
-    if (ch === '\n') {
-      mirrorContent.push(<br key={i} />);
-    } else {
+    if (found) {
       mirrorContent.push(
         <span
           key={i}
-          data-idx={i}
+          data-highlight={found.word}
           style={{
-            background: charHighlights[i] ? '#fef08a' : undefined,
+            background: '#fef08a',
             color: 'transparent',
-            whiteSpace: ch === ' ' ? 'pre' : undefined,
+            whiteSpace: 'pre',
           }}
         >
-          {ch === ' ' ? '\u00A0' : ch}
+          {value.substring(i, i + found.word.length).replace(/ /g, '\u00A0')}
         </span>,
       );
+      i += found.word.length;
+    } else {
+      const ch = value[i];
+      if (ch === '\n') {
+        mirrorContent.push(<br key={i} />);
+      } else {
+        mirrorContent.push(
+          <span
+            key={i}
+            style={{
+              color: 'transparent',
+              whiteSpace: ch === ' ' ? 'pre' : undefined,
+            }}
+          >
+            {ch === ' ' ? '\u00A0' : ch}
+          </span>,
+        );
+      }
+      i++;
     }
   }
 
@@ -124,7 +112,7 @@ function MessageInputMirrorTooltip({
     };
   }, [textareaRef]);
 
-  // Mouse move handler
+  // Mouse move handler: show tooltip under the whole highlighted word
   useEffect(() => {
     const textarea = textareaRef.current;
     const mirror = mirrorRef.current;
@@ -135,8 +123,8 @@ function MessageInputMirrorTooltip({
       if (!mirror) {
         return;
       }
-      // Find the span under the mouse in the mirror
-      const spans = Array.from(mirror.querySelectorAll('span[data-idx]')) as HTMLSpanElement[];
+      // Find the highlighted span under the mouse
+      const spans = Array.from(mirror.querySelectorAll('span[data-highlight]')) as HTMLSpanElement[];
       for (const span of spans) {
         const spanRect = span.getBoundingClientRect();
         if (
@@ -145,8 +133,8 @@ function MessageInputMirrorTooltip({
           e.clientY >= spanRect.top &&
           e.clientY <= spanRect.bottom
         ) {
-          const idx = Number(span.dataset.idx);
-          const highlight = charHighlights[idx];
+          const word = span.getAttribute('data-highlight');
+          const highlight = highlights.find((h) => h.word.toLowerCase() === word?.toLowerCase());
           if (highlight && mirror.parentElement) {
             const parentRect = mirror.parentElement.getBoundingClientRect();
             setTooltip({
@@ -166,7 +154,7 @@ function MessageInputMirrorTooltip({
       textarea.removeEventListener('mousemove', onMouseMove);
       textarea.removeEventListener('mouseleave', () => setTooltip(null));
     };
-  }, [value, highlights, textareaRef, setTooltip, charHighlights]);
+  }, [value, highlights, textareaRef, setTooltip]);
 
   // Mirror style: match textarea (proportional font)
   const mirrorStyle: React.CSSProperties = {
