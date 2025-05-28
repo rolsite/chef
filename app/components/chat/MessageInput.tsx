@@ -358,8 +358,23 @@ export const MessageInput = memo(function MessageInput({
           <MessageInputMirrorTooltip
             value={input}
             highlights={[
-              { word: 'feature', tooltip: 'This is a feature keyword' },
-              { word: 'collaborative', tooltip: 'This is a collaborative keyword' },
+              {
+                word: 'ai chat',
+                tooltip:
+                  'Unless otherwise configured, Chef will prototype with gpt-4o-mini or gpt-4.1-nano (limits apply).',
+              },
+              {
+                word: 'collaborative text editor',
+                tooltip: 'Chef will use Collaborative Text Editor Convex component.',
+              },
+              {
+                word: 'file upload',
+                tooltip: "Chef will use Convex's built-in file upload capabilities.",
+              },
+              {
+                word: 'full text search',
+                tooltip: "Chef will use Convex's built-in full text search capabilities.",
+              },
             ]}
             textareaRef={textareaRef}
             setTooltip={setTooltip}
