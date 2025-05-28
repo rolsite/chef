@@ -225,7 +225,6 @@ export const MessageInput = memo(function MessageInput({
             minHeight={TEXTAREA_MIN_HEIGHT}
             maxHeight={TEXTAREA_MAX_HEIGHT}
           />
-          {/* Textarea (monospace for demo) */}
           <textarea
             ref={textareaRef}
             value={input}
