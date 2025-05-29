@@ -11,9 +11,10 @@ import { captureMessage } from '@sentry/remix';
 
 interface AssistantMessageProps {
   message: Message;
+  isSummary: boolean;
 }
 
-export const AssistantMessage = memo(function AssistantMessage({ message }: AssistantMessageProps) {
+export const AssistantMessage = memo(function AssistantMessage({ message, isSummary }: AssistantMessageProps) {
   const { showUsageAnnotations } = useLaunchDarkly();
   const parsedAnnotations = useMemo(() => parseAnnotations(message.annotations), [message.annotations]);
   if (!message.parts) {

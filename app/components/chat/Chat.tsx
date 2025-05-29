@@ -74,6 +74,7 @@ const processSampledMessages = createSampler(
 
 interface ChatProps {
   initialMessages: Message[];
+  initialSummarizationMessageIndices: number[];
   partCache: PartCache;
   storeMessageHistory: (
     messages: Message[],
@@ -94,6 +95,7 @@ const retryState = atom({
 export const Chat = memo(
   ({
     initialMessages,
+    initialSummarizationMessageIndices,
     partCache,
     storeMessageHistory,
     initializeChat,
@@ -105,6 +107,8 @@ export const Chat = memo(
     const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
     const actionAlert = useStore(workbenchStore.alert);
     const sessionId = useConvexSessionIdOrNullOrLoading();
+    const [summarizationMessageIndices, setSummarizationMessageIndices] = useState(initialSummarizationMessageIndices);
+    console.log('summarizationMessageIndices', initialSummarizationMessageIndices);
 
     const rewindToMessage = async (messageIndex: number) => {
       if (sessionId && typeof sessionId === 'string') {
@@ -324,6 +328,8 @@ export const Chat = memo(
           throw new Error(`Unknown model: ${_exhaustiveCheck}`);
         }
         let shouldDisableTools = false;
+
+        // If too many tool calls fail in a row, disable tools.
         if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
           const lastSystemMessage = messages[messages.length - 1];
           const toolCalls = lastSystemMessage.parts.filter(
@@ -342,10 +348,15 @@ export const Chat = memo(
             }
           }
         }
+
+        // "Collapsed" messages are messages not to send, either they've been
+        // automatically truncated for exceeding some limit or they've been
+        // manually summarized due to user action.
         const { messages: preparedMessages, collapsedMessages } = chatContextManager.current.prepareContext(
           messages,
           maxSizeForModel(modelSelection, maxCollapsedMessagesSize),
           minCollapsedMessagesSize,
+          summarizationMessageIndices,
         );
         return {
           messages: preparedMessages,
@@ -512,6 +523,10 @@ export const Chat = memo(
         await initializeChat();
         runAnimation();
 
+        // TODO in here, check for whether this is a "new topic" message.
+        // If so, do some summarization, add an annotation I guess? and then we'll use these
+        // annotations
+
         const shouldSendRelevantFiles = chatContextManager.current.shouldSendRelevantFiles(
           messages,
           maxSizeForModel(modelSelection, maxCollapsedMessagesSize),
@@ -626,6 +641,7 @@ export const Chat = memo(
           setModelSelection={handleModelSelectionChange}
           onRewindToMessage={rewindToMessage}
           earliestRewindableMessageRank={earliestRewindableMessageRank}
+          summarizationMessageIndices={summarizationMessageIndices}
         />
         <UsageDebugView />
       </>

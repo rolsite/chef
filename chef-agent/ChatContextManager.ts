@@ -1,4 +1,4 @@
-import { generateId, type ToolInvocation, type UIMessage } from 'ai';
+import { type ToolInvocation, type UIMessage } from 'ai';
 import { type AbsolutePath, getAbsolutePath } from './utils/workDir.js';
 import { type Dirent, type EditorDocument, type FileMap } from './types.js';
 import { PREWARM_PATHS, WORK_DIR } from './constants.js';
@@ -19,9 +19,10 @@ type ParsedAssistantMessage = {
   filesTouched: Map<AbsolutePath, number>;
 };
 
+// Currently a stateless message preparer.
+//
 export class ChatContextManager {
   assistantMessageCache: WeakMap<UIMessage, ParsedAssistantMessage> = new WeakMap();
-  messageSizeCache: WeakMap<UIMessage, number> = new WeakMap();
   partSizeCache: WeakMap<UIMessagePart, number> = new WeakMap();
   messageIndex: number = -1;
   partIndex: number = -1;
@@ -41,11 +42,14 @@ export class ChatContextManager {
    *    cache based on LRU, up to maxRelevantFilesSize.
    * 3. A potentially collapsed segment of the chat history followed
    *    by the full fidelity recent chat history, up to maxCollapsedMessagesSize.
+   *
+   * To maintain caching, context preparation must be deterministic.
    */
   prepareContext(
     messages: UIMessage[],
     maxCollapsedMessagesSize: number,
     minCollapsedMessagesSize: number,
+    summarizationMessageIndices: number[],
   ): { messages: UIMessage[]; collapsedMessages: boolean } {
     // If the last message is a user message this is the first LLM call that includes that user message.
     // Only update the relevant files and the message cutoff indices if the last message is a user message to avoid clearing the cache as the agent makes changes.
@@ -183,6 +187,7 @@ export class ChatContextManager {
     return result;
   }
 
+  // We only send files when we're starting a new "topic."
   shouldSendRelevantFiles(messages: UIMessage[], maxCollapsedMessagesSize: number): boolean {
     // Always send files on the first message
     if (messages.length === 0) {

@@ -114,6 +114,7 @@ export async function getChat(ctx: QueryCtx, id: string, sessionId: Id<"sessions
     description: chat.description,
     timestamp: chat.timestamp,
     snapshotId: chat.snapshotId,
+    summarizationMessageIndices: chat.summarizationMessageIndices || [],
   };
 }
 
@@ -130,6 +131,7 @@ export const get = query({
       description: v.optional(v.string()),
       timestamp: v.string(),
       snapshotId: v.optional(v.id("_storage")),
+      summarizationMessageIndices: v.array(v.number()),
     }),
   ),
   handler: async (ctx, args) => {

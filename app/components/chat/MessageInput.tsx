@@ -34,6 +34,7 @@ import { captureException } from '@sentry/remix';
 import { Menu as MenuComponent, MenuItem as MenuItemComponent } from '@ui/Menu';
 import { PencilSquareIcon } from '@heroicons/react/24/outline';
 import { ChatBubbleLeftIcon, DocumentArrowUpIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { NewTopicButton } from './NewTopicButton.client';
 
 const PROMPT_LENGTH_WARNING_THRESHOLD = 2000;
 
@@ -303,11 +304,16 @@ export const MessageInput = memo(function MessageInput({
               </MenuItemComponent>
             </MenuComponent>
             {chefAuthState.kind === 'fullyLoggedIn' && (
-              <EnhancePromptButton
-                isEnhancing={isEnhancing}
-                disabled={!selectedTeamSlug || disabled || input.length === 0}
-                onClick={enhancePrompt}
-              />
+              <>
+                <EnhancePromptButton
+                  isEnhancing={isEnhancing}
+                  disabled={!selectedTeamSlug || disabled || input.length === 0}
+                  onClick={enhancePrompt}
+                />
+                <NewTopicButton
+                  disabled={!selectedTeamSlug || disabled || input.length === 0 || sendMessageInProgress || isStreaming}
+                />
+              </>
             )}
             <Button
               disabled={

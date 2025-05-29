@@ -20,6 +20,7 @@ interface MessagesProps {
   messages?: Message[];
   onRewindToMessage?: (index: number) => void;
   earliestRewindableMessageRank?: number;
+  summarizationMessageIndices: number[];
 }
 
 export const Messages = forwardRef<HTMLDivElement, MessagesProps>(function Messages(
@@ -30,11 +31,14 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(function Messa
     className,
     onRewindToMessage,
     earliestRewindableMessageRank,
+    summarizationMessageIndices,
   }: MessagesProps,
   ref: ForwardedRef<HTMLDivElement> | undefined,
 ) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMessageIndex, setSelectedMessageIndex] = useState<number | null>(null);
+  const [expandedSummarizationIndices, setExpandedSummarizationIndices] = useState<number[]>([]);
+
   const handleRewindToMessage = useCallback(
     (index: number) => {
       onRewindToMessage?.(index);
@@ -90,9 +94,23 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(function Messa
             const { role, content, annotations } = message;
             const isUserMessage = role === 'user';
             const isHidden = annotations?.includes('hidden');
+            console.log({ summarizationMessageIndices });
+            // This message is the assistant response to the user prompt "please summarize the conversation."
+            const isSummary = summarizationMessageIndices.includes(index);
+
+            const indicesToCollapseAllMessagesBefore = summarizationMessageIndices.filter(
+              (x) => !expandedSummarizationIndices.includes(x),
+            );
+            const isCollapsed = summarizationMessageIndices
+              ? index < summarizationMessageIndices[summarizationMessageIndices.length - 1]
+              : false;
 
             if (isHidden) {
               return <Fragment key={index} />;
+            }
+
+            if (isCollapsed) {
+              return <div key={index}>summarized below...</div>;
             }
 
             return (
@@ -120,7 +138,22 @@ export const Messages = forwardRef<HTMLDivElement, MessagesProps>(function Messa
                     )}
                   </div>
                 )}
-                {isUserMessage ? <UserMessage content={content} /> : <AssistantMessage message={message} />}
+                {isUserMessage ? (
+                  <UserMessage content={content} />
+                ) : isSummary ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setExpandedSummarizationIndices([...expandedSummarizationIndices, index].sort());
+                      }}
+                    >
+                      View summarized messages
+                    </button>
+                    <AssistantMessage message={message} isSummary={true} />
+                  </>
+                ) : (
+                  <AssistantMessage message={message} isSummary={false} />
+                )}
                 {earliestRewindableMessageRank !== undefined &&
                   !isUserMessage &&
                   index >= earliestRewindableMessageRank &&

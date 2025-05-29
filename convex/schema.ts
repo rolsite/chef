@@ -73,8 +73,11 @@ export default defineSchema({
     urlId: v.optional(v.string()),
     description: v.optional(v.string()),
     timestamp: v.string(),
+    // The messages at these indices are summaries of all previous messages.
+    summarizationMessageIndices: v.optional(v.array(v.number())),
     metadata: v.optional(v.any()), // TODO migration to remove this column
     snapshotId: v.optional(v.id("_storage")),
+    // leftover from a migration? no longer used
     lastMessageRank: v.optional(v.number()),
     hasBeenDeployed: v.optional(v.boolean()),
     isDeleted: v.optional(v.boolean()),

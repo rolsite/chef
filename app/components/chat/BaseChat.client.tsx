@@ -58,6 +58,9 @@ interface BaseChatProps {
   // Rewind functionality
   onRewindToMessage?: (index: number) => void;
   earliestRewindableMessageRank?: number;
+
+  // messages which could possibly be collapsed
+  summarizationMessageIndices: number[];
 }
 
 export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
@@ -82,11 +85,11 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       setModelSelection,
       onRewindToMessage,
       earliestRewindableMessageRank,
+      summarizationMessageIndices,
     },
     ref,
   ) => {
     const { maintenanceMode } = useLaunchDarkly();
-
     const isStreaming = streamStatus === 'streaming' || streamStatus === 'submitted';
     const recommendedExperience = chooseExperience(navigator.userAgent, window.crossOriginIsolated);
     const [chatEnabled, setChatEnabled] = useState(recommendedExperience === 'the-real-thing');
@@ -154,6 +157,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                     isStreaming={isStreaming}
                     onRewindToMessage={onRewindToMessage}
                     earliestRewindableMessageRank={earliestRewindableMessageRank}
+                    summarizationMessageIndices={summarizationMessageIndices}
                   />
                 ) : null}
                 <div

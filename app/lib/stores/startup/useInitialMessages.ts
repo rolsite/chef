@@ -16,6 +16,7 @@ export interface InitialMessages {
   serialized: SerializedMessage[];
   deserialized: Message[];
   earliestRewindableMessageRank?: number;
+  summarizationMessageIndices: number[];
 }
 
 export function useInitialMessages(chatId: string):
@@ -24,6 +25,7 @@ export function useInitialMessages(chatId: string):
   | undefined {
   const convex = useConvex();
   const [initialMessages, setInitialMessages] = useState<InitialMessages | null | undefined>();
+  console.log('initialMessage:', initialMessages?.summarizationMessageIndices);
   useEffect(() => {
     const loadInitialMessages = async () => {
       const sessionId = await waitForConvexSessionId('loadInitialMessages');
@@ -94,6 +96,7 @@ export function useInitialMessages(chatId: string):
           serialized: transformedMessages,
           deserialized: deserializedMessages,
           earliestRewindableMessageRank: earliestRewindableMessageRank ?? undefined,
+          summarizationMessageIndices: chatInfo.summarizationMessageIndices,
         });
         description.set(chatInfo.description);
       } catch (error) {

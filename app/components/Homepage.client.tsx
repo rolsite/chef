@@ -33,6 +33,7 @@ const ChatWrapper = ({ initialId }: { initialId: string }) => {
   return (
     <Chat
       initialMessages={emptyList}
+      initialSummarizationMessageIndices={emptyIndices}
       partCache={partCache.current}
       storeMessageHistory={storeMessageHistory}
       initializeChat={initializeChat}
@@ -44,3 +45,4 @@ const ChatWrapper = ({ initialId }: { initialId: string }) => {
 };
 
 const emptyList: Message[] = [];
+const emptyIndices: number[] = [];
