@@ -57,7 +57,7 @@ export default app;
 You do NOT need to add component tables to your \`schema.ts\`. The component tables are only read and written to from the component functions.
 
 Component functions are only accessible by \`components.<component_name>.<component_function_path>\` imported from \`./_generated/api\` like
-\`import { components } from "./_generated/api";\` after code is initially pushed.
+\`import { components } from "./_generated/api";\`.
 
 ## Usage
 
