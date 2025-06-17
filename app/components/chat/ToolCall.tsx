@@ -44,6 +44,11 @@ export const ToolCall = memo(function ToolCall({ partId, toolCallId }: { partId:
   const artifacts = useStore(workbenchStore.artifacts);
   const artifact = artifacts[partId];
 
+  // Early return if artifact doesn't exist
+  if (!artifact) {
+    return null;
+  }
+
   const actions = useStore(artifact.runner.actions);
   const pair = Object.entries(actions).find(([actionId]) => actionId === toolCallId);
   const action = pair && pair[1];

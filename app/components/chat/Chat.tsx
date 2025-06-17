@@ -85,6 +85,8 @@ interface ChatProps {
   isReload: boolean;
   hadSuccessfulDeploy: boolean;
   earliestRewindableMessageRank?: number;
+
+  subchats?: { subchatIndex: number; description?: string }[];
 }
 
 const retryState = atom({
@@ -100,9 +102,10 @@ export const Chat = memo(
     isReload,
     hadSuccessfulDeploy,
     earliestRewindableMessageRank,
+    subchats,
   }: ChatProps) => {
     const convex = useConvex();
-    const [chatStarted, setChatStarted] = useState(initialMessages.length > 0);
+    const [chatStarted, setChatStarted] = useState(initialMessages.length > 0 || (!!subchats && subchats.length > 1));
     const actionAlert = useStore(workbenchStore.alert);
     const sessionId = useConvexSessionIdOrNullOrLoading();
 
@@ -156,9 +159,9 @@ export const Chat = memo(
     const terminalInitializationOptions = useMemo(
       () => ({
         isReload,
-        shouldDeployConvexFunctions: hadSuccessfulDeploy,
+        shouldDeployConvexFunctions: hadSuccessfulDeploy || (!!subchats && subchats.length > 1),
       }),
-      [isReload, hadSuccessfulDeploy],
+      [isReload, hadSuccessfulDeploy, subchats],
     );
 
     useEffect(() => {
@@ -422,8 +425,8 @@ export const Chat = memo(
     setChefDebugProperty('parsedMessages', parsedMessages);
 
     useEffect(() => {
-      chatStore.setKey('started', initialMessages.length > 0);
-    }, [initialMessages.length]);
+      chatStore.setKey('started', initialMessages.length > 0 || (!!subchats && subchats.length > 1));
+    }, [initialMessages.length, subchats]);
 
     useEffect(() => {
       processSampledMessages({
@@ -603,6 +606,7 @@ export const Chat = memo(
           streamStatus={status}
           currentError={error}
           toolStatus={toolStatus}
+          subchats={subchats}
           messages={parsedMessages /* Note that parsedMessages are throttled. */}
           actionAlert={actionAlert}
           clearAlert={() => workbenchStore.clearAlert()}

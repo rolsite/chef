@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useConvex } from 'convex/react';
-import { waitForConvexSessionId } from '~/lib/stores/sessionId';
+import { useConvex, useQuery } from 'convex/react';
+import { useConvexSessionIdOrNullOrLoading, waitForConvexSessionId } from '~/lib/stores/sessionId';
 import { api } from '@convex/_generated/api';
 import type { SerializedMessage } from '@convex/messages';
 import type { Message } from '@ai-sdk/react';
@@ -16,6 +16,7 @@ export interface InitialMessages {
   serialized: SerializedMessage[];
   deserialized: Message[];
   earliestRewindableMessageRank?: number;
+  subchats: { subchatIndex: number; description?: string }[];
 }
 
 export function useInitialMessages(chatId: string):
@@ -24,6 +25,16 @@ export function useInitialMessages(chatId: string):
   | undefined {
   const convex = useConvex();
   const [initialMessages, setInitialMessages] = useState<InitialMessages | null | undefined>();
+  const sessionIdOrNullOrLoading = useConvexSessionIdOrNullOrLoading();
+  const subchats = useQuery(
+    api.subchats.get,
+    sessionIdOrNullOrLoading
+      ? {
+          chatId,
+          sessionId: sessionIdOrNullOrLoading,
+        }
+      : 'skip',
+  );
   useEffect(() => {
     const loadInitialMessages = async () => {
       const sessionId = await waitForConvexSessionId('loadInitialMessages');
@@ -37,6 +48,14 @@ export function useInitialMessages(chatId: string):
           setInitialMessages(null);
           return;
         }
+        if (!subchats) {
+          setInitialMessages(undefined);
+          return;
+        }
+        // const subchats = await convex.query(api.messages.getSubchats, {
+        //   chatId,
+        //   sessionId,
+        // });
         const earliestRewindableMessageRank = await convex.query(api.messages.earliestRewindableMessageRank, {
           chatId,
           sessionId,
@@ -54,6 +73,15 @@ export function useInitialMessages(chatId: string):
             subchatIndex: chatInfo.subchatIndex,
           }),
         });
+        if (initialMessagesResponse.status === 204) {
+          setInitialMessages({
+            loadedChatId: chatInfo.urlId ?? chatInfo.initialId,
+            serialized: [],
+            deserialized: [],
+            subchats,
+          });
+          return;
+        }
         if (!initialMessagesResponse.ok) {
           throw new Error('Failed to fetch initial messages');
         }
@@ -96,6 +124,7 @@ export function useInitialMessages(chatId: string):
           serialized: transformedMessages,
           deserialized: deserializedMessages,
           earliestRewindableMessageRank: earliestRewindableMessageRank ?? undefined,
+          subchats,
         });
         description.set(chatInfo.description);
       } catch (error) {
@@ -104,7 +133,7 @@ export function useInitialMessages(chatId: string):
       }
     };
     void loadInitialMessages();
-  }, [convex, chatId]);
+  }, [convex, chatId, subchats]);
 
   return initialMessages;
 }

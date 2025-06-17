@@ -22,6 +22,7 @@ export async function prepareMessageHistory(args: {
   sessionId: string;
   completeMessageInfo: CompleteMessageInfo;
   persistedMessageInfo: { messageIndex: number; partIndex: number };
+  lastSubchatIndex: number;
 }): Promise<{
   url: URL;
   update: {
@@ -40,6 +41,7 @@ export async function prepareMessageHistory(args: {
   url.searchParams.set('sessionId', sessionId);
   url.searchParams.set('lastMessageRank', messageIndex.toString());
   url.searchParams.set('partIndex', partIndex.toString());
+  url.searchParams.set('lastSubchatIndex', args.lastSubchatIndex.toString());
   if (messageIndex === persistedMessageInfo.messageIndex && partIndex === persistedMessageInfo.partIndex) {
     // No changes
     return { url, update: null };

@@ -11,7 +11,7 @@ import { MessageInput } from './MessageInput';
 import { useChatId } from '~/lib/stores/chatId';
 import { getConvexSiteUrl } from '~/lib/convexSiteUrl';
 import { messageInputStore } from '~/lib/stores/messageInput';
-import { useConvexSessionIdOrNullOrLoading } from '~/lib/stores/sessionId';
+import { useConvexSessionIdOrNullOrLoading, waitForConvexSessionId } from '~/lib/stores/sessionId';
 import type { ActionAlert } from '~/types/actions';
 import { classNames } from '~/utils/classNames';
 import styles from './BaseChat.module.css';
@@ -23,6 +23,22 @@ import { useLaunchDarkly } from '~/lib/hooks/useLaunchDarkly';
 import { CompatibilityWarnings } from '~/components/CompatibilityWarnings.client';
 import { chooseExperience } from '~/utils/experienceChooser';
 import { AnimatePresence, motion } from 'framer-motion';
+import type { SerializedMessage } from '@convex/messages';
+import * as lz4 from 'lz4-wasm';
+import { toast } from 'sonner';
+
+// Chevron icon component for expand/collapse indicator
+const ChevronDownIcon = ({ className }: { className?: string }) => (
+  <svg className={className} width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M5 7.5L10 12.5L15 7.5"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
 interface BaseChatProps {
   // Refs
@@ -58,6 +74,41 @@ interface BaseChatProps {
   // Rewind functionality
   onRewindToMessage?: (index: number) => void;
   earliestRewindableMessageRank?: number;
+
+  // Subchats
+  subchats?: { subchatIndex: number; description?: string }[];
+}
+
+// Function to decompress messages (reused from useInitialMessages.ts)
+async function decompressMessages(compressed: Uint8Array): Promise<SerializedMessage[]> {
+  if (typeof window === 'undefined') {
+    throw new Error('decompressSnapshot can only be used in browser environments');
+  }
+
+  const decompressed = lz4.decompress(compressed);
+  const textDecoder = new TextDecoder();
+  const deserialized = JSON.parse(textDecoder.decode(decompressed));
+  if (!Array.isArray(deserialized)) {
+    throw new Error('Unexpected state -- decompressed data is not an array');
+  }
+  return deserialized;
+}
+
+// Function to deserialize messages for display (reused from useInitialMessages.ts)
+function deserializeMessageForConvex(message: SerializedMessage): Message {
+  const content =
+    message.content ??
+    message.parts
+      ?.filter((part): part is { type: 'text'; text: string } => part.type === 'text')
+      .map((part) => part.text)
+      .join('') ??
+    '';
+
+  return {
+    ...message,
+    createdAt: message.createdAt ? new Date(message.createdAt) : undefined,
+    content,
+  };
 }
 
 export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
@@ -82,20 +133,36 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
       setModelSelection,
       onRewindToMessage,
       earliestRewindableMessageRank,
+      subchats,
     },
     ref,
   ) => {
     const { maintenanceMode } = useLaunchDarkly();
+    console.log('subchats', subchats);
 
     const isStreaming = streamStatus === 'streaming' || streamStatus === 'submitted';
     const recommendedExperience = chooseExperience(navigator.userAgent, window.crossOriginIsolated);
     const [chatEnabled, setChatEnabled] = useState(recommendedExperience === 'the-real-thing');
+    const [expandedSubchat, setExpandedSubchat] = useState<number | null>(null);
+    const [subchatMessages, setSubchatMessages] = useState<Record<number, Message[]>>({});
+    const [loadingSubchats, setLoadingSubchats] = useState<Set<number>>(new Set());
+
     useEffect(() => {
       const hasDismissedMobileWarning = localStorage.getItem('hasDismissedMobileWarning') === 'true';
       if (hasDismissedMobileWarning) {
         setChatEnabled(true);
       }
     }, []);
+
+    // Set the most recent subchat as expanded when subchats change
+    useEffect(() => {
+      if (subchats && subchats.length > 0) {
+        const lastSubchatIndex = subchats[subchats.length - 1].subchatIndex;
+        setExpandedSubchat(lastSubchatIndex);
+      } else {
+        setExpandedSubchat(null);
+      }
+    }, [subchats]);
 
     const chatId = useChatId();
     const sessionId = useConvexSessionIdOrNullOrLoading();
@@ -106,6 +173,84 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         convexSiteUrl: getConvexSiteUrl(),
       });
     }, [chatId, sessionId]);
+
+    // Function to fetch messages for a specific subchat
+    const fetchSubchatMessages = useCallback(
+      async (subchatIndex: number) => {
+        if (subchatMessages[subchatIndex] || loadingSubchats.has(subchatIndex)) {
+          return; // Already loaded or loading
+        }
+
+        setLoadingSubchats((prev) => new Set(prev).add(subchatIndex));
+
+        try {
+          const sessionId = await waitForConvexSessionId('fetchSubchatMessages');
+          const siteUrl = getConvexSiteUrl();
+
+          const response = await fetch(`${siteUrl}/initial_messages`, {
+            method: 'POST',
+            body: JSON.stringify({
+              chatId,
+              sessionId,
+              subchatIndex,
+            }),
+          });
+
+          if (response.status === 204) {
+            setSubchatMessages((prev) => ({ ...prev, [subchatIndex]: [] }));
+            return;
+          }
+
+          if (!response.ok) {
+            throw new Error('Failed to fetch subchat messages');
+          }
+
+          const content = await response.arrayBuffer();
+          const serializedMessages = await decompressMessages(new Uint8Array(content));
+
+          // Transform messages to convert partial-call states to failed states
+          const transformedMessages = serializedMessages.map((message) => {
+            if (!message.parts) {
+              return message;
+            }
+
+            const updatedParts = message.parts.map((part) => {
+              if (part.type === 'tool-invocation') {
+                if (part.toolInvocation.state === 'partial-call' || part.toolInvocation.state === 'call') {
+                  return {
+                    ...part,
+                    toolInvocation: {
+                      ...part.toolInvocation,
+                      state: 'result' as const,
+                      result: 'Error: Tool call was interrupted',
+                    },
+                  };
+                }
+              }
+              return part;
+            });
+
+            return {
+              ...message,
+              parts: updatedParts,
+            };
+          });
+
+          const deserializedMessages = transformedMessages.map(deserializeMessageForConvex);
+          setSubchatMessages((prev) => ({ ...prev, [subchatIndex]: deserializedMessages }));
+        } catch (error) {
+          toast.error('Failed to load subchat messages');
+          console.error('Error fetching subchat messages:', error);
+        } finally {
+          setLoadingSubchats((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(subchatIndex);
+            return newSet;
+          });
+        }
+      },
+      [chatId, subchatMessages, loadingSubchats],
+    );
 
     const lastUserMessage = messages.findLast((message) => message.role === 'user');
     const resendMessage = useCallback(async () => {
@@ -147,14 +292,130 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                 ref={scrollRef}
               >
                 {chatStarted ? (
-                  <Messages
-                    ref={messageRef}
-                    className="z-[1] mx-auto flex w-full max-w-chat flex-1 flex-col gap-4 pb-6"
-                    messages={messages}
-                    isStreaming={isStreaming}
-                    onRewindToMessage={onRewindToMessage}
-                    earliestRewindableMessageRank={earliestRewindableMessageRank}
-                  />
+                  <>
+                    {/* Subchats + Current Feature unified container */}
+                    {(subchats && subchats.length > 1) || messages.length > 0 ? (
+                      <div className="mx-auto w-full max-w-chat mb-6 flex-1 flex flex-col">
+                        <div className="flex flex-col divide-y divide-border-default rounded-lg border bg-bolt-elements-background-depth-1 shadow-sm flex-1">
+                          {/* Previous completed subchats (all except the current/latest one) */}
+                          {subchats &&
+                            subchats.length > 1 &&
+                            subchats.slice(0, -1).map((subchat, index) => {
+                              const isExpanded = expandedSubchat === subchat.subchatIndex;
+
+                              return (
+                                <div key={subchat.subchatIndex} className="overflow-hidden">
+                                  <button
+                                    onClick={() => {
+                                      const newExpandedSubchat = isExpanded ? null : subchat.subchatIndex;
+                                      setExpandedSubchat(newExpandedSubchat);
+                                      if (newExpandedSubchat !== null) {
+                                        fetchSubchatMessages(subchat.subchatIndex);
+                                      }
+                                    }}
+                                    className="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-bolt-elements-item-backgroundHover"
+                                  >
+                                    <span
+                                      className={classNames('font-medium text-content-primary', {
+                                        'font-semibold': isExpanded,
+                                      })}
+                                    >
+                                      {subchat.description ?? `Feature ${subchat.subchatIndex + 1}`}
+                                    </span>
+                                    <ChevronDownIcon
+                                      className={classNames(
+                                        'text-content-secondary transition-transform duration-200',
+                                        {
+                                          'rotate-180': isExpanded,
+                                        },
+                                      )}
+                                    />
+                                  </button>
+
+                                  <AnimatePresence initial={false}>
+                                    {isExpanded && (
+                                      <motion.div
+                                        initial={{ height: 0 }}
+                                        animate={{ height: 'auto' }}
+                                        exit={{ height: 0 }}
+                                        transition={{ duration: 0.2, ease: 'easeInOut' }}
+                                        className="overflow-hidden"
+                                      >
+                                        <div className="border-t bg-bolt-elements-background-depth-2 p-4">
+                                          <div className="min-h-[200px] rounded border bg-bolt-elements-background-depth-1 p-4">
+                                            {loadingSubchats.has(subchat.subchatIndex) ? (
+                                              <div className="flex items-center justify-center py-8">
+                                                <div className="text-sm text-content-secondary">
+                                                  Loading messages...
+                                                </div>
+                                              </div>
+                                            ) : subchatMessages[subchat.subchatIndex] ? (
+                                              <Messages
+                                                messages={subchatMessages[subchat.subchatIndex]}
+                                                isStreaming={false}
+                                                className="flex flex-col gap-4"
+                                              />
+                                            ) : (
+                                              <div className="flex items-center justify-center py-8">
+                                                <div className="text-sm text-content-secondary">
+                                                  No messages in{' '}
+                                                  {subchat.description ?? `Feature ${subchat.subchatIndex + 1}`}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              );
+                            })}
+
+                          {/* Current feature - always show when there are any messages */}
+                          {messages.length > 0 && (
+                            <div className="overflow-hidden flex-1 flex flex-col">
+                              <div className="flex w-full items-center justify-between p-4 bg-bolt-elements-item-backgroundActive">
+                                <span className="font-semibold text-content-primary">
+                                  {subchats && subchats.length > 0
+                                    ? (subchats[subchats.length - 1]?.description ??
+                                      `Feature ${(subchats[subchats.length - 1]?.subchatIndex ?? 0) + 1}`)
+                                    : 'Current Feature'}
+                                </span>
+                                <span className="text-xs px-2 py-1 rounded bg-bolt-elements-button-primary-background text-bolt-elements-button-primary-text">
+                                  Active
+                                </span>
+                              </div>
+                              <div className="border-t bg-bolt-elements-background-depth-2 p-4 flex-1 flex flex-col">
+                                <div className="rounded border bg-bolt-elements-background-depth-1 p-4 flex-1 flex flex-col">
+                                  <Messages
+                                    ref={messageRef}
+                                    className="flex flex-col gap-4 flex-1"
+                                    messages={messages}
+                                    isStreaming={isStreaming}
+                                    onRewindToMessage={onRewindToMessage}
+                                    earliestRewindableMessageRank={earliestRewindableMessageRank}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      /* Fallback: show messages normally if no subchats container needed */
+                      messages.length > 0 && (
+                        <Messages
+                          ref={messageRef}
+                          className="z-[1] mx-auto flex w-full max-w-chat flex-1 flex-col gap-4 pb-6"
+                          messages={messages}
+                          isStreaming={isStreaming}
+                          onRewindToMessage={onRewindToMessage}
+                          earliestRewindableMessageRank={earliestRewindableMessageRank}
+                        />
+                      )
+                    )}
+                  </>
                 ) : null}
                 <div
                   className={classNames('flex flex-col w-full max-w-chat mx-auto z-prompt relative', {

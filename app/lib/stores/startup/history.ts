@@ -15,6 +15,7 @@ import {
   waitForNewMessages,
 } from './messages';
 import { createScopedLogger } from 'chef-agent/utils/logger';
+import { api } from '@convex/_generated/api';
 
 const logger = createScopedLogger('history');
 
@@ -113,6 +114,14 @@ export function useBackupSyncState(chatId: string, initialMessages?: Message[]) 
 async function chatSyncWorker(args: { chatId: string; sessionId: Id<'sessions'>; convex: ConvexReactClient }) {
   const { chatId, sessionId, convex } = args;
   const currentState = chatSyncState.get();
+  const chatInfo = await convex.query(api.messages.get, {
+    id: chatId,
+    sessionId,
+  });
+  if (!chatInfo) {
+    logger.error('Chat info not found');
+    return;
+  }
   if (currentState.started) {
     return;
   }
@@ -167,6 +176,7 @@ async function chatSyncWorker(args: { chatId: string; sessionId: Id<'sessions'>;
       sessionId,
       completeMessageInfo,
       persistedMessageInfo: currentState.persistedMessageInfo,
+      lastSubchatIndex: chatInfo.subchatIndex,
     });
     const { url, update } = messageHistoryResult;
     if (update !== null) {

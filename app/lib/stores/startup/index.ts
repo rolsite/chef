@@ -33,5 +33,6 @@ export function useConvexChatExisting(chatId: string) {
     initializeChat,
     storeMessageHistory,
     earliestRewindableMessageRank: initialMessages?.earliestRewindableMessageRank,
+    subchats: initialMessages?.subchats,
   };
 }
