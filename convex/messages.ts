@@ -148,7 +148,7 @@ export async function getLatestChatMessageStorageState(
   if (lastMessageRank === undefined) {
     return await ctx.db
       .query("chatMessagesStorageState")
-      .withIndex("byChatId", (q) => q.eq("chatId", chat._id))
+      .withIndex("byChatId", (q) => q.eq("chatId", chat._id).eq("subchatIndex", chat.subchatIndex))
       .order("desc")
       .first();
   }
@@ -282,7 +282,9 @@ export const updateStorageState = internalMutation({
       return;
     }
 
-    if (previous.storageId !== null && storageId === null) {
+    // If a new feature has been created, we may also not have any messages yet, so we only care about
+    // this case if there have been no new features created yet.
+    if (previous.storageId !== null && storageId === null && chat.lastSubchatIndex === 0) {
       throw new Error("Received null storageId for a chat with messages");
     }
 
