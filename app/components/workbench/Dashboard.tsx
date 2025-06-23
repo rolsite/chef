@@ -17,7 +17,7 @@ export const Dashboard = memo(function Dashboard() {
   const { deploymentUrl, token, deploymentName } = convexProject;
 
   const actualUrl = 'https://dashboard-embedded.convex.dev/data';
-  const shownUrl = `https://dashboard.convex.dev/d/${deploymentName}/`;
+  const shownUrl = `https://dashboard.convex.dev/d/${deploymentName}/data`;
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
