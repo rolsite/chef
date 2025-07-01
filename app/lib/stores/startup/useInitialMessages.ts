@@ -28,6 +28,7 @@ export function useInitialMessages(chatId: string | undefined):
   const [initialMessages, setInitialMessages] = useState<InitialMessages | null | undefined>();
   const sessionIdOrNullOrLoading = useConvexSessionIdOrNullOrLoading();
   const subchatIndex = useStore(subchatIndexStore);
+  const subchatLoaded = useStore(subchatLoadedStore);
   const subchats = useQuery(
     api.subchats.get,
     sessionIdOrNullOrLoading && chatId
@@ -62,6 +63,8 @@ export function useInitialMessages(chatId: string | undefined):
         if (subchatIndex === undefined) {
           subchatLoadedStore.set(false);
           subchatIndexStore.set(chatInfo.subchatIndex);
+          // Clear existing messages to prevent showing old messages during subchat switch
+          setInitialMessages(undefined);
           // Exit early to let the effect run again with the new subchatIndex
           return;
         }
