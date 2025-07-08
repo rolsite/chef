@@ -44,7 +44,7 @@ import { components } from "./_generated/api";
 import { Resend } from "@convex-dev/resend";
 import { internalMutation } from "./_generated/server";
 
-export const resend: Resend = new Resend(components.resend, { testMode: false});
+export const resend: Resend = new Resend(components.resend, { testMode: false });
 
 export const sendEmail = internalMutation({
   handler: async (ctx) => {
@@ -60,7 +60,7 @@ export const sendEmail = internalMutation({
 \`\`\`
 
 Then, calling \`sendEmail\` from anywhere in your app will send this email. 
-You should use the onboarding@resend.dev email address to send emails unless the user requests otherwise.
+You should alwaysuse the onboarding@resend.dev email address as the from email unless the user requests otherwise.
 
 ## Advanced: Setting up a webhook
 Only do this if the user specifically asks for it. This will allow you to get email status updates.
@@ -104,7 +104,7 @@ batches!
 
 Speaking of...
 
-### Registering an email status event handler. Only do this if the user asks for it.
+### Registering an email status event handler.
 
 If you have your webhook established, you can also register an event handler in your
 apps you get notifications when email statuses change.
