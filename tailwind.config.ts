@@ -109,9 +109,6 @@ export default {
           },
         },
       },
-      maxWidth: {
-        chat: 'var(--chat-max-width)',
-      },
     },
   },
 };

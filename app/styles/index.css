@@ -34,4 +34,8 @@ html.dark {
   .bottom-four {
     @apply bottom-4;
   }
+
+  .max-w-chat {
+    max-width: 37rem;
+  }
 }
