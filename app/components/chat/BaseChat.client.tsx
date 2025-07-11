@@ -149,7 +149,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
         <div ref={scrollRef} className="flex size-full flex-col overflow-y-auto">
           <div className="flex w-full grow flex-col lg:flex-row">
             <div
-              className={classNames(styles.Chat, 'flex flex-col flex-grow lg:min-w-[var(--chat-min-width)] h-full', {
+              className={classNames(styles.Chat, 'flex flex-col grow lg:min-w-(--chat-min-width) h-full', {
                 'items-center px-4 sm:px-8 lg:px-12': !chatStarted,
                 'pt-4': chatStarted,
               })}
@@ -198,7 +198,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         >
                           <Messages
                             ref={messageRef}
-                            className="z-[1] mx-auto flex w-full max-w-chat flex-1 flex-col gap-4 pb-6"
+                            className="z-1 mx-auto flex w-full max-w-chat flex-1 flex-col gap-4 pb-6"
                             messages={messages}
                             isStreaming={isStreaming}
                             onRewindToMessage={onRewindToMessage}

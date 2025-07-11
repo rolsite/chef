@@ -78,7 +78,7 @@ export function SubchatBar({
     })) ?? [];
 
   return (
-    <div className="sticky top-0 z-[2] mx-auto mb-4 w-full max-w-chat pt-4">
+    <div className="sticky top-0 z-2 mx-auto mb-4 w-full max-w-chat pt-4">
       {isRewindModalOpen && (
         <Modal
           onClose={() => {

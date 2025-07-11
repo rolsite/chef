@@ -13,8 +13,8 @@ export default function HorizontalCarousel({ tweets, className = '' }: Horizonta
 
   return (
     <div className={classNames('relative overflow-hidden', className)}>
-      <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-8 bg-gradient-to-r to-transparent dark:from-[var(--bolt-elements-bg-depth-1)]" />
-      <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-8 bg-gradient-to-l to-transparent dark:from-[var(--bolt-elements-bg-depth-1)]" />
+      <div className="pointer-events-none absolute left-0 top-0 z-10 h-full w-8 bg-linear-to-r to-transparent dark:from-(--bolt-elements-bg-depth-1)" />
+      <div className="pointer-events-none absolute right-0 top-0 z-10 h-full w-8 bg-linear-to-l to-transparent dark:from-(--bolt-elements-bg-depth-1)" />
       <div ref={emblaRef} style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="flex cursor-grab">
           {tweets.map((tweet) => (

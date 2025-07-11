@@ -16,7 +16,7 @@ export function ProfileCard() {
   };
 
   return (
-    <LoadingTransition loadingProps={{ className: 'h-[12.375rem]' }}>
+    <LoadingTransition loadingProps={{ className: 'h-49.5' }}>
       {profile && (
         <div className="w-full rounded-lg border bg-bolt-elements-background-depth-1 shadow-sm">
           <div className="p-6">

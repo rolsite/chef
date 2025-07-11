@@ -46,8 +46,8 @@ export default function VerticalCarousel({ tweets, direction = 'forward', classN
         </div>
       </div>
       {/* Optional: Add a gradient overlay at top and bottom for effect */}
-      <div className="pointer-events-none absolute left-0 top-0 z-10 h-8 w-full bg-gradient-to-b from-white/80 to-transparent dark:from-[var(--bolt-elements-bg-depth-1)]" />
-      <div className="pointer-events-none absolute bottom-0 left-0 z-10 h-8 w-full bg-gradient-to-t from-white/80 to-transparent dark:from-[var(--bolt-elements-bg-depth-1)]" />
+      <div className="pointer-events-none absolute left-0 top-0 z-10 h-8 w-full bg-linear-to-b from-white/80 to-transparent dark:from-(--bolt-elements-bg-depth-1)" />
+      <div className="pointer-events-none absolute bottom-0 left-0 z-10 h-8 w-full bg-linear-to-t from-white/80 to-transparent dark:from-(--bolt-elements-bg-depth-1)" />
     </div>
   );
 }

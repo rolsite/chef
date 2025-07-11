@@ -152,12 +152,12 @@ export const Menu = memo(() => {
         style={{ width: '340px' }}
         className={classNames(
           'flex flex-col side-menu fixed top-0 h-full',
-          'bg-[var(--bolt-elements-sidebar-background)] border-r',
+          'bg-(--bolt-elements-sidebar-background) border-r',
           'shadow-sm text-sm',
           'z-30',
         )}
       >
-        <div className="flex h-[var(--header-height)] items-center justify-between border-b px-4"></div>
+        <div className="flex h-(--header-height) items-center justify-between border-b px-4"></div>
 
         <div className="flex size-full flex-1 flex-col overflow-hidden">
           <div className="space-y-3 p-4">
@@ -183,7 +183,7 @@ export const Menu = memo(() => {
             )}
             {binDates(filteredList).map(({ category, items }) => (
               <div key={category} className="mt-2 space-y-1 first:mt-0">
-                <div className="sticky top-0 z-10 bg-[var(--bolt-elements-sidebar-background)] px-3 py-1 text-xs font-medium text-gray-500 dark:text-gray-400">
+                <div className="sticky top-0 z-10 bg-(--bolt-elements-sidebar-background) px-3 py-1 text-xs font-medium text-gray-500 dark:text-gray-400">
                   {category}
                 </div>
                 <div className="space-y-0.5 pr-1">

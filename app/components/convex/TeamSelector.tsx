@@ -47,7 +47,7 @@ export const TeamSelector = memo(function TeamSelector({
       Option={({ label, inButton }) => (
         <div className="flex items-center gap-1">
           {inButton && <img className="size-4" height="16" width="16" src="/icons/Convex.svg" alt="Convex" />}
-          <div className={classNames('truncate', inButton ? 'max-w-[6.5rem]' : 'max-w-48')}>{label}</div>
+          <div className={classNames('truncate', inButton ? 'max-w-26' : 'max-w-48')}>{label}</div>
         </div>
       )}
     />

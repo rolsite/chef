@@ -33,7 +33,7 @@ interface StreamingIndicatorProps {
 }
 
 // Icon components
-const WarningIcon = () => <ExclamationTriangleIcon className="text-[var(--cvx-content-warning)]" />;
+const WarningIcon = () => <ExclamationTriangleIcon className="text-(--cvx-content-warning)" />;
 const LoadingIcon = () => <Spinner />;
 const CheckIcon = () => <CheckCircledIcon />;
 
