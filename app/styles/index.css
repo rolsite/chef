@@ -1,6 +1,6 @@
 @import "../../node_modules/@convex-dev/design-system/dist/styles/shared.css";
-@source "../../node_modules/@convex-dev/design-system/dist/";
 
+@import 'tailwindConfig.css';
 @import 'variables.css';
 @import 'z-index.css';
 @import 'animations.css';
@@ -9,10 +9,6 @@
 @import 'components/resize-handle.css';
 @import 'components/code.css';
 @import 'components/editor.css';
-
-@theme {
-/* TODO */
-}
 
 html,
 body {
