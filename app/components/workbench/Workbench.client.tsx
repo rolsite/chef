@@ -178,7 +178,7 @@ export const Workbench = memo(function Workbench({
         >
           <div
             className={classNames(
-              'fixed top-[calc(var(--header-height)+1rem)] bottom-four w-(--workbench-inner-width) z-0 transition-[left,width] duration-200 bolt-ease-cubic-bezier',
+              'fixed top-[calc(var(--header-height)+1rem)] bottom-four w-(--workbench-inner-width) z-0 transition-[left,width] duration-200 ease-bolt-cubic-bezier',
               {
                 'w-full': isSmallViewport,
                 'left-0': showWorkbench && isSmallViewport,

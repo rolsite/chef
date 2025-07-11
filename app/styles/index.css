@@ -1,4 +1,4 @@
-@import "../../node_modules/@convex-dev/design-system/dist/styles/shared.css";
+@import '../../node_modules/@convex-dev/design-system/dist/styles/shared.css';
 
 @import 'tailwindConfig.css';
 @import 'variables.css';
@@ -27,12 +27,6 @@ html.light {
 
 html.dark {
   color-scheme: dark;
-}
-
-@layer utilities {
-  .bolt-ease-cubic-bezier {
-    @apply ease-[cubic-bezier(0.4,0,0.2,1)];
-  }
 }
 
 @layer utilities {
