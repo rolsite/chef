@@ -11,7 +11,6 @@ export default tseslint.config(
       "eslint.config.js",
       "convex/_generated",
       "postcss.config.js",
-      "tailwind.config.js",
       "vite.config.ts",
     ],
   },
