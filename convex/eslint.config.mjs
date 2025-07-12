@@ -1,7 +1,6 @@
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import convexPlugin from "@convex-dev/eslint-plugin";
-import betterTailwindcss from "eslint-plugin-better-tailwindcss";
 
 export default [
   {
@@ -12,7 +11,6 @@ export default [
     files: ["**/*.ts"],
     plugins: {
       "@typescript-eslint": tsPlugin,
-      "better-tailwindcss": betterTailwindcss,
     },
     languageOptions: {
       parser: tsParser,
@@ -60,14 +58,6 @@ export default [
           ],
         },
       ],
-
-      ...betterTailwindcss.configs["recommended-warn"].rules,
-      ...betterTailwindcss.configs["recommended-error"].rules,
-    },
-    settings: {
-      "better-tailwindcss": {
-        entryPoint: "app/styles/index.css",
-      },
     },
   },
 ];

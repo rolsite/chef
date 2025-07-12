@@ -1,7 +1,7 @@
 import blitzPlugin from '@blitz/eslint-plugin';
 import { jsFileExtensions } from '@blitz/eslint-plugin/dist/configs/javascript.js';
 import { getNamingConventionRule, tsFileExtensions } from '@blitz/eslint-plugin/dist/configs/typescript.js';
-import tailwindcss from 'eslint-plugin-tailwindcss';
+import betterTailwindcss from 'eslint-plugin-better-tailwindcss';
 import reactPlugin from 'eslint-plugin-react';
 import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import noGlobalFetchRule from './eslint-rules/no-global-fetch.js';
@@ -76,7 +76,6 @@ export default [
           allowNamedFunctions: true,
         },
       ],
-      'tailwindcss/classnames-order': 'off',
       'no-restricted-syntax': [
         'error',
         {
@@ -88,6 +87,11 @@ export default [
     settings: {
       react: {
         version: 'detect',
+      },
+      settings: {
+        'better-tailwindcss': {
+          entryPoint: 'app/styles/index.css',
+        },
       },
     },
   },
@@ -127,19 +131,20 @@ export default [
       ],
     },
   },
-  ...tailwindcss.configs['flat/recommended'],
   {
     files: ['**/*.tsx'],
     plugins: {
-      tailwindcss,
+      'better-tailwindcss': betterTailwindcss,
     },
     rules: {
-      'tailwindcss/no-custom-classname': [
-        'error',
-        {
-          whitelist: ['sentry-mask'],
-        },
-      ],
+      ...betterTailwindcss.configs['recommended-warn'].rules,
+      ...betterTailwindcss.configs['recommended-error'].rules,
+      // 'tailwindcss/no-custom-classname': [
+      //   'error',
+      //   {
+      //     whitelist: ['sentry-mask'],
+      //   },
+      // ],
     },
   },
   {
