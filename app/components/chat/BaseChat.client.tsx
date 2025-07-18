@@ -282,7 +282,7 @@ export const BaseChat = React.forwardRef<HTMLDivElement, BaseChatProps>(
                         transition={{ duration: 0.15 }}
                       >
                         <Sheet
-                          className="-mt-2 flex w-full animate-fadeInFromLoading flex-col gap-3 rounded-xl rounded-t-none bg-util-accent/10 p-4 shadow backdrop-blur-lg"
+                          className="-mt-2 flex w-full animate-fadeInFromLoading flex-col gap-3 rounded-xl rounded-t-none bg-util-accent/10 p-4 shadow-sm backdrop-blur-lg"
                           padding={false}
                         >
                           {disableChatMessage}

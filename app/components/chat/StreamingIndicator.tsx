@@ -163,7 +163,7 @@ export default function StreamingIndicator(props: StreamingIndicatorProps) {
   return (
     <AnimatePresence>
       <motion.div
-        className="-mb-2 mt-2 w-full max-w-chat rounded-t-xl border bg-background-secondary pb-2 shadow"
+        className="-mb-2 mt-2 w-full max-w-chat rounded-t-xl border bg-background-secondary pb-2 shadow-sm"
         initial={{ translateY: '100%' }}
         animate={{ translateY: '0%' }}
         exit={{ translateY: '100%' }}

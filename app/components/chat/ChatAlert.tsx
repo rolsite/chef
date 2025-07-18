@@ -25,7 +25,7 @@ export default function ChatAlert({ alert, clearAlert, postMessage }: Props) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.3 }}
-        className={`rounded-lg border bg-background-secondary p-4 shadow`}
+        className={`rounded-lg border bg-background-secondary p-4 shadow-sm`}
       >
         <div className="flex items-start">
           {/* Icon */}

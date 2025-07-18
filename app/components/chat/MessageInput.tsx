@@ -238,7 +238,7 @@ export const MessageInput = memo(function MessageInput({
   );
 
   return (
-    <div className="relative z-20 mx-auto w-full max-w-chat rounded-xl shadow transition-all duration-200">
+    <div className="relative z-20 mx-auto w-full max-w-chat rounded-xl shadow-sm transition-all duration-200">
       <div className="rounded-xl bg-background-primary/75 backdrop-blur-md">
         <div className="rounded-t-xl border transition-all has-[textarea:focus]:border-border-selected">
           <TextareaWithHighlights
