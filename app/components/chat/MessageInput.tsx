@@ -354,7 +354,15 @@ export const MessageInput = memo(function MessageInput({
               size="xs"
               className="ml-2 h-6.5"
               aria-label={isStreaming ? 'Stop' : 'Send'}
-              icon={!isStreaming ? <ArrowRightIcon /> : <StopIcon />}
+              icon={
+                sendMessageInProgress ? (
+                  <Spinner className="text-white" />
+                ) : !isStreaming ? (
+                  <ArrowRightIcon />
+                ) : (
+                  <StopIcon />
+                )
+              }
             />
           </div>
         </div>
