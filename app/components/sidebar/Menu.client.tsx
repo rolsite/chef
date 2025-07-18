@@ -156,7 +156,7 @@ export const Menu = memo(({ isOpen, onClose }: MenuProps) => {
         className={classNames(
           'flex flex-col side-menu fixed top-0 h-full',
           'bg-(--bolt-elements-sidebar-background) border-r',
-          'shadow-sm text-sm',
+          'shadow-xs text-sm',
           'z-30',
         )}
       >

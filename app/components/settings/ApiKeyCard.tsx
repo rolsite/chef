@@ -62,7 +62,7 @@ export function ApiKeyCard() {
   };
 
   return (
-    <div className="rounded-lg border bg-bolt-elements-background-depth-1 shadow-sm">
+    <div className="rounded-lg border bg-bolt-elements-background-depth-1 shadow-xs">
       <div className="p-6">
         <h2 className="mb-2 text-xl font-semibold text-content-primary">API Keys</h2>
 

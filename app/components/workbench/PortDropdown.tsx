@@ -49,7 +49,7 @@ export const PortDropdown = memo(function PortDropdown({
     <div className="z-port-dropdown relative" ref={dropdownRef}>
       <IconButton icon={<Link2Icon />} onClick={() => setIsDropdownOpen(!isDropdownOpen)} />
       {isDropdownOpen && (
-        <div className="dropdown-animation absolute right-0 mt-2 min-w-[140px] rounded border bg-bolt-elements-background-depth-2 shadow-sm">
+        <div className="dropdown-animation absolute right-0 mt-2 min-w-[140px] rounded border bg-bolt-elements-background-depth-2 shadow-xs">
           <div className="border-b px-4 py-2 text-sm font-semibold text-content-primary">Ports</div>
           {sortedPreviews.map((preview) => (
             <div

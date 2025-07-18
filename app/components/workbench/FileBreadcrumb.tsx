@@ -125,7 +125,7 @@ export const FileBreadcrumb = memo<FileBreadcrumbProps>(function FileBreadcrumb(
                         variants={contextMenuVariants}
                       >
                         <div className="overflow-hidden rounded-lg">
-                          <div className="max-h-[50vh] min-w-[300px] overflow-scroll rounded-lg border bg-bolt-elements-background-depth-1 shadow-sm">
+                          <div className="max-h-[50vh] min-w-[300px] overflow-scroll rounded-lg border bg-bolt-elements-background-depth-1 shadow-xs">
                             <FileTree
                               files={files}
                               hideRoot

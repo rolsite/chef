@@ -78,7 +78,7 @@ function UsageBreakdownContent() {
         </div>
 
         <div className="space-y-6">
-          <div className="flex flex-col gap-2 rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
+          <div className="flex flex-col gap-2 rounded-lg bg-white p-6 shadow-xs dark:bg-gray-800">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Chat Initial ID
               <input
@@ -90,7 +90,7 @@ function UsageBreakdownContent() {
                     setShowDebug(true);
                   }
                 }}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 placeholder="Enter chat initial ID"
               />
             </label>
@@ -100,7 +100,7 @@ function UsageBreakdownContent() {
                 type="text"
                 value={convexSiteUrl}
                 onChange={(e) => setConvexSiteUrl(e.target.value)}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 placeholder="Enter convex site URL"
               />
             </label>
@@ -111,7 +111,7 @@ function UsageBreakdownContent() {
                 onChange={(e) => {
                   setFileContent(e.target.files?.[0] || null);
                 }}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
             </label>
             <button

@@ -18,7 +18,7 @@ export function ProfileCard() {
   return (
     <LoadingTransition loadingProps={{ className: 'h-49.5' }}>
       {profile && (
-        <div className="w-full rounded-lg border bg-bolt-elements-background-depth-1 shadow-sm">
+        <div className="w-full rounded-lg border bg-bolt-elements-background-depth-1 shadow-xs">
           <div className="p-6">
             <h2 className="mb-4 text-xl font-semibold text-content-primary">Profile</h2>
             <div className="flex items-center gap-4">

@@ -26,7 +26,7 @@ export function UsageCard() {
   });
 
   return (
-    <div className="rounded-lg border bg-bolt-elements-background-depth-1 shadow-sm">
+    <div className="rounded-lg border bg-bolt-elements-background-depth-1 shadow-xs">
       <div className="p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-content-primary">Chef Usage</h2>
