@@ -79,7 +79,7 @@ export default function ChatAlert({ alert, clearAlert, postMessage }: Props) {
                     `px-2 py-1.5 rounded-md text-sm font-medium`,
                     'bg-bolt-elements-button-primary-background',
                     'hover:bg-bolt-elements-button-primary-backgroundHover',
-                    'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bolt-elements-button-danger-background',
+                    'focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-bolt-elements-button-danger-background',
                     'text-bolt-elements-button-primary-text',
                     'flex items-center gap-1.5',
                   )}
@@ -93,7 +93,7 @@ export default function ChatAlert({ alert, clearAlert, postMessage }: Props) {
                     `px-2 py-1.5 rounded-md text-sm font-medium`,
                     'bg-bolt-elements-button-secondary-background',
                     'hover:bg-bolt-elements-button-secondary-backgroundHover',
-                    'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bolt-elements-button-secondary-background',
+                    'focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-bolt-elements-button-secondary-background',
                     'text-bolt-elements-button-secondary-text',
                   )}
                 >

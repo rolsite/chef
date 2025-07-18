@@ -423,7 +423,7 @@ const TextareaWithHighlights = memo(function TextareaWithHighlights({
       <textarea
         ref={textareaRef}
         className={classNames(
-          'w-full px-3 py-3 outline-none resize-none text-content-primary placeholder-content-tertiary bg-transparent text-sm leading-snug',
+          'w-full px-3 py-3 outline-hidden resize-none text-content-primary placeholder-content-tertiary bg-transparent text-sm leading-snug',
           'transition-opacity',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           'scrollbar-thin scrollbar-thumb-macosScrollbar-thumb scrollbar-track-transparent',

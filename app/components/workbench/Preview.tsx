@@ -258,7 +258,7 @@ export const Preview = memo(function Preview({ showClose, onClose }: { showClose
           <input
             title="URL"
             ref={inputRef}
-            className="w-full bg-transparent outline-none focus:outline-none"
+            className="w-full bg-transparent outline-hidden focus:outline-hidden"
             type="text"
             value={url || ''}
             onChange={(event) => {
