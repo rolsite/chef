@@ -158,7 +158,7 @@ export function SubchatBar({
         </Modal>
       )}
 
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-content-secondary/20 bg-background-secondary/90 px-4 py-2 backdrop-blur-sm">
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-content-secondary/20 bg-background-secondary/90 px-4 py-2 backdrop-blur-xs">
         <div className="flex min-w-0 grow items-center gap-2">
           <div className={classNames('flex rounded-lg bg-background-secondary border')}>
             <Button
