@@ -130,8 +130,8 @@ export function SubchatBar({
               This will create a new chat with fresh context. This can be useful for starting work on a new feature of
               your app, or fixing a bug unrelated to your recent changes. You can always navigate back to previous chats
               using{' '}
-              <ArrowLeftIcon className="inline size-5 rounded border border-content-secondary/20 bg-background-secondary p-0.5" />{' '}
-              <ArrowRightIcon className="inline size-5 rounded border border-content-secondary/20 bg-background-secondary p-0.5" />{' '}
+              <ArrowLeftIcon className="inline size-5 rounded-sm border border-content-secondary/20 bg-background-secondary p-0.5" />{' '}
+              <ArrowRightIcon className="inline size-5 rounded-sm border border-content-secondary/20 bg-background-secondary p-0.5" />{' '}
               to view your chat history, but you won&apos;t be able to send more messages in previous chats.
             </p>
             <p className="text-sm text-content-primary">Are you sure you want to continue?</p>

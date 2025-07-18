@@ -44,7 +44,7 @@ export function UsageCard() {
         <div className="space-y-4">
           <div className="w-80 max-w-80">
             {isLoadingUsage ? (
-              <div className="size-full h-4 overflow-hidden rounded bg-gray-200 dark:bg-gray-700">
+              <div className="size-full h-4 overflow-hidden rounded-sm bg-gray-200 dark:bg-gray-700">
                 <div className="animate-shimmer absolute inset-0 bg-linear-to-r from-transparent via-white/10 to-transparent" />
               </div>
             ) : (
@@ -59,9 +59,9 @@ export function UsageCard() {
           <p className="text-sm text-content-secondary">
             {isLoadingUsage ? (
               <span className="inline-flex gap-1">
-                <span className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                <span className="h-4 w-16 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-700" />
                 {' / '}
-                <span className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                <span className="h-4 w-16 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-700" />
                 {' included tokens used this billing period.'}
               </span>
             ) : (

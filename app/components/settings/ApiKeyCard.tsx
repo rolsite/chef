@@ -383,9 +383,9 @@ function AlwaysUseKeyCheckbox(props: {
   if (props.isLoading) {
     return (
       <div className="mt-4 flex items-center gap-2">
-        <div className="size-4 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="h-5 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="size-4 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        <div className="size-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-700" />
+        <div className="h-5 w-32 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-700" />
+        <div className="size-4 animate-pulse rounded-sm bg-gray-200 dark:bg-gray-700" />
       </div>
     );
   }

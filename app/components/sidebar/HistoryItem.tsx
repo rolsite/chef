@@ -29,7 +29,7 @@ export function HistoryItem({ item, handleDeleteClick }: HistoryItemProps) {
   return (
     <div
       className={classNames(
-        'group rounded text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-(--bolt-elements-sidebar-active-item-background) overflow-hidden flex justify-between items-center px-3 py-2 transition-colors',
+        'group rounded-sm text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-(--bolt-elements-sidebar-active-item-background) overflow-hidden flex justify-between items-center px-3 py-2 transition-colors',
         { 'text-gray-900 dark:text-white bg-(--bolt-elements-sidebar-active-item-background)': isActiveChat },
       )}
     >

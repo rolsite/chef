@@ -55,7 +55,7 @@ export default function ChatAlert({ alert, clearAlert, postMessage }: Props) {
             >
               <p>{message}</p>
               {description && (
-                <div className="my-4 rounded bg-bolt-elements-background-depth-3 p-2 text-xs text-content-secondary">
+                <div className="my-4 rounded-sm bg-bolt-elements-background-depth-3 p-2 text-xs text-content-secondary">
                   Error: {description}
                 </div>
               )}

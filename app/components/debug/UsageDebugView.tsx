@@ -47,7 +47,7 @@ export function UsageDebugView() {
               type="checkbox"
               checked={isOverriding}
               onChange={(e) => setIsOverriding(e.target.checked)}
-              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
             />
             <span className="text-sm font-medium">Enable Overrides</span>
           </label>
@@ -83,7 +83,7 @@ export function UsageDebugView() {
               type="checkbox"
               checked={overrideValues.isPaidPlan}
               onChange={(e) => handleOverrideChange('isPaidPlan', e.target.checked)}
-              className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
             />
             <span className="text-sm font-medium">Paid Plan</span>
           </label>

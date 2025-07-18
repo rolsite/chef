@@ -749,7 +749,9 @@ function GetConvexDeploymentNameTool({ invocation }: { invocation: ConvexToolInv
       <div className="space-y-2 p-4">
         <div className="flex items-center gap-2">
           <span>Convex Deployment Name:</span>
-          <code className="rounded bg-bolt-elements-background-depth-2 px-2 py-1 font-mono">{invocation.result}</code>
+          <code className="rounded-sm bg-bolt-elements-background-depth-2 px-2 py-1 font-mono">
+            {invocation.result}
+          </code>
         </div>
       </div>
     </div>

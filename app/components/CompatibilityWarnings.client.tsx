@@ -45,13 +45,13 @@ export function CompatibilityWarnings({ setEnabled }: { setEnabled: (enabled: bo
   if (experience === 'mobile-warning') {
     return (
       <>
-        <div className="my-2 text-balance rounded border border-neutral-1 bg-[#F7F3F1] p-4 text-center dark:border-neutral-10 dark:bg-neutral-11">
+        <div className="my-2 text-balance rounded-sm border border-neutral-1 bg-[#F7F3F1] p-4 text-center dark:border-neutral-10 dark:bg-neutral-11">
           {isDebug && (
             <div className="absolute left-4 top-4 z-50">
               <select
                 value={experience}
                 onChange={(e) => setSelectedExperience(e.target.value as Experience)}
-                className="rounded border bg-white px-2 py-1"
+                className="rounded-sm border bg-white px-2 py-1"
               >
                 <option value="marketing-page-only-for-mobile">marketing-page-only-for-mobile</option>
                 <option value="marketing-page-only-for-desktop">marketing-page-only-for-desktop</option>
@@ -101,14 +101,14 @@ export function CompatibilityWarnings({ setEnabled }: { setEnabled: (enabled: bo
   }
 
   return (
-    <div className="my-2 text-balance rounded border border-neutral-1 bg-[#F7F3F1] p-4 text-center dark:border-neutral-10 dark:bg-neutral-11">
+    <div className="my-2 text-balance rounded-sm border border-neutral-1 bg-[#F7F3F1] p-4 text-center dark:border-neutral-10 dark:bg-neutral-11">
       <div>
         {isDebug && (
           <div className="absolute left-4 top-4 z-50">
             <select
               value={experience}
               onChange={(e) => setSelectedExperience(e.target.value as Experience)}
-              className="rounded border bg-white px-2 py-1"
+              className="rounded-sm border bg-white px-2 py-1"
             >
               <option value="marketing-page-only-for-mobile">marketing-page-only-for-mobile</option>
               <option value="marketing-page-only-for-desktop">marketing-page-only-for-desktop</option>

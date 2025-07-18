@@ -232,7 +232,7 @@ export function ThumbnailChooser({ isOpen, onOpenChange, onRequestCapture }: Thu
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
-            className={`relative flex h-[600px] max-w-[800px] flex-1 flex-col items-center justify-center rounded ${
+            className={`relative flex h-[600px] max-w-[800px] flex-1 flex-col items-center justify-center rounded-sm ${
               isDraggingImage
                 ? 'border-2 border-dashed border-blue-500 bg-blue-500/5'
                 : `${isCapturing ? '' : captureError ? 'border-2 border-red-500/50' : ''}`

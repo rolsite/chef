@@ -194,7 +194,7 @@ function LlmPromptAndResponseView({ promptAndResponse }: { promptAndResponse: Ll
   const lastAssistantMessage = findLastAssistantMessage(completion);
 
   return (
-    <div className="rounded border p-4 dark:border-gray-700">
+    <div className="rounded-sm border p-4 dark:border-gray-700">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex w-full items-center gap-2 text-left"
@@ -231,7 +231,7 @@ function LlmPromptAndResponseView({ promptAndResponse }: { promptAndResponse: Ll
       </button>
       {isExpanded && prompt && (
         <div className="mt-4">
-          <div className="mt-4 space-y-0 rounded border border-gray-200 p-2 dark:border-gray-700">
+          <div className="mt-4 space-y-0 rounded-sm border border-gray-200 p-2 dark:border-gray-700">
             <div>
               {formatNumber(cachedPromptTokens)} cached prompt tokens +{' '}
               {formatNumber(promptTokensTotal - cachedPromptTokens)} uncached prompt tokens (
@@ -247,7 +247,7 @@ function LlmPromptAndResponseView({ promptAndResponse }: { promptAndResponse: Ll
               />
             ))}
           </div>
-          <div className="mt-4 space-y-0 rounded border border-gray-200 p-2 dark:border-gray-700">
+          <div className="mt-4 space-y-0 rounded-sm border border-gray-200 p-2 dark:border-gray-700">
             <div>
               {formatNumber(outputTokens)} completion tokens ({formatNumber(totalOutputChars)} chars)
             </div>
@@ -309,7 +309,7 @@ function MessageContentView({ content, showRawJson = false }: MessageContentView
         {content.map((part, idx) => {
           if (isTextPart(part)) {
             return (
-              <div key={idx} className="rounded bg-white/50 p-2 dark:bg-black/5">
+              <div key={idx} className="rounded-sm bg-white/50 p-2 dark:bg-black/5">
                 <div className="text-xs font-medium text-gray-500">text</div>
                 <div className="whitespace-pre-wrap text-sm">{part.text}</div>
               </div>
@@ -319,7 +319,7 @@ function MessageContentView({ content, showRawJson = false }: MessageContentView
           if (isFilePart(part)) {
             const fileData = typeof part.data === 'string' ? part.data : '[Binary Data]';
             return (
-              <div key={idx} className="rounded bg-purple-50 p-2 dark:bg-purple-900/10">
+              <div key={idx} className="rounded-sm bg-purple-50 p-2 dark:bg-purple-900/10">
                 <div className="text-xs font-medium text-purple-500">file: {part.filename || part.mimeType}</div>
                 <div className="whitespace-pre-wrap font-mono text-sm">{fileData}</div>
               </div>
@@ -328,7 +328,7 @@ function MessageContentView({ content, showRawJson = false }: MessageContentView
 
           if (isToolCallPart(part)) {
             return (
-              <div key={idx} className="rounded bg-yellow-50 p-2 dark:bg-yellow-900/10">
+              <div key={idx} className="rounded-sm bg-yellow-50 p-2 dark:bg-yellow-900/10">
                 <div className="text-xs font-medium text-yellow-600">tool call: {part.toolName}</div>
                 <div className="mt-1">
                   <JsonView data={part} />
@@ -338,7 +338,7 @@ function MessageContentView({ content, showRawJson = false }: MessageContentView
           }
 
           return (
-            <div key={idx} className="rounded bg-gray-50 p-2 dark:bg-gray-900/10">
+            <div key={idx} className="rounded-sm bg-gray-50 p-2 dark:bg-gray-900/10">
               <div className="text-xs font-medium text-gray-500">{part.type}</div>
               {typeof part === 'object' && part !== null && <JsonView data={part as object} />}
             </div>
@@ -354,7 +354,7 @@ function MessageContentView({ content, showRawJson = false }: MessageContentView
             {isJsonVisible ? 'Hide' : 'Show'} raw JSON
           </button>
           {isJsonVisible && (
-            <div className="rounded border border-gray-200 p-2 dark:border-gray-700">
+            <div className="rounded-sm border border-gray-200 p-2 dark:border-gray-700">
               <JsonView data={content} />
             </div>
           )}
@@ -386,7 +386,7 @@ function CoreMessageView({ message, getTokenEstimate, totalCompletionTokens }: C
         : 0;
 
   return (
-    <div className={`rounded border px-4 py-1 ${roleColor}`}>
+    <div className={`rounded-sm border px-4 py-1 ${roleColor}`}>
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex w-full items-center gap-2 text-left"
