@@ -1,3 +1,5 @@
+@reference '../../styles/tailwindConfig.css';
+
 .BaseChat {
   &[data-chat-visible='false'] {
     --workbench-inner-width: 100%;
