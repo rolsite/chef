@@ -28,7 +28,7 @@ async function fetchTeams(convex: ConvexReactClient) {
       },
     });
     if (!response.ok) {
-      const body = await response.text.text();
+      const body = await response.text();
       throw new Error(`Failed to fetch teams: ${response.statusText}: ${body}`);
     }
     teams = await response.json();

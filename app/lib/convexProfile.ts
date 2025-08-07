@@ -16,7 +16,7 @@ export async function getConvexProfile(convexAuthToken: string): Promise<ConvexP
     },
   });
   if (!response.ok) {
-    const body = await response.text.text();
+    const body = await response.text();
     throw new Error(`Failed to fetch profile: ${response.statusText}: ${body}`);
   }
   return response.json();

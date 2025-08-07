@@ -271,7 +271,7 @@ async function _connectConvexProjectForMember(
     }),
   });
   if (!response.ok) {
-    const text = await response.text.text();
+    const text = await response.text();
     const defaultProvisioningError = new ConvexError({
       code: "ProvisioningError",
       message: `Failed to create project: ${response.status}`,

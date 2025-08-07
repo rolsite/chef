@@ -248,7 +248,7 @@ async function chatSyncWorker(args: {
       error = e as Error;
     }
     if (error !== null || (response !== undefined && !response.ok)) {
-      const errorText = response !== undefined ? await response.text.text() : (error?.message ?? 'Unknown error');
+      const errorText = response !== undefined ? await response.text() : (error?.message ?? 'Unknown error');
       logger.error('Complete message info not initialized');
       const newFailureCount = currentState.numFailures + 1;
       chatSyncState.set({

@@ -186,7 +186,7 @@ export const updateCachedProfile = action({
       },
     });
     if (!response.ok) {
-      const body = await response.text.text();
+      const body = await response.text();
       throw new Error(`Failed to fetch profile: ${response.statusText}: ${body}`);
     }
 

@@ -490,13 +490,13 @@ function addUsage(usageA: Usage, update: Usage) {
 }
 
 type ChefBreakdown = {
-  completionTokens: {
+  outputTokens: {
     anthropic: number;
     openai: number;
     xai: number;
     google: number;
   };
-  promptTokens: {
+  inputTokens: {
     anthropic: {
       uncached: number;
       cached: number;
