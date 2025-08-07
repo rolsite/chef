@@ -94,14 +94,14 @@ function addUsage(totalUsage: Usage, payload: UsageAnnotation) {
 }
 
 export type ChefTokenBreakdown = {
-  completionTokens: {
+  outputTokens: {
     anthropic: number;
     openai: number;
     xai: number;
     google: number;
     bedrock: number;
   };
-  promptTokens: {
+  inputTokens: {
     anthropic: { uncached: number; cached: number };
     openai: { uncached: number; cached: number };
     xai: { uncached: number; cached: number };
