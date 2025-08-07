@@ -16,7 +16,7 @@ import { ensureEnvVar, startProvisionConvexProjectHelper } from "./convexProject
 import { internal } from "./_generated/api";
 import { assertIsConvexAdmin } from "./admin";
 
-export type SerializedMessage = Omit<undefined, "createdAt" | "content"> & {
+export type SerializedMessage = Omit<AIMessage, "createdAt" | "content"> & {
   createdAt: number | undefined;
   content?: string;
 };
