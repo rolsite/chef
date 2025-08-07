@@ -662,7 +662,7 @@ async function tryDeleteProject(args: {
     });
 
     if (!response.ok) {
-      const text = await response.text.text();
+      const text = await response.text();
       return { kind: "error", error: `Failed to delete project: ${response.statusText} ${text}` };
     }
   }
