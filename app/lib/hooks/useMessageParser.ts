@@ -1,4 +1,4 @@
-import type { UIMessage, UIMessage } from 'ai';
+import type { UIMessage } from 'ai';
 import { useCallback, useRef, useState } from 'react';
 import { StreamingMessageParser } from 'chef-agent/message-parser';
 import { workbenchStore } from '~/lib/stores/workbench.client';

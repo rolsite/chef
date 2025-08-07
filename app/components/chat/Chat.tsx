@@ -1,5 +1,5 @@
 import { useStore } from '@nanostores/react';
-import type { UIMessage, UIMessage } from 'ai';
+import type { UIMessage } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useAnimate } from 'framer-motion';
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
