@@ -7,7 +7,7 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from "./_generated/server";
-import type { Message as AIMessage } from "ai";
+import type { UIMessage as AIMessage } from "ai";
 import { ConvexError, v } from "convex/values";
 import type { Infer } from "convex/values";
 import { isValidSession } from "./sessions";
@@ -16,7 +16,7 @@ import { ensureEnvVar, startProvisionConvexProjectHelper } from "./convexProject
 import { internal } from "./_generated/api";
 import { assertIsConvexAdmin } from "./admin";
 
-export type SerializedMessage = Omit<AIMessage, "createdAt" | "content"> & {
+export type SerializedMessage = Omit<undefined, "createdAt" | "content"> & {
   createdAt: number | undefined;
   content?: string;
 };
@@ -662,7 +662,7 @@ async function tryDeleteProject(args: {
     });
 
     if (!response.ok) {
-      const text = await response.text();
+      const text = await response.text.text();
       return { kind: "error", error: `Failed to delete project: ${response.statusText} ${text}` };
     }
   }
