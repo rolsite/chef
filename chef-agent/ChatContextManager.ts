@@ -89,34 +89,18 @@ export class ChatContextManager {
   /**
    * Calculate character counts for different parts of the prompt
    */
-  calculatePromptCharacterCounts(messages: UIMessage[], systemPrompts?: string[]): PromptCharacterCounts {
+  calculatePromptCharacterCounts(messages: UIMessage[]): PromptCharacterCounts {
     // Calculate message history character count (excluding current turn)
     let messageHistoryChars = 0;
     const lastMessage = messages[messages.length - 1];
-    const isLastMessageUser = lastMessage?.role === 'user';
+    const currentTurnChars = this.messageSize(lastMessage);
 
     for (let i = 0; i < messages.length; i++) {
       const message = messages[i];
-      // Skip the current turn (last message if it's from user)
-      if (isLastMessageUser && i === messages.length - 1) {
-        continue;
-      }
       messageHistoryChars += this.messageSize(message);
     }
 
-    // Calculate current turn character count
-    let currentTurnChars = 0;
-    if (isLastMessageUser) {
-      currentTurnChars = this.messageSize(lastMessage);
-    }
-
-    // Calculate system prompts character count (if provided)
-    let systemPromptsChars = 0;
-    if (systemPrompts) {
-      systemPromptsChars = systemPrompts.reduce((sum, prompt) => sum + prompt.length, 0);
-    }
-
-    const totalPromptChars = messageHistoryChars + currentTurnChars + systemPromptsChars;
+    const totalPromptChars = messageHistoryChars;
 
     return {
       messageHistoryChars,
@@ -131,7 +115,7 @@ export class ChatContextManager {
       return cached;
     }
 
-    let size = message.content.length;
+    let size = 0;
     for (const part of message.parts) {
       size += this.partSize(part);
     }
@@ -243,7 +227,9 @@ export class ChatContextManager {
         const remainingMessage = {
           ...message,
           content: StreamingMessageParser.stripArtifacts(message.content),
-          parts: filteredParts,
+          parts: filteredParts.map((p) =>
+            p.type == 'text' ? { ...p, text: StreamingMessageParser.stripArtifacts(p.text) } : p,
+          ),
         };
         fullMessages.push(remainingMessage);
       } else {
