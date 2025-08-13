@@ -130,6 +130,11 @@ export async function convexAgent(args: {
         maxTokens: provider.maxTokens,
         providerOptions: provider.options,
         messages: messagesForDataStream,
+        // If we are using Anthropic with our own API key, we extend the context length to 1M tokens.
+        headers:
+          provider.model.provider === 'Anthropic' && userApiKey === undefined
+            ? { 'anthropic-beta': 'context-1m-2025-08-07' }
+            : undefined,
         tools,
         toolChoice: shouldDisableTools ? 'none' : 'auto',
         onFinish: (result) => {
