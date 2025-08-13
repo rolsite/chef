@@ -123,6 +123,8 @@ export async function convexAgent(args: {
     ...cleanupAssistantMessages(messages),
   ];
 
+  console.log('Prompt character counts', promptCharacterCounts);
+
   const dataStream = createDataStream({
     execute(dataStream) {
       const result = streamText({
@@ -259,7 +261,6 @@ async function onFinishHandler({
     usage,
     providerMetadata,
   });
-  console.log('Prompt character counts', promptCharacterCounts);
   if (tracer) {
     const span = tracer.startSpan('on-finish-handler');
     span.setAttribute('chatInitialId', chatInitialId);
