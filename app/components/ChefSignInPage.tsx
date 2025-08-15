@@ -42,6 +42,7 @@ function ConvexSignInForm() {
               setStarted(true);
               loginWithRedirect({
                 authorizationParams: {
+                  audience: 'https://console.convex.dev/api/',
                   connection: query.get('use-email') ? 'Username-Password-Authentication' : 'github',
                   redirect_uri: `${window.location.origin}/signin`,
                 },
@@ -60,6 +61,7 @@ function ConvexSignInForm() {
               setStarted(true);
               loginWithRedirect({
                 authorizationParams: {
+                  audience: 'https://console.convex.dev/api/',
                   connection: 'google-oauth2',
                   redirect_uri: `${window.location.origin}/signin`,
                 },

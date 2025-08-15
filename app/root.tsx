@@ -143,6 +143,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               domain={import.meta.env.VITE_AUTH0_DOMAIN}
               clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
               authorizationParams={{
+                audience: 'https://console.convex.dev/api/',
                 redirect_uri: window.location.origin,
               }}
               useRefreshTokens={true}
