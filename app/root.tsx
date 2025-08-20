@@ -138,23 +138,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <AuthKitProvider
-        clientId={import.meta.env.VITE_WORKOS_CLIENT_ID}
-        redirectUri={globalThis.process.env.WORKOS_REDIRECT_URI}
-        apiHostname={import.meta.env.VITE_WORKOS_API_HOSTNAME}
-      >
-        <ClientOnly>
-          {() => {
-            return (
-              <DndProvider backend={HTML5Backend}>
+      <ClientOnly>
+        {() => {
+          return (
+            <DndProvider backend={HTML5Backend}>
+              <AuthKitProvider
+                clientId={import.meta.env.VITE_WORKOS_CLIENT_ID}
+                redirectUri={globalThis.process.env.WORKOS_REDIRECT_URI}
+                apiHostname={import.meta.env.VITE_WORKOS_API_HOSTNAME}
+              >
                 <ConvexProviderWithAuthKit client={convex} useAuth={useAuth}>
                   {children}
                 </ConvexProviderWithAuthKit>
-              </DndProvider>
-            );
-          }}
-        </ClientOnly>
-      </AuthKitProvider>
+              </AuthKitProvider>
+            </DndProvider>
+          );
+        }}
+      </ClientOnly>
 
       <ScrollRestoration />
       <Scripts />
