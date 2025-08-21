@@ -73,6 +73,7 @@ export default defineSchema({
    */
   chats: defineTable({
     creatorId: v.id("sessions"),
+    ownerId: v.optional(v.id("convexMembers")),
     initialId: v.string(),
     urlId: v.optional(v.string()),
     description: v.optional(v.string()),

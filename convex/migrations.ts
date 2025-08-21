@@ -74,3 +74,20 @@ export const addConvexMemberIdToConvexMembers = migrations.define({
 export const runAddConvexMemberIdToConvexMembers = migrations.runner(
   internal.migrations.addConvexMemberIdToConvexMembers,
 );
+
+export const addOwnerIdToChats = migrations.define({
+  table: "chats",
+  migrateOne: async (ctx, doc) => {
+    const d = doc as Doc<"chats">;
+    if (d.ownerId === undefined) {
+      const owner = await ctx.db.get(d.creatorId);
+      if (!owner || !owner.memberId) {
+        return;
+      }
+
+      await ctx.db.patch(doc._id, { ownerId: owner.memberId });
+    }
+  },
+});
+
+export const runAddOwnerIdToChats = migrations.runner(internal.migrations.addOwnerIdToChats);
