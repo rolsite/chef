@@ -21,6 +21,8 @@ jobs:
           ENVIRONMENT: ci
           BRAINTRUST_API_KEY: ${{ secrets.BRAINTRUST_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
-          USE_OPENAI: false
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          USE_OPENAI: true
         run: cd test-kitchen && npx braintrust eval initialGeneration.eval.ts
