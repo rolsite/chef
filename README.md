@@ -17,6 +17,12 @@ This is a fork of [Chef](https://chef.convex.dev) that replaces the multi-provid
 - **Simplified Setup**: One API key gives you access to everything
 - **Cost Optimization**: Choose the best price/performance ratio for each task
 
+### Model Selection Interface
+
+![OpenRouter Model Selection](models-openrouter.png)
+
+*Choose from 200+ AI models with real-time pricing and search functionality*
+
 ## Original Chef Features
 
 Chef builds full-stack web apps with a built-in database, zero config auth, file uploads, real-time UIs, and background workflows. Chef's capabilities are enabled by being built on top of [Convex](https://convex.dev), the open-source reactive database designed to make life easy for web app developers.
