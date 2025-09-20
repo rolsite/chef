@@ -176,15 +176,8 @@ function displayModel(modelInfo: { provider: ProviderType; model: string | undef
   switch (modelInfo.provider) {
     case 'Unknown':
       return null;
-    case 'Anthropic':
-    case 'Bedrock':
-      return <div className="text-xs text-content-secondary">Generated with Anthropic</div>;
-    case 'OpenAI':
-      return <div className="text-xs text-content-secondary">Generated with OpenAI</div>;
-    case 'XAI':
-      return <div className="text-xs text-content-secondary">Generated with xAI</div>;
-    case 'Google':
-      return <div className="text-xs text-content-secondary">Generated with Google</div>;
+    case 'OpenRouter':
+      return <div className="text-xs text-content-secondary">Generated with {modelInfo.model || 'OpenRouter'}</div>;
     default: {
       const _exhaustiveCheck: never = modelInfo.provider;
       return null;

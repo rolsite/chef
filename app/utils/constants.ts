@@ -20,18 +20,7 @@ export function backoffTime(numFailures: number) {
   return Math.min(MIN_BACKOFF * Math.pow(2, numFailures), MAX_BACKOFF) * Math.random();
 }
 
-// These are the user facing options for the model selector, which the
-// client then maps to the model provider used by the backend. For
-// example, the user may specify "claude-4-sonnet", but then we'll
-// fallback between Anthropic and Bedrock.
-export type ModelSelection =
-  | 'auto'
-  | 'claude-3-5-haiku'
-  | 'claude-4-sonnet'
-  | 'gpt-4.1'
-  | 'gpt-4.1-mini'
-  | 'gpt-5'
-  | 'grok-3-mini'
-  | 'gemini-2.5-pro';
+// Model selection is now just the OpenRouter model ID string
+export type ModelSelection = string;
 
 export const MAX_CONSECUTIVE_DEPLOY_ERRORS = 5;

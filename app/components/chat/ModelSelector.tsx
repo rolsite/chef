@@ -1,29 +1,21 @@
 import { Combobox } from '@ui/Combobox';
-import { MagicWandIcon } from '@radix-ui/react-icons';
+import { MagicWandIcon, ReloadIcon } from '@radix-ui/react-icons';
 import type { ModelSelection } from '~/utils/constants';
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { Tooltip } from '@ui/Tooltip';
 import { HandThumbUpIcon, KeyIcon } from '@heroicons/react/24/outline';
-import { useQuery } from 'convex/react';
+import { useQuery, useAction } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import type { Doc } from '@convex/_generated/dataModel';
 import { captureMessage } from '@sentry/remix';
-import { useLaunchDarkly } from '~/lib/hooks/useLaunchDarkly';
+import { toast } from 'sonner';
 
-export type ModelProvider = 'openai' | 'google' | 'xai' | 'anthropic' | 'auto';
+export type ModelProvider = 'openrouter';
 
 export function displayModelProviderName(provider: ModelProvider) {
   switch (provider) {
-    case 'openai':
-      return 'OpenAI';
-    case 'google':
-      return 'Google';
-    case 'xai':
-      return 'xAI';
-    case 'anthropic':
-      return 'Anthropic';
-    case 'auto':
-      return 'Anthropic';
+    case 'openrouter':
+      return 'OpenRouter';
     default: {
       const exhaustiveCheck: never = provider;
       throw new Error(`Unknown model provider: ${exhaustiveCheck}`);
@@ -42,74 +34,35 @@ export interface ModelSelectorProps {
 }
 
 const providerToIcon: Record<string, React.ReactNode> = {
-  auto: <MagicWandIcon />,
-  openai: svgIcon('/icons/openai.svg'),
-  anthropic: svgIcon('/icons/claude.svg'),
-  google: svgIcon('/icons/gemini.svg'),
-  xai: (
-    <svg width="16" height="16" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  openrouter: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
-        d="M395.479 633.828L735.91 381.105C752.599 368.715 776.454 373.548 784.406 392.792C826.26 494.285 807.561 616.253 724.288 699.996C641.016 783.739 525.151 802.104 419.247 760.277L303.556 814.143C469.49 928.202 670.987 899.995 796.901 773.282C896.776 672.843 927.708 535.937 898.785 412.476L899.047 412.739C857.105 231.37 909.358 158.874 1016.4 10.6326C1018.93 7.11771 1021.47 3.60279 1024 0L883.144 141.651V141.212L395.392 633.916"
-        fill="currentColor"
+        d="M12 2L2 7L12 12L22 7L12 2Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
-        d="M325.226 695.251C206.128 580.84 226.662 403.776 328.285 301.668C403.431 226.097 526.549 195.254 634.026 240.596L749.454 186.994C728.657 171.88 702.007 155.623 671.424 144.2C533.19 86.9942 367.693 115.465 255.323 228.382C147.234 337.081 113.244 504.215 171.613 646.833C215.216 753.423 143.739 828.818 71.7385 904.916C46.2237 931.893 20.6216 958.87 0 987.429L325.139 695.339"
-        fill="currentColor"
+        d="M2 17L12 22L22 17"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M2 12L12 17L22 12"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   ),
 };
 
-export const models: Partial<
-  Record<
-    ModelSelection,
-    {
-      name: string;
-      recommended?: boolean;
-      requireKey?: boolean;
-      provider: ModelProvider;
-    }
-  >
-> = {
-  auto: {
-    name: 'Auto',
-    recommended: true,
-    provider: 'auto',
-  },
-  'claude-4-sonnet': {
-    name: 'Claude 4 Sonnet',
-    provider: 'anthropic',
-    recommended: true,
-    requireKey: false,
-  },
-  'gemini-2.5-pro': {
-    name: 'Gemini 2.5 Pro',
-    recommended: false,
-    provider: 'google',
-  },
-  'gpt-4.1': {
-    name: 'GPT-4.1',
-    provider: 'openai',
-  },
-  'gpt-5': {
-    name: 'GPT-5',
-    provider: 'openai',
-  },
-  'grok-3-mini': {
-    name: 'Grok 3 Mini',
-    provider: 'xai',
-  },
-  'claude-3-5-haiku': {
-    name: 'Claude 3.5 Haiku',
-    provider: 'anthropic',
-    requireKey: true,
-  },
-  'gpt-4.1-mini': {
-    name: 'GPT-4.1 Mini',
-    provider: 'openai',
-    requireKey: true,
-  },
-} as const;
+// Default model if none selected
+const DEFAULT_MODEL = 'anthropic/claude-3.5-sonnet';
 
 export const ModelSelector = React.memo(function ModelSelector({
   modelSelection,
@@ -117,56 +70,116 @@ export const ModelSelector = React.memo(function ModelSelector({
   size = 'md',
 }: ModelSelectorProps) {
   const apiKey = useQuery(api.apiKeys.apiKeyForCurrentMember);
-  const selectedModel = models[modelSelection];
-  const { useGeminiAuto, enableGpt5 } = useLaunchDarkly();
-  if (!selectedModel) {
-    captureMessage(`Model ${modelSelection} not found`);
-    setModelSelection('auto');
+  const models = useQuery(api.openrouter.getCachedModels, { limit: 500 });
+  const refreshModels = useAction(api.openrouter.manualRefreshModels);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Initialize models if not cached
+  React.useEffect(() => {
+    if (models && models.length === 0) {
+      // Trigger model initialization
+      fetch('/api/initialize-models', { method: 'POST' }).catch(console.error);
+    }
+  }, [models]);
+
+  // Handle manual refresh
+  const handleRefresh = async () => {
+    console.log('🔄 Starting manual model refresh...');
+    setIsRefreshing(true);
+    try {
+      console.log('📡 Calling refresh action...');
+      await refreshModels();
+      console.log('✅ Models refreshed successfully');
+      toast.success('Models refreshed successfully');
+    } catch (error) {
+      console.error('❌ Failed to refresh models:', error);
+      toast.error('Failed to refresh models');
+    } finally {
+      setIsRefreshing(false);
+      console.log('🔄 Refresh process completed');
+    }
+  };
+
+  const filteredModels = useMemo(() => {
+    if (!models) return [];
+    
+    console.log(`📊 Total models loaded: ${models.length}`);
+    let filtered = models;
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = models.filter(model => 
+        model.name.toLowerCase().includes(searchLower) ||
+        model.modelId.toLowerCase().includes(searchLower) ||
+        (model.description && model.description.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    return filtered;
+  }, [models, searchTerm]);
+
+  // Set default model if none selected and models are available
+  React.useEffect(() => {
+    if (!modelSelection && models && models.length > 0) {
+      const defaultModel = models.find(m => m.modelId === DEFAULT_MODEL) || models[0];
+      setModelSelection(defaultModel.modelId);
+    }
+  }, [modelSelection, models, setModelSelection]);
+
+  const selectedModel = models?.find(m => m.modelId === modelSelection);
+  const hasApiKey = !!apiKey?.openrouter;
+  const prefersAlwaysUseApiKey = apiKey?.preference === 'always';
+  const canUseModel = hasApiKey || !prefersAlwaysUseApiKey;
+
+  if (!models) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-500">
+        Loading models...
+      </div>
+    );
   }
 
-  const availableModels = Object.entries(models).filter(([key]) => {
-    if (key === 'gpt-5') {
-      return enableGpt5;
-    }
-    return true;
-  });
-
   return (
-    <Combobox
-      searchPlaceholder="Search models..."
-      label="Select model"
-      options={availableModels.map(([value, model]) => ({
-        label: model.provider + ' ' + model.name,
-        value: value as ModelSelection,
-      }))}
-      buttonClasses="w-fit"
-      size={size}
-      selectedOption={modelSelection}
-      setSelectedOption={(option) => {
-        if (!option) {
-          throw new Error('Model selection set to null');
-        }
-
-        setModelSelection(option);
-      }}
+    <div className="flex items-center gap-2">
+      <Combobox
+        searchPlaceholder="Search models..."
+        label="Select model"
+        options={filteredModels.map((model) => ({
+          label: `${model.name} - $${model.pricing.prompt}/1M tokens`,
+          value: model.modelId,
+        }))}
+        buttonClasses="w-fit"
+        size={size}
+        selectedOption={modelSelection}
+        setSelectedOption={(option) => {
+          if (!option) {
+            throw new Error('Model selection set to null');
+          }
+          setModelSelection(option);
+        }}
       Option={({ value, inButton }) => {
-        const model = models[value as ModelSelection];
+        const model = models.find(m => m.modelId === value);
         if (!model) {
           return null;
         }
-        const prefersAlwaysUseApiKey = apiKey?.preference === 'always';
-        const key = apiKey ? keyForProvider(apiKey, model.provider, useGeminiAuto) : undefined;
-        const canUseModel = !(model.requireKey && !key) && !(prefersAlwaysUseApiKey && !key);
+
         return (
           <div className={'flex items-center gap-2'}>
-            {providerToIcon[model.provider]}
-            <div className="max-w-48 truncate">{model?.name}</div>
+            {providerToIcon.openrouter}
+            <div className="flex-1 min-w-0">
+              <div className="max-w-48 truncate font-medium">{model.name}</div>
+              {!inButton && (
+                <div className="text-xs text-gray-500 truncate">
+                  ${model.pricing.prompt}/1M prompt • ${model.pricing.completion}/1M completion
+                </div>
+              )}
+            </div>
 
             {!inButton && (
               <div className="ml-auto flex gap-1">
-                {model.recommended && (
+                {model.modelId === DEFAULT_MODEL && (
                   <Tooltip
-                    tip="This model is recommended for most use cases. Other models may be more expensive or less accurate."
+                    tip="This model is recommended for most use cases."
                     side="right"
                   >
                     <HandThumbUpIcon className="size-4 text-content-secondary" />
@@ -174,11 +187,7 @@ export const ModelSelector = React.memo(function ModelSelector({
                 )}
                 {!canUseModel && (
                   <Tooltip
-                    tip={
-                      model.requireKey
-                        ? 'You must set an API key for the relevant provider to use this model.'
-                        : 'Your preferences require an API key to be set to use this model. You may change your preferences or set an API key.'
-                    }
+                    tip="You must set an OpenRouter API key to use this model."
                     side="right"
                   >
                     <KeyIcon className="size-4 text-content-secondary" />
@@ -190,19 +199,26 @@ export const ModelSelector = React.memo(function ModelSelector({
         );
       }}
     />
+    
+    <Tooltip tip="Refresh available models">
+      <button
+        onClick={() => {
+          console.log('🖱️ Refresh button clicked!');
+          handleRefresh();
+        }}
+        disabled={isRefreshing}
+        className="flex items-center justify-center w-8 h-8 rounded-md border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        aria-label="Refresh models"
+      >
+        <ReloadIcon 
+          className={`w-4 h-4 text-gray-600 ${isRefreshing ? 'animate-spin' : ''}`} 
+        />
+      </button>
+    </Tooltip>
+  </div>
   );
 });
 
-const keyForProvider = (apiKeys: Doc<'convexMembers'>['apiKey'], provider: ModelProvider, useGeminiAuto: boolean) => {
-  if (provider === 'anthropic') {
-    return apiKeys?.value;
-  }
-  if (provider === 'auto') {
-    if (useGeminiAuto) {
-      return apiKeys?.google;
-    } else {
-      return apiKeys?.value;
-    }
-  }
-  return apiKeys?.[provider];
+export const keyForProvider = (apiKeys: Doc<'convexMembers'>['apiKey']) => {
+  return apiKeys?.openrouter;
 };

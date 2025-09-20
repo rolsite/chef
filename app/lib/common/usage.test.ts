@@ -10,7 +10,7 @@ test('calculateChefTokensGoogle', () => {
     googleCachedContentTokenCount: 50,
   };
 
-  const { chefTokens, breakdown } = calculateChefTokens(usage, 'Google');
+  const { chefTokens, breakdown } = calculateChefTokens(usage, 'OpenRouter');
 
   // Google completion tokens: 100 * 140 = 14000
   // Google uncached prompt tokens: (200 - 50) * 18 = 2700
@@ -32,7 +32,7 @@ test('calculateChefTokensGoogleNoCachedContent', () => {
     googleCachedContentTokenCount: 0,
   };
 
-  const { chefTokens, breakdown } = calculateChefTokens(usage, 'Google');
+  const { chefTokens, breakdown } = calculateChefTokens(usage, 'OpenRouter');
 
   // Google completion tokens: 100 * 140 = 14000
   // Google uncached prompt tokens: (200 - 0) * 18 = 3600
@@ -54,7 +54,7 @@ test('calculateChefTokensGoogleWithThoughtTokens', () => {
     googleThoughtsTokenCount: 50,
   };
 
-  const { chefTokens, breakdown } = calculateChefTokens(usage, 'Google');
+  const { chefTokens, breakdown } = calculateChefTokens(usage, 'OpenRouter');
 
   // Google completion tokens: (100 + 50) * 140 = 21000
   // Google uncached prompt tokens: 200 * 18 = 3600
@@ -76,7 +76,7 @@ test('calculateChefTokensBedrock', () => {
     bedrockCacheReadInputTokens: 10,
   };
 
-  const { chefTokens, breakdown } = calculateChefTokens(usage, 'Bedrock');
+  const { chefTokens, breakdown } = calculateChefTokens(usage, 'OpenRouter');
 
   // Bedrock completion tokens: 100 * 200 = 20000
   // Bedrock uncached prompt tokens: 200 * 40 = 8000

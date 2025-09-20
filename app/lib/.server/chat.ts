@@ -6,7 +6,6 @@ import { BatchSpanProcessor, WebTracerProvider } from '@opentelemetry/sdk-trace-
 import type { LanguageModelUsage, Message, ProviderMetadata } from 'ai';
 import { checkTokenUsage, recordUsage } from '~/lib/.server/usage';
 import { disabledText, noTokensText } from '~/lib/convexUsage';
-import type { ModelProvider } from '~/lib/.server/llm/provider';
 import { getEnv } from '~/lib/.server/env';
 import type { PromptCharacterCounts } from 'chef-agent/ChatContextManager';
 
@@ -59,11 +58,8 @@ export async function chatAction({ request }: ActionFunctionArgs) {
     token: string;
     teamSlug: string;
     deploymentName: string | undefined;
-    modelProvider: ModelProvider;
     modelChoice: string | undefined;
-    userApiKey:
-      | { preference: 'always' | 'quotaExhausted'; value?: string; openai?: string; xai?: string; google?: string }
-      | undefined;
+    userApiKey: string | undefined; // Now just the OpenRouter API key
     shouldDisableTools: boolean;
     recordRawPromptsForDebugging?: boolean;
     collapsedMessages: boolean;
@@ -75,24 +71,10 @@ export async function chatAction({ request }: ActionFunctionArgs) {
   const { messages, firstUserMessage, chatInitialId, deploymentName, token, teamSlug, recordRawPromptsForDebugging } =
     body;
 
-  if (getEnv('DISABLE_BEDROCK') === '1' && body.modelProvider === 'Bedrock') {
-    body.modelProvider = 'Anthropic';
-  }
+  let useUserApiKey = !!body.userApiKey;
 
-  let useUserApiKey = false;
-
-  // Use the user's API key if they're set to always mode or if they manually set a model.
-  // Sonnet 4 can be used with the default API key since it has the same pricing as Sonnet 3.5
-  // GPT-5 can be used with our own API key since it has the same pricing as Gemini 2.5 Pro
-  if (
-    body.userApiKey?.preference === 'always' ||
-    (body.modelChoice && body.modelChoice !== 'claude-sonnet-4-0' && body.modelChoice !== 'gpt-5')
-  ) {
-    useUserApiKey = true;
-  }
-
-  // If they're not set to always mode, check to see if the user has any Convex tokens left.
-  if (body.userApiKey?.preference !== 'always') {
+  // If no user API key, check to see if the user has any Convex tokens left.
+  if (!useUserApiKey) {
     const resp = await checkTokenUsage(PROVISION_HOST, token, teamSlug, deploymentName);
     if (resp.status === 'error') {
       return new Response(JSON.stringify({ error: 'Failed to check for tokens' }), {
@@ -106,7 +88,7 @@ export async function chatAction({ request }: ActionFunctionArgs) {
       });
     }
     if (centitokensUsed >= centitokensQuota) {
-      if (!isPaidPlan && !hasApiKeySetForProvider(body.userApiKey, body.modelProvider)) {
+      if (!isPaidPlan && !body.userApiKey) {
         // If they're not on a paid plan and don't have an API key set, return an error.
         logger.error(`No tokens available for ${deploymentName}: ${centitokensUsed} of ${centitokensQuota}`);
         return new Response(
@@ -115,36 +97,20 @@ export async function chatAction({ request }: ActionFunctionArgs) {
             status: 402,
           },
         );
-      } else if (hasApiKeySetForProvider(body.userApiKey, body.modelProvider)) {
-        // If they have an API key set, use it. Otherwise, they use Convex tokens.
-        useUserApiKey = true;
       }
     }
   }
 
-  let userApiKey: string | undefined;
-  if (useUserApiKey) {
-    if (body.modelProvider === 'Anthropic' || body.modelProvider === 'Bedrock') {
-      userApiKey = body.userApiKey?.value;
-      body.modelProvider = 'Anthropic';
-    } else if (body.modelProvider === 'OpenAI') {
-      userApiKey = body.userApiKey?.openai;
-    } else if (body.modelProvider === 'XAI') {
-      userApiKey = body.userApiKey?.xai;
-    } else {
-      userApiKey = body.userApiKey?.google;
-    }
-
-    if (!userApiKey) {
-      return new Response(
-        JSON.stringify({ code: 'missing-api-key', error: `Tried to use missing ${body.modelProvider} API key.` }),
-        {
-          status: 402,
-        },
-      );
-    }
+  const userApiKey = body.userApiKey;
+  if (useUserApiKey && !userApiKey) {
+    return new Response(
+      JSON.stringify({ code: 'missing-api-key', error: 'OpenRouter API key required.' }),
+      {
+        status: 402,
+      },
+    );
   }
-  logger.info(`Using model provider: ${body.modelProvider} (user API key: ${useUserApiKey})`);
+  logger.info(`Using OpenRouter (user API key: ${useUserApiKey})`);
 
   const recordUsageCb = async (
     lastMessage: Message | undefined,
@@ -154,7 +120,7 @@ export async function chatAction({ request }: ActionFunctionArgs) {
       await recordUsage(
         PROVISION_HOST,
         token,
-        body.modelProvider,
+        'OpenRouter',
         teamSlug,
         deploymentName,
         lastMessage,
@@ -171,12 +137,7 @@ export async function chatAction({ request }: ActionFunctionArgs) {
       firstUserMessage,
       messages,
       tracer,
-      modelProvider: body.modelProvider,
-      // Only set the requested model choice if we're using a user API key or Claude 4 Sonnet/GPT-5
-      modelChoice:
-        userApiKey || body.modelChoice === 'claude-sonnet-4-0' || body.modelChoice === 'gpt-5'
-          ? body.modelChoice
-          : undefined,
+      modelChoice: body.modelChoice || 'anthropic/claude-3.5-sonnet',
       userApiKey,
       shouldDisableTools: body.shouldDisableTools,
       recordUsageCb,
@@ -214,23 +175,3 @@ export async function chatAction({ request }: ActionFunctionArgs) {
   }
 }
 
-// Returns whether or not the user has an API key set for a given provider
-function hasApiKeySetForProvider(
-  userApiKey:
-    | { preference: 'always' | 'quotaExhausted'; value?: string; openai?: string; xai?: string; google?: string }
-    | undefined,
-  provider: ModelProvider,
-) {
-  switch (provider) {
-    case 'Anthropic':
-      return userApiKey?.value !== undefined;
-    case 'OpenAI':
-      return userApiKey?.openai !== undefined;
-    case 'XAI':
-      return userApiKey?.xai !== undefined;
-    case 'Google':
-      return userApiKey?.google !== undefined;
-    default:
-      return false;
-  }
-}

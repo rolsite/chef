@@ -265,7 +265,7 @@ function LittleUsage({
     return null;
   }
 
-  const usingApiKey = hasApiKeySet(modelSelection, useGeminiAuto, apiKey);
+  const usingApiKey = hasApiKeySet(modelSelection, apiKey);
   const alwaysUsingApiKey = usingApiKey && apiKey?.preference === 'always';
 
   // show referral or upgrade CTA

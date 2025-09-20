@@ -38,7 +38,7 @@ import { VITE_PROVISION_HOST } from '~/lib/convexProvisionHost';
 import type { ProviderType } from '~/lib/common/annotations';
 import { setChefDebugProperty } from 'chef-agent/utils/chefDebug';
 import { MissingApiKey } from './MissingApiKey';
-import { models, type ModelProvider } from '~/components/chat/ModelSelector';
+import { type ModelProvider } from '~/components/chat/ModelSelector';
 import { useLaunchDarkly } from '~/lib/hooks/useLaunchDarkly';
 import { useLocalStorage } from '@uidotdev/usehooks';
 import { KeyIcon } from '@heroicons/react/24/outline';
@@ -141,7 +141,6 @@ export const Chat = memo(
       maxCollapsedMessagesSize,
       maxRelevantFilesSize,
       minCollapsedMessagesSize,
-      useGeminiAuto,
       enableResend,
       useAnthropicFraction,
     } = useLaunchDarkly();
@@ -152,9 +151,10 @@ export const Chat = memo(
 
     const [animationScope, animate] = useAnimate();
 
-    const apiKey = useQuery(api.apiKeys.apiKeyForCurrentMember);
+  const apiKey = useQuery(api.apiKeys.apiKeyForCurrentMember);
+  const hasEnvKey = useQuery(api.apiKeys.hasEnvironmentOpenRouterKey);
 
-    const [modelSelection, setModelSelection] = useLocalStorage<ModelSelection>('modelSelection', 'auto');
+  const [modelSelection, setModelSelection] = useLocalStorage<ModelSelection>('modelSelection', 'auto');
     const terminalInitializationOptions = useMemo(
       () => ({
         isReload,
@@ -188,37 +188,23 @@ export const Chat = memo(
 
     const checkApiKeyForCurrentModel = useCallback(
       (model: ModelSelection): { hasMissingKey: boolean; provider?: ModelProvider; requireKey: boolean } => {
-        const requireKey = models[model]?.requireKey || false;
-        if (apiKey?.preference !== 'always' && !requireKey) {
+        // If environment key is available, we don't require user to provide their own key
+        // unless they've specifically set preference to 'always'
+        const requireKey = apiKey?.preference === 'always' && !hasEnvKey;
+        
+        if (!requireKey) {
           return { hasMissingKey: false, requireKey: false };
         }
 
-        // Map models to their respective providers
-        const MODEL_TO_PROVIDER_MAP: {
-          [K in ModelSelection]: { providerName: ModelProvider; apiKeyField: 'value' | 'openai' | 'xai' | 'google' };
-        } = {
-          auto: { providerName: 'anthropic', apiKeyField: 'value' },
-          'claude-4-sonnet': { providerName: 'anthropic', apiKeyField: 'value' },
-          'gpt-4.1': { providerName: 'openai', apiKeyField: 'openai' },
-          'gpt-5': { providerName: 'openai', apiKeyField: 'openai' },
-          'grok-3-mini': { providerName: 'xai', apiKeyField: 'xai' },
-          'gemini-2.5-pro': { providerName: 'google', apiKeyField: 'google' },
-          'claude-3-5-haiku': { providerName: 'anthropic', apiKeyField: 'value' },
-          'gpt-4.1-mini': { providerName: 'openai', apiKeyField: 'openai' },
-        };
-
-        // Get provider info for the current model
-        const providerInfo = MODEL_TO_PROVIDER_MAP[model];
-
-        // Check if the API key for this provider is missing
-        const keyValue = apiKey?.[providerInfo.apiKeyField];
+        // Check if OpenRouter API key is missing
+        const keyValue = apiKey?.openrouter;
         if (!keyValue || keyValue.trim() === '') {
-          return { hasMissingKey: true, provider: providerInfo.providerName, requireKey };
+          return { hasMissingKey: true, provider: 'openrouter', requireKey };
         }
 
         return { hasMissingKey: false, requireKey };
       },
-      [apiKey],
+      [apiKey, hasEnvKey],
     );
 
     const [_disableChatMessage, setDisableChatMessage] = useState<
@@ -235,11 +221,11 @@ export const Chat = memo(
 
     const [sendMessageInProgress, setSendMessageInProgress] = useState(false);
 
-    const anthropicProviders: ProviderType[] =
-      Math.random() < useAnthropicFraction ? ['Anthropic', 'Bedrock'] : ['Bedrock', 'Anthropic'];
+    const openrouterProviders: ProviderType[] = ['OpenRouter'];
 
     const checkTokenUsage = useCallback(async () => {
-      if (hasApiKeySet(modelSelection, useGeminiAuto, apiKey)) {
+      // If user has their own API key OR environment key is available, don't show quota message
+      if (hasApiKeySet(modelSelection, apiKey) || hasEnvKey) {
         setDisableChatMessage(null);
         return;
       }
@@ -275,7 +261,7 @@ export const Chat = memo(
       } catch (error) {
         captureException(error);
       }
-    }, [apiKey, convex, modelSelection, setDisableChatMessage, useGeminiAuto]);
+    }, [apiKey, convex, modelSelection, setDisableChatMessage, hasEnvKey]);
 
     const { messages, status, stop, append, setMessages, reload, error } = useChat({
       initialMessages,
@@ -292,36 +278,9 @@ export const Chat = memo(
         if (!teamSlug) {
           throw new Error('No team slug');
         }
-        let modelProvider: ProviderType;
-        const retries = retryState.get();
-        let modelChoice: string | undefined = undefined;
-        if (modelSelection === 'auto') {
-          const providers: ProviderType[] = anthropicProviders;
-          modelProvider = providers[retries.numFailures % providers.length];
-          modelChoice = 'claude-sonnet-4-0';
-        } else if (modelSelection === 'claude-3-5-haiku') {
-          modelProvider = 'Anthropic';
-          modelChoice = 'claude-3-5-haiku-latest';
-        } else if (modelSelection === 'claude-4-sonnet') {
-          const providers: ProviderType[] = anthropicProviders;
-          modelProvider = providers[retries.numFailures % providers.length];
-          modelChoice = 'claude-sonnet-4-0';
-        } else if (modelSelection === 'grok-3-mini') {
-          modelProvider = 'XAI';
-        } else if (modelSelection === 'gemini-2.5-pro') {
-          modelProvider = 'Google';
-        } else if (modelSelection === 'gpt-4.1-mini') {
-          modelProvider = 'OpenAI';
-          modelChoice = 'gpt-4.1-mini';
-        } else if (modelSelection === 'gpt-4.1') {
-          modelProvider = 'OpenAI';
-        } else if (modelSelection === 'gpt-5') {
-          modelProvider = 'OpenAI';
-          modelChoice = 'gpt-5';
-        } else {
-          const _exhaustiveCheck: never = modelSelection;
-          throw new Error(`Unknown model: ${_exhaustiveCheck}`);
-        }
+        // All models now go through OpenRouter
+        const modelProvider: ProviderType = 'OpenRouter';
+        const modelChoice: string = modelSelection || 'anthropic/claude-3.5-sonnet';
         let shouldDisableTools = false;
         if (messages.length > 0 && messages[messages.length - 1].role === 'assistant') {
           const lastSystemMessage = messages[messages.length - 1];
@@ -343,7 +302,7 @@ export const Chat = memo(
         }
         const { messages: preparedMessages, collapsedMessages } = chatContextManager.current.prepareContext(
           messages,
-          maxSizeForModel(modelSelection, maxCollapsedMessagesSize),
+          maxCollapsedMessagesSize, // Use default size since all models are now OpenRouter
           minCollapsedMessagesSize,
         );
 
@@ -356,9 +315,8 @@ export const Chat = memo(
           token,
           teamSlug,
           deploymentName,
-          modelProvider,
           // Fall back to the user's API key if the request has failed too many times
-          userApiKey: retries.numFailures < MAX_RETRIES ? apiKey : { ...apiKey, preference: 'always' },
+          userApiKey: apiKey?.openrouter,
           shouldDisableTools,
           recordRawPromptsForDebugging,
           modelChoice,
@@ -472,7 +430,7 @@ export const Chat = memo(
       const retries = retryState.get();
       if (
         (retries.numFailures >= MAX_RETRIES || now < retries.nextRetry) &&
-        !hasApiKeySet(modelSelection, useGeminiAuto, apiKey)
+        !hasApiKeySet(modelSelection, apiKey) && !hasEnvKey
       ) {
         let message: string | ReactNode = 'Chef is too busy cooking right now. ';
         if (retries.numFailures >= MAX_RETRIES) {
@@ -579,9 +537,9 @@ export const Chat = memo(
       async (newModel: ModelSelection) => {
         setModelSelection(newModel);
 
-        // First check if we have a key for this model, which is the most important case
-        if (hasApiKeySet(newModel, useGeminiAuto, apiKey)) {
-          // If we have a key for this model, clear the message and exit early
+        // First check if we have a key for this model OR environment key, which is the most important case
+        if (hasApiKeySet(newModel, apiKey) || hasEnvKey) {
+          // If we have a key for this model or env key is available, clear the message and exit early
           setDisableChatMessage(null);
           return;
         }
@@ -598,7 +556,7 @@ export const Chat = memo(
           });
         }
       },
-      [apiKey, checkApiKeyForCurrentModel, checkTokenUsage, setModelSelection, useGeminiAuto],
+      [apiKey, checkApiKeyForCurrentModel, checkTokenUsage, setModelSelection, hasEnvKey],
     );
 
     return (

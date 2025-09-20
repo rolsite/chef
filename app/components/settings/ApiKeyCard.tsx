@@ -22,10 +22,7 @@ export function ApiKeyCard() {
       await convex.mutation(api.apiKeys.setApiKeyForCurrentMember, {
         apiKey: {
           preference: value ? 'always' : 'quotaExhausted',
-          value: apiKey?.value,
-          openai: apiKey?.openai,
-          xai: apiKey?.xai,
-          google: apiKey?.google,
+          openrouter: apiKey?.openrouter,
         },
       });
       toast.success('Preference updated.', { id: value ? 'always' : 'quotaExhausted' });
@@ -35,128 +32,79 @@ export function ApiKeyCard() {
     }
   };
 
-  const hasAnyKey = apiKey && (apiKey.value || apiKey.openai || apiKey.xai || apiKey.google);
+  const hasAnyKey = apiKey && apiKey.openrouter;
 
-  const validateAnthropicApiKey = async (apiKey: string) => {
-    return await convex.action(api.apiKeys.validateAnthropicApiKey, {
+  const validateOpenrouterApiKey = async (apiKey: string) => {
+    return await convex.action(api.apiKeys.validateOpenrouterApiKey, {
       apiKey,
     });
   };
 
-  const validateOpenaiApiKey = async (apiKey: string) => {
-    return await convex.action(api.apiKeys.validateOpenaiApiKey, {
-      apiKey,
-    });
-  };
-
-  const validateGoogleApiKey = async (apiKey: string) => {
-    return await convex.action(api.apiKeys.validateGoogleApiKey, {
-      apiKey,
-    });
-  };
-
-  const validateXaiApiKey = async (apiKey: string) => {
-    return await convex.action(api.apiKeys.validateXaiApiKey, {
-      apiKey,
-    });
-  };
-
-  return (
-    <div className="rounded-lg border bg-bolt-elements-background-depth-1 shadow-sm">
-      <div className="p-6">
-        <h2 className="mb-2 text-xl font-semibold text-content-primary">API Keys</h2>
-
-        <p className="mb-1 max-w-prose text-sm text-content-secondary">
-          You can use your own API keys to cook with Chef.
-        </p>
-        <p className="mb-4 max-w-prose text-sm text-content-secondary">
-          By default, Chef will use tokens built into your Convex plan.
-        </p>
+  if (apiKey === undefined) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium">API Keys</h3>
+        </div>
         <div className="space-y-4">
-          <AlwaysUseKeyCheckbox
-            isLoading={apiKey === undefined}
-            disabled={!hasAnyKey}
-            value={apiKey?.preference === 'always'}
-            onChange={handleAlwaysUseKeyChange}
-          />
-          <ApiKeyItem
-            label="Anthropic API key"
-            description={
-              <a
-                href="https://docs.anthropic.com/en/api/getting-started#accessing-the-api"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-content-link hover:underline"
-              >
-                See instructions for generating an Anthropic API key
-              </a>
-            }
-            isLoading={apiKey === undefined}
-            keyType="anthropic"
-            value={apiKey?.value || ''}
-            onValidate={validateAnthropicApiKey}
-          />
-
-          <ApiKeyItem
-            label="Google API key"
-            description={
-              <a
-                href="https://ai.google.dev/gemini-api/docs/api-key"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-content-link hover:underline"
-              >
-                See instructions for generating a Google API key
-              </a>
-            }
-            isLoading={apiKey === undefined}
-            keyType="google"
-            value={apiKey?.google || ''}
-            onValidate={validateGoogleApiKey}
-          />
-
-          <ApiKeyItem
-            label="OpenAI API key"
-            description={
-              <a
-                href="https://platform.openai.com/docs/api-reference/introduction"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-content-link hover:underline"
-              >
-                See instructions for generating an OpenAI API key
-              </a>
-            }
-            isLoading={apiKey === undefined}
-            keyType="openai"
-            value={apiKey?.openai || ''}
-            onValidate={validateOpenaiApiKey}
-          />
-
-          <ApiKeyItem
-            label="xAI API key"
-            description={
-              <a
-                href="https://docs.x.ai/docs/overview#welcome"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-content-link hover:underline"
-              >
-                See instructions for generating an xAI API key
-              </a>
-            }
-            isLoading={apiKey === undefined}
-            keyType="xai"
-            value={apiKey?.xai || ''}
-            onValidate={validateXaiApiKey}
-          />
+          <div className="h-[78px] w-full animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-medium">API Keys</h3>
+      </div>
+
+      <div className="space-y-4">
+        <ApiKeyItem
+          label="OpenRouter"
+          description={
+            <span>
+              Get your API key from{' '}
+              <a
+                href="https://openrouter.ai/keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline hover:text-blue-800"
+              >
+                OpenRouter
+              </a>
+              . This gives you access to all available models.
+            </span>
+          }
+          isLoading={apiKey === undefined}
+          keyType="openrouter"
+          value={apiKey?.openrouter || ''}
+          onValidate={validateOpenrouterApiKey}
+        />
+      </div>
+
+      {hasAnyKey && (
+        <div className="mt-6 space-y-4 border-t pt-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="always-use-key"
+              checked={apiKey?.preference === 'always'}
+              onChange={(e) => handleAlwaysUseKeyChange((e.target as HTMLInputElement).checked)}
+            />
+            <label htmlFor="always-use-key" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+              Always use my API key
+            </label>
+            <Tooltip tip="If enabled, your API key will always be used instead of our provided quota. If disabled, your API key will only be used when our quota is exhausted.">
+              <QuestionMarkCircledIcon className="h-4 w-4 text-gray-400" />
+            </Tooltip>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-type KeyType = 'anthropic' | 'google' | 'openai' | 'xai';
+type KeyType = 'openrouter';
 
 function ApiKeyItem({
   label,
@@ -222,197 +170,126 @@ function ApiKeyItem({
 
   const handleRemoveKey = async () => {
     try {
-      setIsSaving(true);
-
-      switch (keyType) {
-        case 'anthropic':
-          await convex.mutation(api.apiKeys.deleteAnthropicApiKeyForCurrentMember);
-          toast.success('Anthropic API key removed', { id: 'anthropic-removed' });
-          break;
-        case 'google':
-          await convex.mutation(api.apiKeys.deleteGoogleApiKeyForCurrentMember);
-          toast.success('Google API key removed', { id: 'google-removed' });
-          break;
-        case 'openai':
-          await convex.mutation(api.apiKeys.deleteOpenaiApiKeyForCurrentMember);
-          toast.success('OpenAI API key removed', { id: 'openai-removed' });
-          break;
-        case 'xai':
-          await convex.mutation(api.apiKeys.deleteXaiApiKeyForCurrentMember);
-          toast.success('xAI API key removed', { id: 'xai-removed' });
-          break;
-      }
+      await convex.mutation(api.apiKeys.deleteOpenrouterApiKeyForCurrentMember);
+      toast.success(`${label} API key removed`);
     } catch (error) {
       captureException(error);
-      toast.error(`Failed to remove ${keyType} API key`);
-    } finally {
-      setIsSaving(false);
+      toast.error(`Failed to remove ${label} API key`);
     }
   };
 
-  const handleSaveKey = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveKey = async () => {
+    if (validationError) return;
 
     try {
       setIsSaving(true);
-
-      // Get the current API key data
       const apiKey = await convex.query(api.apiKeys.apiKeyForCurrentMember);
 
-      const apiKeyMutation = {
-        preference: apiKey?.preference || ('quotaExhausted' as 'always' | 'quotaExhausted'),
-        value: apiKey?.value || undefined,
-        openai: apiKey?.openai || undefined,
-        xai: apiKey?.xai || undefined,
-        google: apiKey?.google || undefined,
-      };
-
-      switch (keyType) {
-        case 'anthropic':
-          apiKeyMutation.value = cleanApiKey(newKeyValue);
-          break;
-        case 'google':
-          apiKeyMutation.google = cleanApiKey(newKeyValue);
-          break;
-        case 'openai':
-          apiKeyMutation.openai = cleanApiKey(newKeyValue);
-          break;
-        case 'xai':
-          apiKeyMutation.xai = cleanApiKey(newKeyValue);
-          break;
-      }
-
       await convex.mutation(api.apiKeys.setApiKeyForCurrentMember, {
-        apiKey: apiKeyMutation,
+        apiKey: {
+          preference: apiKey?.preference || 'quotaExhausted',
+          openrouter: newKeyValue.trim(),
+        },
       });
 
-      toast.success(`${label} saved`, { id: keyType });
+      toast.success(`${label} API key saved`);
       setIsAdding(false);
       setNewKeyValue('');
-      setValidationError(null);
     } catch (error) {
       captureException(error);
-      toast.error(`Failed to save ${keyType} API key`);
+      toast.error(`Failed to save ${label} API key`);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleCancel = () => {
-    setIsAdding(false);
-    setNewKeyValue('');
-    setValidationError(null);
-  };
-
-  // Update setNewKeyValue to also clear validation errors when empty
-  const handleKeyValueChange = (e: any) => {
-    const value = e.target.value;
-    setNewKeyValue(value);
-    if (!value.trim()) {
-      setValidationError(null);
-    }
-  };
-
-  return (
-    <div>
-      <div className="mb-1.5">
-        <span className="font-medium text-content-primary">{label}</span>
-      </div>
-      <div className="mb-2 text-xs text-content-secondary">{description}</div>
-
-      {hasKey ? (
-        <div className="flex items-center gap-2 py-1.5">
-          <span className="max-w-80 truncate font-mono text-sm" aria-label="API key value">
-            {showKey ? value : '•'.repeat(value.length)}
-          </span>
-          <Button
-            onClick={() => setShowKey(!showKey)}
-            icon={showKey ? <EyeNoneIcon /> : <EyeOpenIcon />}
-            aria-label={showKey ? 'Hide API Key' : 'Show API Key'}
-            variant="neutral"
-            inline
-          />
-          <Button variant="danger" onClick={handleRemoveKey} disabled={isSaving} icon={<TrashIcon />} inline />
-        </div>
-      ) : isAdding ? (
-        <form onSubmit={handleSaveKey} className="flex flex-col gap-1">
-          <div className="flex flex-col items-start gap-2">
-            <div className="-mt-1 w-80">
-              <TextInput
-                autoFocus
-                type={showKey ? 'text' : 'password'}
-                value={newKeyValue}
-                onChange={handleKeyValueChange}
-                placeholder={`Enter your ${label}`}
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-expect-error Unclear issue with typing of design system
-                action={(): void => {
-                  setShowKey(!showKey);
-                }}
-                Icon={() => {
-                  return showKey ? <EyeNoneIcon /> : <EyeOpenIcon />;
-                }}
-                error={newKeyValue.trim() && validationError ? validationError : undefined}
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit" disabled={isSaving || !newKeyValue.trim()} icon={isSaving && <Spinner />}>
-                Save
-              </Button>
-              <Button type="button" variant="neutral" onClick={handleCancel} disabled={isSaving}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </form>
-      ) : (
-        <Button variant="neutral" onClick={() => setIsAdding(true)} icon={<PlusIcon />}>
-          Add {label}
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function AlwaysUseKeyCheckbox(props: {
-  isLoading: boolean;
-  disabled: boolean;
-  value: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  if (props.isLoading) {
+  if (isAdding) {
     return (
-      <div className="mt-4 flex items-center gap-2">
-        <div className="size-4 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="h-5 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="size-4 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+      <div className="rounded-lg border p-4">
+        <div className="mb-4">
+          <h4 className="font-medium">{label}</h4>
+          <p className="text-sm text-gray-600">{description}</p>
+        </div>
+        <div className="space-y-3">
+          <div className="relative">
+            <TextInput
+              id={`${keyType}-api-key`}
+              type={showKey ? 'text' : 'password'}
+              value={newKeyValue}
+              onChange={(e) => setNewKeyValue(e.target.value)}
+              placeholder={`Enter your ${label} API key`}
+              className={`w-full pr-20 ${validationError ? 'border-red-500' : ''}`}
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey(!showKey)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500 hover:text-gray-700"
+            >
+              {showKey ? <EyeNoneIcon className="h-4 w-4" /> : <EyeOpenIcon className="h-4 w-4" />}
+            </button>
+          </div>
+          {validationError && <p className="text-sm text-red-600">{validationError}</p>}
+          <div className="flex gap-2">
+            <Button
+              onClick={handleSaveKey}
+              disabled={!newKeyValue.trim() || isSaving || !!validationError}
+              size="sm"
+            >
+              {isSaving ? <Spinner className="h-4 w-4" /> : 'Save'}
+            </Button>
+            <Button
+              variant="neutral"
+              onClick={() => {
+                setIsAdding(false);
+                setNewKeyValue('');
+                setValidationError(null);
+              }}
+              size="sm"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
-  return (
-    <Tooltip
-      tip={props.disabled ? "You cannot use this setting when you don't have any API keys configured." : undefined}
-    >
-      <div className="flex items-center gap-2">
-        <Checkbox
-          checked={props.value}
-          onChange={() => {
-            props.onChange(!props.value);
-          }}
-          disabled={props.disabled}
-          id="always-use-key"
-        />
-        <label htmlFor="always-use-key" className="text-sm text-content-secondary">
-          Always use my API keys
-        </label>
-        <Tooltip tip="When unchecked, your API key will only be used if you've run out of tokens built into your Convex plan">
-          <QuestionMarkCircledIcon />
-        </Tooltip>
-      </div>
-    </Tooltip>
-  );
-}
 
-function cleanApiKey(key: string) {
-  return key.trim() === '' ? undefined : key;
+  return (
+    <div className="rounded-lg border p-4">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <h4 className="font-medium">{label}</h4>
+          <p className="text-sm text-gray-600">{description}</p>
+          {hasKey && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-sm text-green-600">✓ API key configured</span>
+              <button
+                type="button"
+                onClick={() => setShowKey(!showKey)}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                {showKey ? <EyeNoneIcon className="h-4 w-4" /> : <EyeOpenIcon className="h-4 w-4" />}
+              </button>
+              {showKey && (
+                <span className="font-mono text-xs text-gray-500">
+                  {value.slice(0, 8)}...{value.slice(-4)}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {hasKey ? (
+            <Button variant="neutral" size="sm" onClick={handleRemoveKey}>
+              <TrashIcon className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Button variant="neutral" size="sm" onClick={() => setIsAdding(true)}>
+              <PlusIcon className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }

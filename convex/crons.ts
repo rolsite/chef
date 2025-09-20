@@ -3,11 +3,7 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-crons.daily(
-  "delete debug files for inactive chats",
-  { hourUTC: 16, minuteUTC: 0 },
-  internal.cleanup.deleteDebugFilesForInactiveChats,
-  { forReal: true, shouldScheduleNext: true, daysInactive: 14 },
-);
+// Refresh OpenRouter models every 6 hours
+crons.interval("refresh openrouter models", { hours: 6 }, internal.openrouter.refreshModels, {});
 
 export default crons;

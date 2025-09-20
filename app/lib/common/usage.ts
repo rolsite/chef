@@ -153,64 +153,14 @@ export function calculateChefTokens(totalUsage: Usage, provider?: ProviderType) 
       },
     },
   };
-  if (provider === 'Anthropic') {
-    const anthropicCompletionTokens = totalUsage.completionTokens * 200;
-    chefTokens += anthropicCompletionTokens;
-    breakdown.completionTokens.anthropic = anthropicCompletionTokens;
-    const anthropicPromptTokens = totalUsage.promptTokens * 40;
-    chefTokens += anthropicPromptTokens;
-    breakdown.promptTokens.anthropic.uncached = anthropicPromptTokens;
-    const cacheCreationInputTokens = totalUsage.anthropicCacheCreationInputTokens * 40;
-    chefTokens += cacheCreationInputTokens;
-    breakdown.promptTokens.anthropic.cached = cacheCreationInputTokens;
-    const cacheReadInputTokens = totalUsage.anthropicCacheReadInputTokens * 3;
-    chefTokens += cacheReadInputTokens;
-    breakdown.promptTokens.anthropic.cached += cacheReadInputTokens;
-  } else if (provider === 'Bedrock') {
-    const bedrockCompletionTokens = totalUsage.completionTokens * 200;
-    chefTokens += bedrockCompletionTokens;
-    breakdown.completionTokens.bedrock = bedrockCompletionTokens;
-    const bedrockPromptTokens = totalUsage.promptTokens * 40;
-    chefTokens += bedrockPromptTokens;
-    breakdown.promptTokens.bedrock.uncached = bedrockPromptTokens;
-    const cacheWriteInputTokens = totalUsage.bedrockCacheWriteInputTokens * 40;
-    chefTokens += cacheWriteInputTokens;
-    breakdown.promptTokens.bedrock.cached = cacheWriteInputTokens;
-    const cacheReadInputTokens = totalUsage.bedrockCacheReadInputTokens * 3;
-    chefTokens += cacheReadInputTokens;
-    breakdown.promptTokens.bedrock.cached += cacheReadInputTokens;
-  } else if (provider === 'OpenAI') {
-    const openaiCompletionTokens = totalUsage.completionTokens * 100;
-    chefTokens += openaiCompletionTokens;
-    breakdown.completionTokens.openai = openaiCompletionTokens;
-    const openaiCachedPromptTokens = totalUsage.openaiCachedPromptTokens * 5;
-    chefTokens += openaiCachedPromptTokens;
-    breakdown.promptTokens.openai.cached = openaiCachedPromptTokens;
-    const openaiUncachedPromptTokens = (totalUsage.promptTokens - totalUsage.openaiCachedPromptTokens) * 26;
-    chefTokens += openaiUncachedPromptTokens;
-    breakdown.promptTokens.openai.uncached = openaiUncachedPromptTokens;
-  } else if (provider === 'XAI') {
-    // TODO: This is a guess. Billing like anthropic
-    const xaiCompletionTokens = totalUsage.completionTokens * 200;
-    chefTokens += xaiCompletionTokens;
-    breakdown.completionTokens.xai = xaiCompletionTokens;
-    const xaiPromptTokens = totalUsage.promptTokens * 40;
-    chefTokens += xaiPromptTokens;
-    breakdown.promptTokens.xai.uncached = xaiPromptTokens;
-    // TODO - never seen xai set this field to anything but 0, so holding off until we understand.
-    //chefTokens += totalUsage.xaiCachedPromptTokens * 3;
-  } else if (provider === 'Google') {
-    const googleCompletionTokens = totalUsage.completionTokens * 140;
-    chefTokens += googleCompletionTokens;
-    const googleThoughtTokens = totalUsage.googleThoughtsTokenCount * 140;
-    chefTokens += googleThoughtTokens;
-    breakdown.completionTokens.google = googleCompletionTokens;
-    const googlePromptTokens = (totalUsage.promptTokens - totalUsage.googleCachedContentTokenCount) * 18;
-    chefTokens += googlePromptTokens;
-    breakdown.promptTokens.google.uncached = googlePromptTokens;
-    const googleCachedContentTokens = totalUsage.googleCachedContentTokenCount * 5;
-    chefTokens += googleCachedContentTokens;
-    breakdown.promptTokens.google.cached = googleCachedContentTokens;
+  if (provider === 'OpenRouter') {
+    // OpenRouter pricing varies by model, using default rates
+    const openrouterCompletionTokens = totalUsage.completionTokens * 100;
+    chefTokens += openrouterCompletionTokens;
+    breakdown.completionTokens.openai = openrouterCompletionTokens; // Reuse openai field
+    const openrouterPromptTokens = totalUsage.promptTokens * 20;
+    chefTokens += openrouterPromptTokens;
+    breakdown.promptTokens.openai.uncached = openrouterPromptTokens; // Reuse openai field
   } else {
     captureMessage('WARNING: Unknown provider. Not recording usage. Giving away for free.', {
       level: 'error',

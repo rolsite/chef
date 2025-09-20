@@ -5,11 +5,7 @@ import type { CoreMessage } from "ai";
 
 export const apiKeyValidator = v.object({
   preference: v.union(v.literal("always"), v.literal("quotaExhausted")),
-  // NB: This is the *Anthropic* API key.
-  value: v.optional(v.string()),
-  openai: v.optional(v.string()),
-  xai: v.optional(v.string()),
-  google: v.optional(v.string()),
+  openrouter: v.optional(v.string()),
 });
 
 // A stable-enough way to store token usage.
@@ -240,4 +236,18 @@ export default defineSchema({
   })
     .index("name", ["name"])
     .index("isDone", ["isDone"]),
+
+  openrouterModels: defineTable({
+    modelId: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    pricing: v.object({
+      prompt: v.string(),
+      completion: v.string(),
+    }),
+    contextLength: v.number(),
+    maxCompletionTokens: v.optional(v.number()),
+    isModerated: v.boolean(),
+    lastUpdated: v.number(),
+  }).index("byModelId", ["modelId"]),
 });

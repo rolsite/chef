@@ -44,8 +44,7 @@ export async function convexAgent(args: {
   firstUserMessage: boolean;
   messages: Messages;
   tracer: Tracer | null;
-  modelProvider: ModelProvider;
-  modelChoice: string | undefined;
+  modelChoice: string | undefined; // Now just the OpenRouter model ID
   userApiKey: string | undefined;
   shouldDisableTools: boolean;
   recordUsageCb: (
@@ -64,7 +63,6 @@ export async function convexAgent(args: {
     firstUserMessage,
     messages,
     tracer,
-    modelProvider,
     userApiKey,
     modelChoice,
     shouldDisableTools,
@@ -74,7 +72,7 @@ export async function convexAgent(args: {
     promptCharacterCounts,
     featureFlags,
   } = args;
-  console.debug('Starting agent with model provider', modelProvider);
+  console.debug('Starting agent with model', modelChoice);
   if (userApiKey) {
     console.debug('Using user provided API key');
   }
@@ -82,13 +80,13 @@ export async function convexAgent(args: {
   const startTime = Date.now();
   let firstResponseTime: number | null = null;
 
-  const provider = getProvider(userApiKey, modelProvider, modelChoice);
+  const provider = getProvider(userApiKey, modelChoice || 'anthropic/claude-3.5-sonnet');
   const opts: SystemPromptOptions = {
     enableBulkEdits: true,
     includeTemplate: true,
     openaiProxyEnabled: getEnv('OPENAI_PROXY_ENABLED') == '1',
-    usingOpenAi: modelProvider == 'OpenAI',
-    usingGoogle: modelProvider == 'Google',
+    usingOpenAi: false, // All models now go through OpenRouter
+    usingGoogle: false, // All models now go through OpenRouter
     resendProxyEnabled: getEnv('RESEND_PROXY_ENABLED') == '1',
     enableResend: featureFlags.enableResend,
   };
@@ -114,32 +112,13 @@ export async function convexAgent(args: {
     ...cleanupAssistantMessages(messages),
   ];
 
-  if (modelProvider === 'Bedrock') {
-    messagesForDataStream[messagesForDataStream.length - 1].providerOptions = {
-      bedrock: {
-        cachePoint: {
-          type: 'default',
-        },
-      },
-    };
-  }
-
-  if (modelProvider === 'Anthropic') {
-    messagesForDataStream[messagesForDataStream.length - 1].providerOptions = {
-      anthropic: {
-        cacheControl: {
-          type: 'ephemeral',
-        },
-      },
-    };
-  }
+  // All models now go through OpenRouter, no provider-specific options needed
 
   const dataStream = createDataStream({
     execute(dataStream) {
       const result = streamText({
         model: provider.model,
         maxTokens: provider.maxTokens,
-        providerOptions: provider.options,
         messages: messagesForDataStream,
         tools,
         toolChoice: shouldDisableTools ? 'none' : 'auto',
@@ -154,7 +133,6 @@ export async function convexAgent(args: {
             toolsDisabledFromRepeatedErrors: shouldDisableTools,
             recordRawPromptsForDebugging,
             coreMessages: messagesForDataStream,
-            modelProvider,
             modelChoice,
             collapsedMessages,
             promptCharacterCounts,
@@ -171,7 +149,7 @@ export async function convexAgent(args: {
           metadata: {
             firstUserMessage,
             chatInitialId,
-            provider: modelProvider,
+            provider: 'OpenRouter',
           },
         },
       });
@@ -187,12 +165,12 @@ export async function convexAgent(args: {
                 const span = tracer.startSpan('first-response');
                 span.setAttribute('chatInitialId', chatInitialId);
                 span.setAttribute('timeToFirstResponse', timeToFirstResponse);
-                span.setAttribute('provider', modelProvider);
+                span.setAttribute('provider', 'OpenRouter');
                 span.end();
               }
               console.log('First response metrics:', {
                 timeToFirstResponse: `${timeToFirstResponse}ms`,
-                provider: modelProvider,
+                provider: 'OpenRouter',
                 chatInitialId,
               });
               break;
@@ -222,7 +200,6 @@ async function onFinishHandler({
   toolsDisabledFromRepeatedErrors,
   recordRawPromptsForDebugging,
   coreMessages,
-  modelProvider,
   modelChoice,
   collapsedMessages,
   promptCharacterCounts,
@@ -242,7 +219,6 @@ async function onFinishHandler({
   recordRawPromptsForDebugging: boolean;
   toolsDisabledFromRepeatedErrors: boolean;
   coreMessages: CoreMessage[];
-  modelProvider: ModelProvider;
   modelChoice: string | undefined;
   collapsedMessages: boolean;
   promptCharacterCounts?: PromptCharacterCounts;
@@ -339,7 +315,7 @@ async function onFinishHandler({
   if (toolCallId) {
     const annotation = encodeUsageAnnotation(toolCallId, usage, providerMetadata);
     dataStream.writeMessageAnnotation({ type: 'usage', usage: annotation });
-    const modelAnnotation = encodeModelAnnotation(toolCallId, providerMetadata, modelChoice);
+    const modelAnnotation = encodeModelAnnotation(toolCallId, { openrouter: {} }, modelChoice);
     dataStream.writeMessageAnnotation({ type: 'model', ...modelAnnotation });
   }
 
@@ -360,7 +336,6 @@ async function onFinishHandler({
           usage,
           providerMetadata,
         },
-        modelProvider,
       ),
     );
   }
@@ -441,7 +416,6 @@ async function storeDebugPrompt(
   responseCoreMessages: CoreMessage[],
   result: Omit<StepResult<any>, 'stepType' | 'isContinued'>,
   generation: { usage: LanguageModelUsage; providerMetadata?: ProviderMetadata },
-  modelProvider: ModelProvider,
 ) {
   try {
     const finishReason = result.finishReason;
@@ -452,7 +426,7 @@ async function storeDebugPrompt(
     const compressedData = compressWithLz4Server(promptMessageData);
 
     type Metadata = Omit<(typeof internal.debugPrompt.storeDebugPrompt)['_args'], 'promptCoreMessagesStorageId'>;
-    const { chefTokens } = calculateChefTokens(usage, modelProvider);
+    const { chefTokens } = calculateChefTokens(usage, 'OpenRouter');
 
     const metadata = {
       chatInitialId,
@@ -465,7 +439,7 @@ async function storeDebugPrompt(
 
     const formData = new FormData();
     formData.append('metadata', JSON.stringify(metadata));
-    formData.append('promptCoreMessages', new Blob([compressedData]));
+    formData.append('promptCoreMessages', new Blob([new Uint8Array(compressedData)]));
 
     const response = await fetch(`${getConvexSiteUrl()}/upload_debug_prompt`, {
       method: 'POST',

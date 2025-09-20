@@ -2,7 +2,7 @@ import type { LanguageModelUsage, Message, ProviderMetadata } from 'ai';
 import { createScopedLogger } from 'chef-agent/utils/logger';
 import { getTokenUsage } from '~/lib/convexUsage';
 import type { ProviderType, UsageAnnotation } from '~/lib/common/annotations';
-import { modelForProvider, type ModelProvider } from './llm/provider';
+import { type ModelProvider } from './llm/provider';
 import { calculateTotalBilledUsageForMessage, calculateChefTokens } from '~/lib/common/usage';
 import { captureMessage } from '@sentry/remix';
 
@@ -47,24 +47,9 @@ export function encodeModelAnnotation(
   providerMetadata: ProviderMetadata | undefined,
   modelChoice: string | undefined,
 ) {
-  let provider: ProviderType | null = null;
-  let model: string | null = null;
-  if (providerMetadata?.anthropic) {
-    provider = 'Anthropic';
-    model = modelForProvider('Anthropic', modelChoice);
-  } else if (providerMetadata?.openai) {
-    provider = 'OpenAI';
-    model = modelForProvider('OpenAI', modelChoice);
-  } else if (providerMetadata?.xai) {
-    provider = 'XAI';
-    model = modelForProvider('XAI', modelChoice);
-  } else if (providerMetadata?.google) {
-    provider = 'Google';
-    model = modelForProvider('Google', modelChoice);
-  } else if (providerMetadata?.bedrock) {
-    provider = 'Bedrock';
-    model = modelForProvider('Bedrock', modelChoice);
-  }
+  // All models now go through OpenRouter
+  const provider: ProviderType = 'OpenRouter';
+  const model: string = modelChoice || 'unknown';
   return { toolCallId: call.kind === 'tool-call' ? call.toolCallId : 'final', provider, model };
 }
 
