@@ -52,3 +52,5 @@ template/pnpm-lock.yaml
 .env*.local
 
 temp_envars
+
+chef-openrouter-article.md
