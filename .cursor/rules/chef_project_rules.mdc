@@ -206,6 +206,21 @@ pnpm run typecheck  # Verificação de tipos
 - Atualize guias de desenvolvimento conforme necessário
 - Documente decisões arquiteturais importantes
 
+## Documentação Técnica
+
+### Arquivos Essenciais para Compreensão do Projeto
+Antes de qualquer modificação significativa, leia os seguintes arquivos na pasta `docs/`:
+
+- **`CODEBASE_ANALYSIS.md`**: Análise abrangente da arquitetura, qualidade de código, dependências e recomendações de melhoria
+- **`TECHNICAL_REFERENCE.md`**: Referência técnica completa com fluxos de dados, sistemas e padrões arquiteturais
+- **`DEVELOPMENT_GUIDE.md`**: Guia detalhado de desenvolvimento, setup e práticas recomendadas
+
+### Processo de Análise
+- [ ] Li e compreendi a análise da base de código
+- [ ] Consultei a referência técnica para arquitetura
+- [ ] Segui o guia de desenvolvimento para padrões
+- [ ] Avaliei o impacto das mudanças nos sistemas documentados
+
 ## Suporte e Manutenção
 
 ### Monitoramento
