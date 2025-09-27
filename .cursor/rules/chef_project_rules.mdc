@@ -1,0 +1,225 @@
+---
+description: Regras e diretrizes para desenvolvimento do projeto Chef, incluindo padrões de código, arquitetura, e práticas recomendadas
+globs: **/*.ts,**/*.tsx,**/*.js,**/*.jsx,**/*.md
+---
+
+# Chef Project Rules
+
+## Visão Geral do Projeto
+Chef é uma aplicação web desenvolvida pela Convex que permite aos usuários executar e gerenciar projetos de software em um ambiente containerizado diretamente no navegador. O projeto utiliza tecnologias modernas como React, TypeScript, Convex, e WebContainers.
+
+## Princípios de Desenvolvimento
+
+### Filosofia de Intervenção Mínima
+- **Analisar antes de modificar**: Sempre avalie o impacto das mudanças antes de implementá-las
+- **Modificar o mínimo necessário**: Preserve a funcionalidade existente e faça apenas as alterações essenciais
+- **Preservar padrões**: Mantenha a consistência com o código existente e padrões estabelecidos
+- **Checklist antes de modificações**:
+  - [ ] Entendi completamente o código existente
+  - [ ] Avaliei o impacto da mudança em outras partes do sistema
+  - [ ] Considerei alternativas menos invasivas
+  - [ ] Testei a mudança em ambiente de desenvolvimento
+  - [ ] Verifiquei se a mudança não quebra funcionalidades existentes
+
+## Arquitetura e Estrutura
+
+### Tecnologias Principais
+- **Frontend**: React 18+ com TypeScript
+- **Backend**: Convex (database e backend)
+- **Containerização**: WebContainers para execução de código no navegador
+- **Build**: Vite, pnpm
+- **Estilos**: CSS Modules, PostCSS
+- **Deploy**: Vercel
+
+### Estrutura de Diretórios
+```
+app/                    # Código do frontend React
+├── components/        # Componentes reutilizáveis
+├── lib/              # Utilitários e hooks
+├── utils/            # Funções auxiliares
+convex/               # Backend Convex
+├── schema.ts         # Definição do banco de dados
+├── functions/        # Queries, mutations e actions
+public/               # Assets estáticos
+src/                  # Código fonte (se aplicável)
+```
+
+## Padrões de Código
+
+### TypeScript
+- Use TypeScript estrito em todos os arquivos
+- Prefira interfaces para objetos, tipos para primitivos
+- Use `Id<TableName>` para IDs do Convex ao invés de `string`
+- Sempre tipar as props dos componentes React
+- Use `as const` para literais de string em unions discriminadas
+
+### React
+- Use hooks funcionais ao invés de classes
+- Mantenha componentes pequenos e focados em uma responsabilidade
+- Use custom hooks para lógica reutilizável
+- Prefira CSS Modules para estilos locais
+- Use `client` e `server` components apropriadamente
+
+### Convex
+- Siga as diretrizes do `convex_rules.mdc` para funções Convex
+- Use validators para todos os argumentos e retornos
+- Prefira queries para leitura, mutations para escrita
+- Use actions apenas quando necessário (operações que precisam de Node.js)
+- Organize funções por domínio (messages, users, etc.)
+
+### Nomenclatura
+- Use `camelCase` para variáveis, funções e métodos
+- Use `PascalCase` para componentes React e interfaces
+- Use `SCREAMING_SNAKE_CASE` para constantes
+- Use nomes descritivos e evite abreviações
+
+## Práticas de Desenvolvimento
+
+### Commits
+- Use mensagens de commit claras e descritivas
+- Prefira commits atômicos (uma mudança por commit)
+- Use imperativo na mensagem: "Add feature" ao invés de "Added feature"
+
+### Pull Requests
+- Teste mudanças localmente antes de submeter
+- Use deploy previews para testar em ambiente próximo à produção
+- Mantenha PRs pequenos e focados
+- Atualize documentação quando necessário
+
+### Code Review
+- Revise código por correção, performance e legibilidade
+- Considere o impacto das mudanças no usuário final
+- Verifique se mudanças seguem os padrões estabelecidos
+
+## Ambiente de Desenvolvimento
+
+### Setup Inicial
+```bash
+git clone https://github.com/rolsite/chef.git
+cd chef
+pnpm install
+npx vercel env pull
+echo 'VITE_CONVEX_URL=placeholder' >> .env.local
+npx convex dev --configure existing --team convex --project chef --once
+```
+
+### Desenvolvimento Diário
+```bash
+pnpm run dev        # Frontend
+npx convex dev      # Backend (em outro terminal)
+```
+
+### Testes e Qualidade
+```bash
+pnpm run lint:fix   # Lints e formatação
+pnpm run test       # Testes
+pnpm run typecheck  # Verificação de tipos
+```
+
+## Recursos e Debugging
+
+### Variáveis Globais para Debug
+- `chefWebContainer`: Container WebContainer
+- `chefMessages`: Mensagens brutas
+- `chefParsedMessages`: Mensagens parseadas
+- `chefSentryEnabled`: Status do Sentry
+- `chefSetLogLevel()`: Configurar nível de log
+
+### Ferramentas de Desenvolvimento
+- Source maps em produção para debugging
+- Deploy previews automáticos no Vercel
+- Evals automáticos para validação de mudanças
+
+## Deploy e Produção
+
+### Branches
+- `main`: Branch principal
+- `staging`: Ambiente de staging (chef-staging.convex.dev)
+- `release`: Produção (chef.convex.dev)
+
+### Processo de Deploy
+1. Merge para `main`
+2. Push `main` → `staging`
+3. Testar em staging
+4. Merge `staging` → `release`
+5. Anunciar mudanças no Slack (#project-chef)
+
+## Autenticação e Autorização
+
+### Sistema de Auth
+- Integração com WorkOS para autenticação
+- Usuários conectam contas Convex existentes
+- Seleção de team para criação de projetos
+- Variáveis de ambiente necessárias:
+  - `VITE_WORKOS_CLIENT_ID`
+  - `VITE_WORKOS_REDIRECT_URI`
+  - `VITE_WORKOS_API_HOSTNAME`
+
+## Considerações de Segurança
+
+### Práticas Seguras
+- Nunca commite credenciais ou chaves de API
+- Use variáveis de ambiente para dados sensíveis
+- Valide inputs do usuário em funções Convex
+- Use HTTPS em produção
+- Mantenha dependências atualizadas
+
+### Tratamento de Erros
+- Use try/catch apropriadamente
+- Forneça mensagens de erro úteis para desenvolvedores
+- Não exponha detalhes internos de erro para usuários
+- Use Sentry para monitoramento de erros em produção
+
+## Performance
+
+### Otimizações
+- Use React.memo para componentes que renderizam frequentemente
+- Implemente lazy loading para componentes pesados
+- Otimize queries Convex com índices apropriados
+- Minimize bundle size com code splitting
+- Use WebContainers eficientemente
+
+## Acessibilidade
+
+### Boas Práticas
+- Use semântica HTML apropriada
+- Implemente navegação por teclado
+- Forneça textos alternativos para imagens
+- Mantenha contraste adequado
+- Teste com leitores de tela
+
+## Testes
+
+### Estratégia de Testes
+- Teste funcionalidades críticas
+- Use testes unitários para lógica pura
+- Teste integração com Convex
+- Teste manual em staging antes de produção
+- Considere testes end-to-end para fluxos importantes
+
+## Documentação
+
+### Manutenção
+- Mantenha README atualizado
+- Documente APIs públicas
+- Use comentários JSDoc para funções complexas
+- Atualize guias de desenvolvimento conforme necessário
+- Documente decisões arquiteturais importantes
+
+## Suporte e Manutenção
+
+### Monitoramento
+- Use logs apropriados para debugging
+- Monitore performance em produção
+- Configure alertas para erros críticos
+- Mantenha métricas de uso
+
+### Manutenção
+- Mantenha dependências atualizadas
+- Revise e atualize código deprecated
+- Monitore vulnerabilidades de segurança
+- Faça refatorações quando necessário
+
+---
+
+*Este documento deve ser mantido atualizado conforme o projeto evolui. Última atualização: 2025*
