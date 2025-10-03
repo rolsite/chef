@@ -40,8 +40,8 @@ Chef builds full-stack web apps with a built-in database, zero config auth, file
 ### Clone and Run
 
 ```bash
-git clone https://github.com/turazashvili/chef-openrouter.git
-cd chef-openrouter
+git clone https://github.com/rolsite/chef.git
+cd chef
 git checkout openrouter-integration
 ```
 
@@ -54,8 +54,8 @@ Note: This will use the hosted Convex control plane to provision Convex projects
 **1. Clone this OpenRouter fork**
 
 ```bash
-git clone https://github.com/turazashvili/chef-openrouter.git
-cd chef-openrouter
+git clone https://github.com/rolsite/chef.git
+cd chef
 git checkout openrouter-integration
 ```
 
