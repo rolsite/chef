@@ -64,11 +64,12 @@ export async function chatAction({ request }: ActionFunctionArgs) {
     recordRawPromptsForDebugging?: boolean;
     collapsedMessages: boolean;
     promptCharacterCounts?: PromptCharacterCounts;
+    userId?: string;
     featureFlags: {
       enableResend?: boolean;
     };
   };
-  const { messages, firstUserMessage, chatInitialId, deploymentName, token, teamSlug, recordRawPromptsForDebugging } =
+  const { messages, firstUserMessage, chatInitialId, deploymentName, token, teamSlug, recordRawPromptsForDebugging, userId } =
     body;
 
   let useUserApiKey = !!body.userApiKey;
@@ -132,6 +133,7 @@ export async function chatAction({ request }: ActionFunctionArgs) {
   try {
     const totalMessageContent = messages.reduce((acc, message) => acc + message.content, '');
     logger.debug(`Total message length: ${totalMessageContent.split(' ').length}, words`);
+
     const dataStream = await convexAgent({
       chatInitialId,
       firstUserMessage,
@@ -144,6 +146,7 @@ export async function chatAction({ request }: ActionFunctionArgs) {
       recordRawPromptsForDebugging: !!recordRawPromptsForDebugging,
       collapsedMessages: body.collapsedMessages,
       promptCharacterCounts: body.promptCharacterCounts,
+      userId,
       featureFlags: {
         enableResend: body.featureFlags.enableResend ?? false,
       },

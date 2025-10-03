@@ -47,6 +47,7 @@ import { useReferralCode, useReferralStats } from '~/lib/hooks/useReferralCode';
 import { useUsage } from '~/lib/stores/usage';
 import { hasAnyApiKeySet, hasApiKeySet } from '~/lib/common/apiKey';
 import { chatSyncState } from '~/lib/stores/startup/chatSyncState';
+import { useAuth } from '@workos-inc/authkit-react';
 
 const logger = createScopedLogger('Chat');
 
@@ -153,6 +154,7 @@ export const Chat = memo(
 
   const apiKey = useQuery(api.apiKeys.apiKeyForCurrentMember);
   const hasEnvKey = useQuery(api.apiKeys.hasEnvironmentOpenRouterKey);
+  const { user } = useAuth();
 
   const [modelSelection, setModelSelection] = useLocalStorage<ModelSelection>('modelSelection', 'auto');
     const terminalInitializationOptions = useMemo(
@@ -322,6 +324,7 @@ export const Chat = memo(
           modelChoice,
           collapsedMessages,
           promptCharacterCounts: characterCounts,
+          userId: user?.id || undefined,
           featureFlags: {
             enableResend,
           },

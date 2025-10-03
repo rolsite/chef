@@ -199,6 +199,7 @@ export const MessageInput = memo(function MessageInput({
           token,
           teamSlug: selectedTeamSlug,
           deploymentName: convexProjectStore.get()?.deploymentName,
+          modelSelection,
         }),
       });
 

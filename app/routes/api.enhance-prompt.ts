@@ -111,6 +111,30 @@ Calendar: A visual monthly view displaying habit completion history with color-c
 
 Your output should ONLY be the enhanced prompt text without any additional explanation or commentary.`;
 
+// Função para obter o modelo OpenRouter baseado na seleção do usuário
+function getOpenRouterModel(modelSelection: string): string {
+  // Mapear seleção do usuário para modelo OpenRouter
+  switch (modelSelection) {
+    case 'claude-3.5-sonnet':
+      return 'anthropic/claude-3.5-sonnet';
+    case 'gpt-4o':
+      return 'openai/gpt-4o';
+    case 'claude-3-opus':
+      return 'anthropic/claude-3-opus';
+    case 'claude-3-haiku':
+      return 'anthropic/claude-3-haiku';
+    case 'gemini-1.5-flash':
+      return 'google/gemini-flash-1.5';
+    case 'gemini-1.5-pro':
+      return 'google/gemini-pro-1.5';
+    case 'llama-3.1-70b':
+      return 'meta-llama/llama-3.1-70b-instruct';
+    default:
+      // Para sumarização, usar um modelo econômico e eficiente
+      return 'openai/gpt-4.1-mini';
+  }
+}
+
 export async function action({ request }: ActionFunctionArgs) {
   const PROVISION_HOST = getEnv('PROVISION_HOST') || 'https://api.convex.dev';
   try {
@@ -121,7 +145,7 @@ export async function action({ request }: ActionFunctionArgs) {
       });
     }
 
-    const { prompt, token, teamSlug, deploymentName } = await request.json();
+    const { prompt, token, teamSlug, deploymentName, modelSelection } = await request.json();
 
     const resp = await checkTokenUsage(PROVISION_HOST, token, teamSlug, deploymentName);
     if (resp.status === 'error') {
@@ -149,11 +173,14 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     const openai = new OpenAI({
-      apiKey: globalThis.process.env.OPENAI_API_KEY,
+      apiKey: globalThis.process.env.OPENROUTER_API_KEY || "",
+      baseURL: 'https://openrouter.ai/api/v1',
     });
 
+    const model = getOpenRouterModel(modelSelection || 'gpt-4.1-mini');
+
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4.1-mini',
+      model,
       messages: [
         {
           role: 'system',

@@ -54,6 +54,7 @@ export async function convexAgent(args: {
   recordRawPromptsForDebugging: boolean;
   collapsedMessages: boolean;
   promptCharacterCounts?: PromptCharacterCounts;
+  userId?: string;
   featureFlags: {
     enableResend: boolean;
   };
@@ -70,17 +71,14 @@ export async function convexAgent(args: {
     recordRawPromptsForDebugging,
     collapsedMessages,
     promptCharacterCounts,
+    userId,
     featureFlags,
   } = args;
-  console.debug('Starting agent with model', modelChoice);
-  if (userApiKey) {
-    console.debug('Using user provided API key');
-  }
 
   const startTime = Date.now();
   let firstResponseTime: number | null = null;
 
-  const provider = getProvider(userApiKey, modelChoice || 'anthropic/claude-3.5-sonnet');
+  const provider = getProvider(userApiKey, modelChoice || 'anthropic/claude-3.5-sonnet', userId);
   const opts: SystemPromptOptions = {
     enableBulkEdits: true,
     includeTemplate: true,

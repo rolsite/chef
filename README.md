@@ -97,6 +97,14 @@ Add your OpenRouter API key to `.env.local` to access 200+ AI models:
 OPENROUTER_API_KEY=<your openrouter api key from https://openrouter.ai/keys>
 ```
 
+**5b. Set OpenRouter API key in Convex environment**
+
+You also need to set the same OpenRouter API key in your Convex environment for server-side functions (like message summarization) to work properly:
+
+```bash
+npx convex env set OPENROUTER_API_KEY <your openrouter api key>
+```
+
 **That's it!** No need for multiple provider API keys. OpenRouter gives you access to:
 - Claude models (3.5 Sonnet, Haiku, Opus)
 - GPT models (4, 4-turbo, 3.5-turbo)
