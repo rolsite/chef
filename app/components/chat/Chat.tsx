@@ -143,7 +143,6 @@ export const Chat = memo(
       maxRelevantFilesSize,
       minCollapsedMessagesSize,
       enableResend,
-      useAnthropicFraction,
     } = useLaunchDarkly();
 
     const title = useStore(description);
@@ -222,8 +221,6 @@ export const Chat = memo(
     const disableChatMessage = forceDisable ? { type: 'ExceededQuota' as const } : _disableChatMessage;
 
     const [sendMessageInProgress, setSendMessageInProgress] = useState(false);
-
-    const openrouterProviders: ProviderType[] = ['OpenRouter'];
 
     const checkTokenUsage = useCallback(async () => {
       // If user has their own API key OR environment key is available, don't show quota message
@@ -305,7 +302,6 @@ export const Chat = memo(
         const { messages: preparedMessages, collapsedMessages } = chatContextManager.current.prepareContext(
           messages,
           maxCollapsedMessagesSize, // Use default size since all models are now OpenRouter
-          minCollapsedMessagesSize,
         );
 
         const characterCounts = chatContextManager.current.calculatePromptCharacterCounts(preparedMessages);
@@ -349,16 +345,13 @@ export const Chat = memo(
         const retries = retryState.get();
         logger.error(`Request failed (retries: ${JSON.stringify(retries)})`, e, error);
 
-        const backoff = error?.message.includes(STATUS_MESSAGES.error)
-          ? exponentialBackoff(retries.numFailures + 1)
-          : 0;
+        // Sistema de retry simplificado
         retryState.set({
           numFailures: retries.numFailures + 1,
-          nextRetry: Date.now() + backoff,
+          nextRetry: Date.now() + 1000, // Retry simples de 1 segundo
         });
 
         workbenchStore.abortAllActions();
-        await checkTokenUsage();
       },
       onFinish: async (message, response) => {
         const usage = response.usage;
@@ -369,8 +362,6 @@ export const Chat = memo(
           retryState.set({ numFailures: 0, nextRetry: Date.now() });
         }
         logger.debug('Finished streaming');
-
-        await checkTokenUsage();
       },
     });
 
@@ -489,7 +480,7 @@ export const Chat = memo(
 
         const shouldSendRelevantFiles = chatContextManager.current.shouldSendRelevantFiles(
           messages,
-          maxSizeForModel(modelSelection, maxCollapsedMessagesSize),
+          maxCollapsedMessagesSize,
         );
         const maybeRelevantFilesMessage: UIMessage = shouldSendRelevantFiles
           ? chatContextManager.current.relevantFiles(messages, `${Date.now()}`, maxRelevantFilesSize)
@@ -651,12 +642,6 @@ function useCurrentToolStatus() {
   return toolStatus;
 }
 
-function exponentialBackoff(numFailures: number) {
-  const jitter = Math.random() + 0.5;
-  const delay = 1000 * Math.pow(2, numFailures) * jitter;
-  return delay;
-}
-
 /**
  * We send the auth token in big brain requests. The Convex client already makes
  * sure it has an up-to-date auth token, so we just need to extract it.
@@ -774,15 +759,4 @@ export function DisabledText({
       </div>
     </div>
   );
-}
-
-function maxSizeForModel(modelSelection: ModelSelection, maxSize: number) {
-  switch (modelSelection) {
-    case 'auto':
-    case 'gemini-2.5-pro':
-      return maxSize;
-    default:
-      // For non-anthropic models not yet using caching, use a lower message size limit.
-      return 8192;
-  }
 }

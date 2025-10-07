@@ -4,8 +4,7 @@ import { convexAgent } from '~/lib/.server/llm/convex-agent';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
 import { BatchSpanProcessor, WebTracerProvider } from '@opentelemetry/sdk-trace-web';
 import type { LanguageModelUsage, Message, ProviderMetadata } from 'ai';
-import { checkTokenUsage, recordUsage } from '~/lib/.server/usage';
-import { disabledText, noTokensText } from '~/lib/convexUsage';
+import { recordUsage } from '~/lib/.server/usage';
 import { getEnv } from '~/lib/.server/env';
 import type { PromptCharacterCounts } from 'chef-agent/ChatContextManager';
 
@@ -72,38 +71,9 @@ export async function chatAction({ request }: ActionFunctionArgs) {
   const { messages, firstUserMessage, chatInitialId, deploymentName, token, teamSlug, recordRawPromptsForDebugging, userId } =
     body;
 
-  let useUserApiKey = !!body.userApiKey;
-
-  // If no user API key, check to see if the user has any Convex tokens left.
-  if (!useUserApiKey) {
-    const resp = await checkTokenUsage(PROVISION_HOST, token, teamSlug, deploymentName);
-    if (resp.status === 'error') {
-      return new Response(JSON.stringify({ error: 'Failed to check for tokens' }), {
-        status: resp.httpStatus,
-      });
-    }
-    const { centitokensUsed, centitokensQuota, isTeamDisabled, isPaidPlan } = resp;
-    if (isTeamDisabled) {
-      return new Response(JSON.stringify({ error: disabledText(isPaidPlan) }), {
-        status: 402,
-      });
-    }
-    if (centitokensUsed >= centitokensQuota) {
-      if (!isPaidPlan && !body.userApiKey) {
-        // If they're not on a paid plan and don't have an API key set, return an error.
-        logger.error(`No tokens available for ${deploymentName}: ${centitokensUsed} of ${centitokensQuota}`);
-        return new Response(
-          JSON.stringify({ code: 'no-tokens', error: noTokensText(centitokensUsed, centitokensQuota) }),
-          {
-            status: 402,
-          },
-        );
-      }
-    }
-  }
-
-  const userApiKey = body.userApiKey;
-  if (useUserApiKey && !userApiKey) {
+  // Sempre usa OpenRouter API key do ambiente - verificação de quotas obsoleta
+  const userApiKey = body.userApiKey || getEnv('OPENROUTER_API_KEY');
+  if (!userApiKey) {
     return new Response(
       JSON.stringify({ code: 'missing-api-key', error: 'OpenRouter API key required.' }),
       {
@@ -111,7 +81,7 @@ export async function chatAction({ request }: ActionFunctionArgs) {
       },
     );
   }
-  logger.info(`Using OpenRouter (user API key: ${useUserApiKey})`);
+  logger.info(`Using OpenRouter (user API key: ${!!body.userApiKey})`);
 
   const recordUsageCb = async (
     lastMessage: Message | undefined,

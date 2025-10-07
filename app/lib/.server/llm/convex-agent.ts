@@ -253,26 +253,9 @@ async function onFinishHandler({
       span.setAttribute('promptCharacterCounts.totalPromptChars', promptCharacterCounts.totalPromptChars);
     }
     if (providerMetadata) {
-      if (providerMetadata.anthropic) {
-        const anthropic: any = providerMetadata.anthropic;
-        span.setAttribute('providerMetadata.anthropic.cacheCreationInputTokens', anthropic.cacheCreationInputTokens);
-        span.setAttribute('providerMetadata.anthropic.cacheReadInputTokens', anthropic.cacheReadInputTokens);
-      }
-      if (providerMetadata.google) {
-        const google: any = providerMetadata.google;
-        span.setAttribute('providerMetadata.google.cachedContentTokenCount', google.cachedContentTokenCount ?? 0);
-      }
-      if (providerMetadata.openai) {
-        const openai: any = providerMetadata.openai;
-        span.setAttribute('providerMetadata.openai.cachedPromptTokens', openai.cachedPromptTokens ?? 0);
-      }
-      if (providerMetadata.bedrock) {
-        const bedrock: any = providerMetadata.bedrock;
-        span.setAttribute(
-          'providerMetadata.bedrock.cacheCreationInputTokens',
-          bedrock.usage?.cacheCreationInputTokens ?? 0,
-        );
-        span.setAttribute('providerMetadata.bedrock.cacheReadInputTokens', bedrock.usage?.cacheReadInputTokens ?? 0);
+      // Apenas OpenRouter - simplificado
+      if (providerMetadata.openrouter) {
+        span.setAttribute('providerMetadata.openrouter', 'true');
       }
     }
     if (result.finishReason === 'stop' || result.finishReason === 'unknown') {
@@ -356,41 +339,6 @@ function buildUsageRecord(usage: Usage): UsageRecord {
       }
       case 'promptTokens': {
         usageRecord.promptTokens += usage.promptTokens;
-        break;
-      }
-      case 'xaiCachedPromptTokens': {
-        usageRecord.cachedPromptTokens += usage.xaiCachedPromptTokens;
-        usageRecord.promptTokens += usage.xaiCachedPromptTokens;
-        break;
-      }
-      case 'openaiCachedPromptTokens': {
-        usageRecord.cachedPromptTokens += usage.openaiCachedPromptTokens;
-        break;
-      }
-      case 'anthropicCacheReadInputTokens': {
-        usageRecord.cachedPromptTokens += usage.anthropicCacheReadInputTokens;
-        usageRecord.promptTokens += usage.anthropicCacheReadInputTokens;
-        break;
-      }
-      case 'anthropicCacheCreationInputTokens': {
-        usageRecord.promptTokens += usage.anthropicCacheCreationInputTokens;
-        break;
-      }
-      case 'googleCachedContentTokenCount': {
-        usageRecord.cachedPromptTokens += usage.googleCachedContentTokenCount;
-        break;
-      }
-      case 'googleThoughtsTokenCount': {
-        usageRecord.completionTokens += usage.googleThoughtsTokenCount;
-        break;
-      }
-      case 'bedrockCacheWriteInputTokens': {
-        usageRecord.promptTokens += usage.bedrockCacheWriteInputTokens;
-        break;
-      }
-      case 'bedrockCacheReadInputTokens': {
-        usageRecord.cachedPromptTokens += usage.bedrockCacheReadInputTokens;
-        usageRecord.promptTokens += usage.bedrockCacheReadInputTokens;
         break;
       }
       case 'toolCallId':

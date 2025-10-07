@@ -26,11 +26,11 @@ export function getProvider(
     return getOpenRouterProvider(userApiKey, modelId, userId);
   }
 
-  // Fallback para provider padrão sem user tracking
+  // Provider OpenRouter simplificado
   const openrouter = createOpenAI({
     apiKey: userApiKey || getEnv('OPENROUTER_API_KEY'),
     baseURL: 'https://openrouter.ai/api/v1',
-    fetch: userApiKey ? userKeyApiFetch() : fetch,
+    fetch: fetch, // Fetch direto sem wrapper complexo
   });
 
   return {
@@ -39,56 +39,3 @@ export function getProvider(
   };
 }
 
-const userKeyApiFetch = () => {
-  return async (input: RequestInfo | URL, init?: RequestInit) => {
-    const result = await fetch(input, init);
-
-    if (result.status === 401) {
-      const text = await result.text();
-      console.error('[Provider Fetch] 401 Unauthorized:', text);
-      throw new Error(JSON.stringify({ error: 'Invalid OpenRouter API key', details: text }));
-    }
-    if (result.status === 413) {
-      const text = await result.text();
-      console.error('[Provider Fetch] 413 Payload Too Large:', text);
-      throw new Error(
-        JSON.stringify({
-          error: 'Request exceeds the maximum allowed number of bytes.',
-          details: text,
-        }),
-      );
-    }
-    if (result.status === 429) {
-      const text = await result.text();
-      console.error('[Provider Fetch] 429 Rate Limited:', text);
-      throw new Error(
-        JSON.stringify({
-          error: 'OpenRouter is rate limiting your requests',
-          details: text,
-        }),
-      );
-    }
-    if (result.status === 529) {
-      const text = await result.text();
-      console.error('[Provider Fetch] 529 Overloaded:', text);
-      throw new Error(
-        JSON.stringify({
-          error: 'OpenRouter API is temporarily overloaded',
-          details: text,
-        }),
-      );
-    }
-    if (!result.ok) {
-      const text = await result.text();
-      console.error('[Provider Fetch] Other error:', result.status, result.statusText, text);
-      throw new Error(
-        JSON.stringify({
-          error: `OpenRouter returned an error (${result.status} ${result.statusText}) when using your provided API key: ${text}`,
-          details: text,
-        }),
-      );
-    }
-
-    return result;
-  };
-};

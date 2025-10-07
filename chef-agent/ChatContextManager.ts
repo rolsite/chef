@@ -63,22 +63,14 @@ export class ChatContextManager {
   prepareContext(
     messages: UIMessage[],
     maxCollapsedMessagesSize: number,
-    minCollapsedMessagesSize: number,
   ): { messages: UIMessage[]; collapsedMessages: boolean; promptCharacterCounts?: PromptCharacterCounts } {
-    // If the last message is a user message this is the first LLM call that includes that user message.
-    // Only update the relevant files and the message cutoff indices if the last message is a user message to avoid clearing the cache as the agent makes changes.
+    // Simplificado: apenas collapse básico sem lógica complexa min/max
     let collapsedMessages = false;
     if (messages[messages.length - 1].role === 'user') {
       const [messageIndex, partIndex] = this.messagePartCutoff(messages, maxCollapsedMessagesSize);
-      if (messageIndex == this.messageIndex && partIndex == this.partIndex) {
-        return { messages, collapsedMessages };
-      }
-      if (messageIndex >= this.messageIndex && partIndex >= this.partIndex) {
-        // Truncate more than just the `maxCollapsedMessagesSize` limit because we want to get some cache hits before needing to truncate again.
-        // If we only truncate to the `maxCollapsedMessagesSize` limit, we'll keep truncating on each new message, which means cache misses.
-        const [newMessageIndex, newPartIndex] = this.messagePartCutoff(messages, minCollapsedMessagesSize);
-        this.messageIndex = newMessageIndex;
-        this.partIndex = newPartIndex;
+      if (messageIndex !== this.messageIndex || partIndex !== this.partIndex) {
+        this.messageIndex = messageIndex;
+        this.partIndex = partIndex;
         collapsedMessages = true;
       }
     }
@@ -256,35 +248,14 @@ export class ChatContextManager {
   }
 
   shouldSendRelevantFiles(messages: UIMessage[], maxCollapsedMessagesSize: number): boolean {
-    // Always send files on the first message
+    // Simplificado: enviar arquivos no primeiro contexto ou quando há collapse
     if (messages.length === 0) {
       return true;
     }
 
-    // Check if we are going to collapse messages, if so, send new files
+    // Enviar novos arquivos se houver collapse de mensagens
     const [messageIndex, partIndex] = this.messagePartCutoff(messages, maxCollapsedMessagesSize);
-    if (messageIndex != this.messageIndex || partIndex != this.partIndex) {
-      return true;
-    }
-
-    // Check if any previous messages contain file artifacts with non-empty content
-    for (const message of messages) {
-      if (message.role === 'user') {
-        for (const part of message.parts) {
-          if (part.type === 'text' && part.text.includes('title="Relevant Files"')) {
-            // Check if there's actual content between the boltAction tags
-            // We used to strip out the file content when serializing messages to store in Convex
-            const hasContent =
-              part.text.includes('<boltAction type="file"') && !part.text.match(/<boltAction[^>]*><\/boltAction>/);
-            if (hasContent) {
-              // Only return false if we found a message with actual file content
-              return false;
-            }
-          }
-        }
-      }
-    }
-    return true;
+    return messageIndex !== this.messageIndex || partIndex !== this.partIndex;
   }
 
   private messagePartCutoff(messages: UIMessage[], maxCollapsedMessagesSize: number): [number, number] {
