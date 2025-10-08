@@ -145,7 +145,7 @@ export const ModelSelector = React.memo(function ModelSelector({
         searchPlaceholder="Search models..."
         label="Select model"
         options={filteredModels.map((model) => ({
-          label: `${model.name} - $${model.pricing.prompt}/1M tokens`,
+          label: `${model.name} - $${(Number(model.pricing.prompt) * 1000000).toFixed(2)}/M input $${(Number(model.pricing.completion) * 1000000).toFixed(2)}/M output`,
           value: model.modelId,
         }))}
         buttonClasses="w-fit"
@@ -167,10 +167,10 @@ export const ModelSelector = React.memo(function ModelSelector({
           <div className={'flex items-center gap-2'}>
             {providerToIcon.openrouter}
             <div className="flex-1 min-w-0">
-              <div className="max-w-48 truncate font-medium">{model.name}</div>
+              <div className="max-w-64 truncate font-medium">{model.name}</div>
               {!inButton && (
                 <div className="text-xs text-gray-500 truncate">
-                  ${model.pricing.prompt}/1M prompt • ${model.pricing.completion}/1M completion
+                  ${(Number(model.pricing.prompt) * 1000000).toFixed(2)}/M input • ${(Number(model.pricing.completion) * 1000000).toFixed(2)}/M output
                 </div>
               )}
             </div>

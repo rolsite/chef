@@ -110,7 +110,7 @@ export function getOpenRouterProvider(
     const model = createModel(modelId);
     return {
       model,
-      maxTokens: 8192,
+      maxTokens: 64000,
     };
   }
   // Fallback para provider padrão sem user tracking
@@ -121,6 +121,6 @@ export function getOpenRouterProvider(
 
   return {
     model: openrouter(modelId),
-    maxTokens: 8192,
+    maxTokens: 64000,
   };
 }

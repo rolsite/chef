@@ -35,7 +35,7 @@ export function getProvider(
 
   return {
     model: openrouter(modelId),
-    maxTokens: 8192, // Default, could be dynamic based on model metadata
+    maxTokens: 64000, // Default, could be dynamic based on model metadata
   };
 }
 
